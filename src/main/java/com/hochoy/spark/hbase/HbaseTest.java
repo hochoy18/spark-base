@@ -20,7 +20,7 @@ public class HbaseTest {
         conf= HBaseConfiguration.create();
         conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,"2181");
         conf.set(HConstants.ZOOKEEPER_QUORUM , "cdhtest01,cdhtest02" );
-        conf.set("hbase.master", "10.14.66.215:60000");
+        conf.set("hbase.master", "cdhtest01:60000");
         System.out.println(conf.get("hbase.zookeeper.quorum"));
     }
 

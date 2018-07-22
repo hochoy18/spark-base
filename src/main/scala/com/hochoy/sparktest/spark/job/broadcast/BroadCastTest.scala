@@ -18,7 +18,8 @@ object BroadCastTest {
 
     val sc = new SparkContext(conf)
 
-    val input = "E:\\work\\sparktest\\src\\main\\scala\\com\\cobub\\sparktest\\spark\\job\\broadcast\\broadcast.txt";
+    val input = System.getProperty("user.dir")+"/src/main/scala/com/hochoy/sparktest/spark/job/broadcast/broadcast.txt"
+
     val data = sc.textFile(input).map(_.split("\\|",100)).map(line =>{
       val Array(privateIP, account,timeFormat, timeType) = line
       (privateIP, (account, timeFormat.toLong, timeType.toInt))

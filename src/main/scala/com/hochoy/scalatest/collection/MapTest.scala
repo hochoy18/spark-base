@@ -1,4 +1,4 @@
-package com.hochoy.scalatest
+package com.hochoy.scalatest.collection
 
 /**
   * Created by Hochoy on 2018/07/23.

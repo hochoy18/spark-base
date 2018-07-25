@@ -9,20 +9,27 @@ object ArrayTest {
 
 //    arrayTest1
 //    arrayTest2
-    arrayBufferTest1
-  }
-  def arrayBufferTest1(){
-    import collection.mutable.ArrayBuffer
-    val b = ArrayBuffer[Int]()
-    b += 1
-    b += 3
-    b.+=(5)
-    b.+=(21)
-    b.++= (Array(10,11,13,14))
-
-    println(b)
+    arrayTest3
   }
 
+  def arrayTest3() {
+    val arr = Array(1 to 10 :_*)
+    arr.foreach(x=>print(x + "   "))
+    println(arr(1))
+    arr(4)= 200
+    arr.foreach(x=>print(x + "   "))
+    val  a = Array(1,2,3)
+    val  b = Array(9,7,8)
+    val c = a ++ b ++ a
+    println()
+
+    c.foreach(x=> print(x +"   "))
+    println(c.distinct.mkString(" , "))
+    println()
+    println(c.mkString("{{{","  >>>  ","}}}"))
+    println()
+println("max  "+c.max+"   ; sum  "+c.sum +"   ;  min "+c.min)
+  }
   def arrayTest2(){
     var myList1 = Array(1.9,2.9,3.9,4.9)
     var myList2 = Array(0.01,0.03,0.04,0.002)
@@ -49,5 +56,46 @@ object ArrayTest {
     var max :Double= 0;
     myList.foreach(x=>{max=Math.max(max,x)})
     println("max......"+max)
+  }
+}
+
+
+object ArrayBufferTest{
+  def main(args: Array[String]) {
+
+//    arrayBufferTest1
+    arrayBufferTest2
+  }
+
+  def arrayBufferTest2(){
+    import collection.mutable.ArrayBuffer
+    var ab = ArrayBuffer[Int]()
+    ab += 1
+    ab +=(2,3,4,5)
+    ab ++= ArrayBuffer(9,8,7)
+    println(ab )
+    ab.insert(2,3000)
+    println(ab )
+
+    ab.remove(1,2)
+    println(ab )
+
+    val a = ab.toArray
+    println(a.mkString("(",",",")") )
+
+    println(Array.isInstanceOf)
+//    println(a.isInstanceOf[Array])
+  }
+
+  def arrayBufferTest1(){
+    import collection.mutable.ArrayBuffer
+    val b = ArrayBuffer[Int]()
+    b += 1
+    b += 3
+    b.+=(5)
+    b.+=(21)
+    b.++= (Array(10,11,13,14))
+
+    println(b)
   }
 }

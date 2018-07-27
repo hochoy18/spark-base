@@ -2,6 +2,8 @@ Scala中的集合：Iterator、BitSet、Set、Map、Stack、Vector、List、Arra
 http://www.bubuko.com/infodetail-412698.html
 https://www.cnblogs.com/cbscan/articles/4147709.html
 
+List(https://www.cnblogs.com/miqi1992/p/5635599.html)
+
 ListBuffer
 TreeSet
 JavaConverters

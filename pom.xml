@@ -53,6 +53,18 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+        <!--&lt;!&ndash; https://mvnrepository.com/artifact/org.elasticsearch/elasticsearch-core &ndash;&gt;-->
+        <!--<dependency>-->
+            <!--<groupId>org.elasticsearch</groupId>-->
+            <!--<artifactId>elasticsearch-core</artifactId>-->
+            <!--<version>6.2.0</version>-->
+        <!--</dependency>-->
+
+        <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
             <version>${scala.version}</version>

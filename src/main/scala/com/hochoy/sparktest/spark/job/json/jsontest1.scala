@@ -1,12 +1,14 @@
 package com.hochoy.sparktest.spark.job.json
 
-import java.io.File
+import java.io.{IOException, File}
 
-import net.sf.json.JSONObject
+import net.sf.json.{JSONException, JSONObject}
 import org.apache.spark.{SparkContext, SparkConf}
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.parsing.json.JSON
+import scala.util.control.Breaks._
 
 
 /**
@@ -23,56 +25,70 @@ object jsontest1 {
 
   def test3(): Unit = {
     val path = System.getProperty("user.dir")
-    val  rdd = sc.textFile(path +"\\src\\main\\scala\\com\\hochoy\\sparktest\\spark\\job\\json\\productInfo.json")
-    val list = List.empty
-    val maprdd = rdd.map(x=>{
-      val  op  = JSON.parseFull(x)
-      op match {
-        case Some(map : Map[String, Any])=>{
-          op.map(println)
-          val info = map.get("Querystorebyproductid")
+    val rdd = sc.textFile(path + "\\src\\main\\scala\\com\\hochoy\\sparktest\\spark\\job\\json\\productInfo.json")
 
-          var li = info.toList
-          println("..........."+li)
+    println("length1111:...................." + rdd.collect().length)
 
+    val maprdd = rdd.map(x => {
+      try {
+        val op = JSON.parseFull(x)
+        op match {
+          case Some(map: Map[String, Any]) => {
+            val info = map.get("Querystorebyproductid")
 
+            val li = info.toList
+            println("..........." + li)
 
-
-          li
-
-
-//          val  productId = if( info.getOrElse("productId","").toString=="") "000"
-//          val userId = if (info.getOrElse("userId","") =="") "u_000"
-//          val  longitude = Integer.parseInt(info.getOrElse("longitude",0).toString)+0.0008
-//          val storeId = info.getOrElse("storeId","")
-//          val latitude =Integer.parseInt(info.getOrElse("latitude",0).toString)+0.00009
-//
-//
-//          val tuple = (userId,longitude,latitude,storeId)
-//          var m1=scala.collection.mutable.Map[String,Any]()
-//
-//          m1+=("userId"->userId)
-//          var m = scala.collection.mutable.Map[String,(_,_,_,_)]()
-//          m+=(productId.toString->tuple)
-//
-//          list.+:(m)
-//
-//          list
-
+            if (!li.isEmpty) li
+          }
+//          case None => {
+//            break;
+//          }
         }
-        case None => println("none")
-        case other => println("other")
+      } catch {
+        case ex: JSONException => {
+          println("je.........【【【【【【【【............." + ex)
+        }
+        case ex: Throwable => {
+          println("ta....【【【【【【【【【【.........." + ex)
+          println("dddddddddd      ")
+        }
       }
+    }).filter(xx => xx.!=(null))
 
-    })
+
+    //
+    println("length:...................." + maprdd.collect().length)
+    //    val maprdd = rdd.map(x=>{
+    //      val  op  = JSON.parseFull(x)
+    //      op match {
+    //        case Some(map : Map[String, Any])=>{
+    //          val info = map.get("Querystorebyproductid")
+    //
+    //          var li = info.toList
+    //          println("..........."+li)
+    //
+    //          li
+    //
+    //        }
+    //        case None =>{
+    //
+    //          println("none111111111111111")
+    //          println(x)
+    //        }
+    //        case other => println("other")
+    //      }
+    //
+    //    })
 
     println("############")
-    list.foreach(println)
-    println("============")
-    maprdd.collect().foreach(println)
-
-    maprdd.map(println)
-    rdd.foreach(println)
+    maprdd.collect().foreach(x => println("kkkkkkkkkkkkkkk......." + x))
+    //    list.foreach(println)
+    //    println("============")
+    //    maprdd.collect().foreach(println)
+    //
+    //    maprdd.map(println)
+    //    rdd.foreach(println)
   }
 
   def test2(): Unit = {

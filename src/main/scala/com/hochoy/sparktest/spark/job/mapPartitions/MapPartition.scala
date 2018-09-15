@@ -1,10 +1,14 @@
 package com.hochoy.sparktest.spark.job.mapPartitions
 
-import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}
 
 /**
   * Created by Cobub on 2018/6/11.
+  *
+  * spark mapPartition方法与map方法的区别
+  * https://blog.csdn.net/vipyeshuai/article/details/51774117
+  *
+  *
   */
 object MapPartition {
 
@@ -14,13 +18,19 @@ object MapPartition {
 
   def main(args: Array[String]) {
 
+    var s1 = System.currentTimeMillis()
     mapTest()
-    mapPartions()
+    var s2 = System.currentTimeMillis()
+    printf("mapTest  %d "  , s2 - s1)
 
+     s1 = System.currentTimeMillis()
+    mapPartitions()
+    s2 = System.currentTimeMillis()
+    printf("mapPartitions  %d  ", s2 - s1)
 
   }
 
-  def mapPartions() {
+  def mapPartitions() {
     def doubleFunc(iter: Iterator[Int]) : Iterator[(Int,Int)] = {
       var res = List[(Int,Int)]()
       while (iter.hasNext)

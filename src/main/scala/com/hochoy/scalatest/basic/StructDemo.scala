@@ -1,4 +1,4 @@
-package com.hochoy.scalatest.other
+package com.hochoy.scalatest.basic
 
 /**
   * Created by Cobub on 2018/10/2.

@@ -58,7 +58,7 @@ object applyDemoTest{
     val applyDemo_ = applyDemo("jingjing",19,99,0)
     applyDemo_ match {
       case applyDemo(name1,age,faceValue) =>
-        println(s"name is ${name1}, age is $age, faceValue is $faceValue")
+        println(s"name is ${name1}, age is $age, faceValue is $faceValue ${applyDemo_.faceValue}")
       case _ =>println("nothing  match ")
     }
   }

@@ -41,7 +41,7 @@ object SealedTest extends App {
     }
     case Student2(name, sno) => {
       println(name + " is a student.")
-      println("teacher......")
+      println("student......")
     }
   }
   //  def main(args: Array[String]) {

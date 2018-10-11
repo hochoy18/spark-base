@@ -12,7 +12,7 @@ object RegexTest {
 
   def main(args: Array[String]) {
     regexTest02
-    exit()
+    sys.exit()
     regexTest1
     println(StringIsNumerical("12342 323"))
     println(DateFormat(0))

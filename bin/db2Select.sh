@@ -3,6 +3,7 @@ DBNODE='razor'
 DBUSER='db2inst1'
 DBPASSWORD='111111'
 
+#连接DB2
 connDB2()
 {
     if( /home/db2inst1/sqllib/bin/db2 connect to $1  user $2 using $3 > /dev/null )
@@ -14,9 +15,11 @@ connDB2()
     fi
 }
 
+#释放DB2连接
 releaseDB2(){
     /home/db2inst1/sqllib/bin/db2 connect reset  > /dev/null
 }
+#查询操作
 selectTable(){
  sql="SELECT ID,WORK_ID, JOB_ID, JOB_NAME, START_TIME, END_TIME ,DURATION,STATUS,DETAIL,DURATION FROM RAZOR_JOBS"
     /home/db2inst1/sqllib/bin/db2 -x ${sql}| while read ID WORK_ID JOB_ID JOB_NAME START_TIME END_TIME  DURATION STATUS DETAIL DURATION
@@ -36,13 +39,14 @@ selectTable(){
     done
 }
 
+#删除操作
 deleteTable(){
     sql="DELETE RAZOR_JOBS"
     /home/db2inst1/sqllib/bin/db2 -x ${sql}
     sql1="DELETE RAZOR_WORKS"
     /home/db2inst1/sqllib/bin/db2 -x ${sql1}
 }
-
+#测试执行
 run(){
  connDB2 ${DBNODE} ${DBUSER} ${DBPASSWORD}
  selectTable

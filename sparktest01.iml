@@ -237,5 +237,6 @@
     <orderEntry type="library" name="Maven: org.apache.mrunit:mrunit:hadoop2:1.1.0" level="project" />
     <orderEntry type="library" name="Maven: org.powermock:powermock-core:1.5.1" level="project" />
     <orderEntry type="library" name="Maven: org.javassist:javassist:3.18.0-GA" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.commons:commons-pool2:2.4.2" level="project" />
   </component>
 </module>

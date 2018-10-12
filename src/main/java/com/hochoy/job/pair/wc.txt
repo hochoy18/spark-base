@@ -1,5 +1,0 @@
-The key value to the RDD is usually used for the aggregation calculation  First  some initial ETL  extraction  transformation  loading  operations are used to transform data into key value pairs  Key values provide some new operating interfaces for RDD
-
-Let users control the advanced characteristics of RDD distribution on each node  partition
-
-Using controllable partition method to put data that is often accessed to the same node can greatly reduce the communication cost of application  This will bring a significant performance improvement

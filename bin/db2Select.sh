@@ -66,21 +66,33 @@ run
 
 #!/bin/bash -l
 hour_fun(){
-    hdfs dfs -rmr   /user/gd/pub1/mobile-logs/cd/*/*/_F*
-
     for i in 6 7 8 9
     do
+        hdfs dfs -rmr   /user/gd/pub1/mobile-logs/cd/*/*/_F*
         echo "$i"
             for j in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
         do
             echo ${j}
-            ./work.sh h 2018070${i} $j -f HDFS2HBase-clientdata
+            ./work.sh h 2018070${i} ${j} -f HDFS2HBase-clientdata
         done
     done
 }
 
-for ((m=1; m<=5; m ++))
+hour_fun1(){
+    for i in 9 8 7 6
+    do
+        hdfs dfs -rmr   /user/gd/pub1/mobile-logs/cd/*/*/_F*
+        echo "$i"
+            for j in 10 11 12 13 14 15 16 17 18 19 20 21 22 23 00 01 02 03 04 05 06 07 08 09
+        do
+            echo ${j}
+            ./work.sh h 2018070${i} ${j} -f HDFS2HBase-clientdata
+        done
+    done
+}
+for ((m=1; m<=${1}; m ++))
 do
     hour_fun
+    hour_fun1
     echo ${m}
 done

@@ -11,7 +11,7 @@ package com.hochoy.thread;
  start ...Join_T1
  finish....Join_T1
  B   start ...joinB——T2
- B   finish....joinB——T2 
+ B   finish....joinB——T2
  **********************************************************************
  *
  *

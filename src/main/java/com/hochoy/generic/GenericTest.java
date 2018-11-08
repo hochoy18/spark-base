@@ -13,6 +13,11 @@ import java.util.Random;
 
 public class GenericTest {
     public static void main(String[] args) {
+        /**
+         * 实例化泛型类时，泛型类型不能是基本数据类型，
+         */
+        //Box<int> i = new Box<int>(123);
+
         Box<Integer> a = new Box<Integer>(222);
         Box<Number> b = new Box<Number>(321);
         Box<Float> f = new Box<Float>(3.1415f);
@@ -47,6 +52,11 @@ public class GenericTest {
 
 class Box<T> {
     private T data;
+
+    /**
+     * 泛型类的 泛型类型不能使用在静态属性上
+     */
+//    private static T javaee;
 
     public Box() {
     }

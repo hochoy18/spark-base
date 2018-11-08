@@ -1,5 +1,7 @@
 package com.hochoy.generic;
 
+import org.apache.avro.generic.GenericData;
+
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -149,7 +151,32 @@ class C4 extends Father{
     }
 }
 
+class Fruit{}
+class Apple extends Fruit{}
+class Pear extends Fruit{}
+class RedApple extends Apple{}
+class GeneTest<T extends Fruit>{
+    static void test01(){
+        GeneTest<Fruit> fruitGeneTest = new GeneTest<Fruit>();
+        GeneTest<Apple> appleGeneTest = new GeneTest<Apple>();
+        GeneTest<RedApple> redAppleGeneTest = new GeneTest<RedApple>();
+    }
+    static void test02(List<? extends Fruit> list){
 
+    }
+    static void test03(List<? super Apple> list){}
+
+    public static void main(String[] args) {
+        test02(new ArrayList<Fruit>());
+        test02(new ArrayList<Apple>());
+        test02(new ArrayList<RedApple>());
+//        test02(new ArrayList<Object>());//Object 不是 Fruit 的子类 ，编译不通过
+
+        test03( new ArrayList<Apple>());
+//        test03(new ArrayList<RedApple>());// RedApple 不是 Apple的 父类 ，编译不能通过
+        test03(new ArrayList<Fruit>());
+    }
+}
 
 
 

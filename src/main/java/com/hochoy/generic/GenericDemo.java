@@ -161,9 +161,14 @@ class GeneTest<T extends Fruit>{
         GeneTest<Apple> appleGeneTest = new GeneTest<Apple>();
         GeneTest<RedApple> redAppleGeneTest = new GeneTest<RedApple>();
     }
-    static void test02(List<? extends Fruit> list){
 
-    }
+    /**
+     * <? extends T>和<? super T>的区别
+     * <? extends T>表示该通配符所代表的类型是T类型的子类。
+     * <? super T>表示该通配符所代表的类型是T类型的父类。
+     * @param list
+     */
+    static void test02(List<? extends Fruit> list){}
     static void test03(List<? super Apple> list){}
 
     public static void main(String[] args) {

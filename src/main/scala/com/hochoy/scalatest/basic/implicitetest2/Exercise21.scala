@@ -25,6 +25,7 @@ object Fraction {
 
 
 object exercise21_5 {
+  //https://github.com/junyalu/scala-hello/blob/master/src/charpter21.scala
   def smaller(a: Fraction, b: Fraction)
              (implicit ordered: Fraction => Ordered[Fraction]): Fraction = if (ordered(a) < b) a else b
 

@@ -55,6 +55,26 @@ object SealedTest extends App {
 
 }
 
+sealed abstract  class People
+case object American extends People
+case object Japanese extends People
+case object Chinese extends People
+case object Russia extends People
+
+object SealedTest01{
+  def people(p:People) = p match {
+    case American => println("American person....")
+    case Japanese => println("Japanese person...")
+    case Chinese => println("Chinese person ...")
+  }
+
+  def main(args: Array[String]) {
+    people(Russia)
+    people(Chinese)
+  }
+}
+
+
 
 
 

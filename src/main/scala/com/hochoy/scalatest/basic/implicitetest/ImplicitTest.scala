@@ -65,26 +65,26 @@ object ImplicitTest2 {
 object ImplicitTest3 {
 
   trait Multiplicable[T] {
-    def multply(x: T): T
+    def multiply(x: T): T
   }
 
   /**
     * 隐式对象
     */
   implicit object MultiplicableInt extends Multiplicable[Int] {
-    override def multply(x: Int): Int = x * x
+    override def multiply(x: Int): Int = x * x
   }
 
   /**
     * 隐式对象
     */
   implicit object MultiplicableString extends Multiplicable[String] {
-    override def multply(x: String): String = x * 3
+    override def multiply(x: String): String = x * x.length
   }
 
   def multiply[T: Multiplicable](x: T): T = {
     val ev = implicitly[Multiplicable[T]]
-    ev.multply(x)
+    ev.multiply(x)
   }
 
   /**
@@ -96,14 +96,14 @@ object ImplicitTest3 {
     * @return
     */
   def multply1[T: Multiplicable](x: T)(implicit ev: Multiplicable[T]): T = {
-    ev.multply(x)
+    ev.multiply(x)
   }
 
   def main(args: Array[String]) {
 
     println(multiply(5))
 
-    println(multiply("333"))
+    println(multiply("12345 "))
     import ImplicitTest.float2Int
     val x: Int = 4.5f
     println(multiply(x))
@@ -124,6 +124,7 @@ object ImplicitTest3 {
       * 调用定义的sqrt函数，它将自行调用定义好的隐式值
       */
     println(sqrt(3, 4))
+    println("implicit curry "+sqrt1(1)(1)(1))
   }
 
   /**
@@ -132,13 +133,12 @@ object ImplicitTest3 {
     * 且implicit 关键字只能放在第一个参数前面（不能同时放在多个参数前或
     * 只放在除第一个参数外的参数前），调用该隐式函数时，不需要传递参数
     * 或传递全部参数，即
-    * 2) 隐式参数使用时要么全部不指定，要么全不指定，不能只指定部分。
+    * 2) 隐式参数使用时要么全部指定，要么全不指定，不能只指定部分。
     * 3) 同类型的隐式值只能在作用域内出现一次，即不能在同一个作用域中定义多个相同类型的隐式值
     * 4) 在指定隐式参数时，implicit 关键字只能出现在参数开头。
     * 5) 如果想要实现参数的部分隐式参数，只能使用函数的柯里化，
     * 如要实现这种形式的函数，def test(x:Int, implicit  y: Double)的形式，必须使用柯里化实现：def test(x: Int)(implicit y: Double).
     * 6) 柯里化的函数， implicit 关键字只能作用于最后一个参数。否则，不合法。
-    *
     *
     * @param x
     * @param y
@@ -149,14 +149,17 @@ object ImplicitTest3 {
     Math.sqrt(x * x + y * y)
   }
 
+  def sqrt1(int: Int)( float: Float)(implicit double: Double):Double ={
+    Math.sqrt(Math.pow(int,2) + Math.pow(float,2) + Math.pow(double,2))
+  }
   /**
     * 7) implicit 关键字在隐式参数中只能出现一次，柯里化的函数也不例外！
     *
     */
-//      def product(implicit x: Double)(implicit y: Double) = x * y
+  //      def product(implicit x: Double)(implicit y: Double) = x * y
 
   /**
-    *  8）匿名函数不能使用隐式参数
+    * 8）匿名函数不能使用隐式参数
     */
   //  val product = (implicit x:Double,y:Double)=>x * y
 }

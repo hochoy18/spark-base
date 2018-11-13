@@ -17,7 +17,7 @@ import java.util.List;
 public class GenericDemo {}
 
 /**
- * 泛型接口中 泛型类型 不能定义全局变量，只能使用在方法中
+ * 在 <泛型接口> 中 泛型类型 不能定义全局变量，只能使用在方法中
  * @param <T1>
  * @param <T2>
  */
@@ -112,9 +112,14 @@ abstract class Father<T1,T2>{
  * @param <T2>
  */
 class C1<T1,T2> extends Father<T1,T2>{
+    T1 v;
+
     @Override
     void test(T2 name) {
-
+        test1(v);
+    }
+    void test1(T1 t1){
+        System.out.println(t1);
     }
 }
 

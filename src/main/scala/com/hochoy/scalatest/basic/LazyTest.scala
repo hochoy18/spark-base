@@ -19,7 +19,7 @@ object lazyOps {
   }
 
   def main(args: Array[String]) {
-     val prop = init()
+    lazy val prop = init()
     println("after init()...")
     println(prop)
 //    加了lazy关键字print的顺序：

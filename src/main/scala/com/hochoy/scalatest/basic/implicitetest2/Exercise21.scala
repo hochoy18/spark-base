@@ -1,5 +1,7 @@
 package com.hochoy.scalatest.basic.implicitetest2
 
+import java.awt.Point
+
 /**
   * @note :  TODO
   * @author :  hochoy
@@ -41,3 +43,42 @@ object exercise21_5 {
       else 0
   }
 }
+
+object exercise21_6_7 {
+
+  class PointOrder6(point: Point) extends java.awt.Point with Ordered[java.awt.Point] {
+    override def compare(that: Point): Int = {
+      if (this.x > that.x || (this.x == that.x && this.y > that.y)) 1
+      else if (this.x == that.x && this.y == that.y) 0
+      else -1
+    }
+  }
+
+  class PointOrder7(point: Point) extends Point with Ordered[Point] {
+    override def compare(that: Point): Int = {
+      val thisLen = this.x * this.x + this.y * this.y
+      val thatLen = that.x * that.x + that.y * that.y
+      if (thisLen > thatLen) 1
+      else if (thisLen == thatLen) 0
+      else 0
+    }
+  }
+
+  object PointOrder {
+    implicit val point6: Point => PointOrder6 = (point: Point) => new PointOrder6(point)
+    implicit val point7: Point => PointOrder7 = (point: Point) => new PointOrder7(point)
+  }
+
+
+  def main(args: Array[String]) {
+    import PointOrder.point7
+    println(new Point(2, 3) < new Point(1, 9))
+  }
+
+  type d = Int =:= AnyVal
+
+  def getFirstChar[T](arg: T)(implicit ev: T =:= String) = ev(arg).head
+}
+
+
+

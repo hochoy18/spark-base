@@ -5,4 +5,5 @@ target
  .idea/workspace.xml
 ./sparktest01.iml
 sparktest01.iml
-
+*.iml
+./*.iml

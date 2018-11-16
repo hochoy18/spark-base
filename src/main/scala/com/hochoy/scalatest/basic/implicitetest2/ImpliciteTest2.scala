@@ -22,12 +22,12 @@ object implicitConvert {
 
   implicit def +%(x: Percent)(implicit y: Int): String = (x.p + y).toString + "%"
 
-  implicit def factInt(i: Int) = new RichMultiPly(i)
+  implicit def factInt(i: BigInt) = new RichMultiPly(i)
 }
 
-case class RichMultiPly(val i: Int) {
+case class RichMultiPly(val i: BigInt) {
 
-  def !(): Int = {
+  def !(): BigInt = {
     if (i == 1) 1
     else i * (RichMultiPly(i - 1) !)
   }
@@ -88,8 +88,8 @@ object exercise extends App {
   // 21.3
   import implicitConvert.factInt
 
-  val i: Int = 6
-  val fact: Int = i !
+  val i: BigInt = 30
+  val fact: BigInt = i !
 
   println(fact)
 

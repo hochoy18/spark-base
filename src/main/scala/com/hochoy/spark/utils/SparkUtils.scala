@@ -1,5 +1,6 @@
 package com.hochoy.spark.utils
 
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.{SparkConf, SparkContext}
 
 
@@ -11,11 +12,27 @@ import org.apache.spark.{SparkConf, SparkContext}
   */
 object SparkUtils {
 
+  def hadoopHomeSet = System.setProperty("hadoop.home.dir", System.getProperty("user.dir") + "\\..\\..\\hadoop-common-2.2.0-bin");
+
   def createSparkContext(appName: String): SparkContext = {
-    System.setProperty("hadoop.home.dir", System.getProperty("user.dir")+"\\..\\..\\hadoop-common-2.2.0-bin");
+    hadoopHomeSet
     val conf = new SparkConf().setMaster("local").setAppName(appName)
     val sc = new SparkContext(conf)
     sc
+  }
+
+  def createSparkSession(appName: String, conf: SparkConf*): SparkSession = {
+    hadoopHomeSet
+    val spark = SparkSession.builder()
+      .master("local")
+      .appName(appName)
+      .config("spark.some.config.option", "some-value")
+      .config("spark.sql.warehouse.dir", "target/spark-warehouse")
+
+    if (conf != null) {
+      conf.foreach(x => spark.config(x))
+    }
+    spark.getOrCreate()
   }
 
 }

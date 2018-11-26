@@ -57,3 +57,15 @@ object StructTypeTest{
     r.rdd.collect().foreach(x=>println(s"${x}"))
   }
 }
+
+object testDF{
+  def main(args: Array[String]) {
+    val sc = createSparkContext("Struct TypeTest frame ")
+    val sql = new SQLContext(sc)
+    val df = sql.read.json(USER_SPARK_PATH + "sql\\students.sql")
+    df.show()
+    val descDF = df.describe()
+    descDF.show()
+    df.foreach(r=>println(r.mkString(",")))
+  }
+}

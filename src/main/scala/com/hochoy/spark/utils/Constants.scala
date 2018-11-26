@@ -12,4 +12,5 @@ object Constants {
     hadoopHomeSet
     System.getProperty("user.dir")+"\\src\\main\\scala\\com\\hochoy\\spark\\"
   }
+  val FILE_PATH={"sql\\data\\"}
 }

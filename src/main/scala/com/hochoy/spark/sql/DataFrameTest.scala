@@ -19,8 +19,8 @@ object DataFrameTest {
 
   def main(args: Array[String]) {
     val sqlContext = new SQLContext(sc)
-    val fileRDD = sc.textFile(USER_SPARK_PATH + "sql\\students.sql")
-    fileRDD.saveAsTextFile(USER_SPARK_PATH + "sql\\result.txt")
+    val fileRDD = sc.textFile(USER_SPARK_PATH + s"${FILE_PATH}students.sql")
+    fileRDD.saveAsTextFile(USER_SPARK_PATH + s"${FILE_PATH}result.txt")
     val lineRDD = fileRDD.map(line => line.split(","))
     val studentsRDD = lineRDD.map(x => Student(x(0).toLong, x(1), x(2).toLong))
     import sqlContext.implicits._
@@ -28,7 +28,7 @@ object DataFrameTest {
     studentDf.registerTempTable("t_students")
     val df = sqlContext.sql("select * from t_students")
     df.rdd.foreach(row => println(s"${row(0)} ,  ${row(1)}  ,  ${row(2)}"))
-    df.rdd.saveAsTextFile(USER_SPARK_PATH + "sql\\result")
+    df.rdd.saveAsTextFile(USER_SPARK_PATH + s"${FILE_PATH}result")
 
 
   }
@@ -39,7 +39,7 @@ object StructTypeTest{
   def main(args: Array[String]) {
     val sc = createSparkContext("Struct TypeTest frame ")
     val sqlContext = new SQLContext(sc)
-    val fileRDD = sc.textFile(USER_SPARK_PATH + "sql\\students.sql").map(_.split(","))
+    val fileRDD = sc.textFile(USER_SPARK_PATH + s"${FILE_PATH}students.sql").map(_.split(","))
 
     val spark = SparkSession.builder().appName("spark session").config("","")
 
@@ -62,7 +62,7 @@ object testDF{
   def main(args: Array[String]) {
     val sc = createSparkContext("Struct TypeTest frame ")
     val sql = new SQLContext(sc)
-    val df = sql.read.json(USER_SPARK_PATH + "sql\\students.sql")
+    val df = sql.read.json(USER_SPARK_PATH + s"${FILE_PATH}students.sql")
     df.show()
     val descDF = df.describe()
     descDF.show()

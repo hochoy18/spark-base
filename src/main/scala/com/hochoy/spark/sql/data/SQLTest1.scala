@@ -21,7 +21,7 @@ object SQLTest1 {
 
   def main(args: Array[String]) {
 
-    val df = spark.read.json(USER_SPARK_PATH + "sql\\students.sql")
+    val df = spark.read.json(USER_SPARK_PATH + s"${FILE_PATH}students.sql")
     df.show()
     df.printSchema()
     df.select($"name", $"age"+3).show()

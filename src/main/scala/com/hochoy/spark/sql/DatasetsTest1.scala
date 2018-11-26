@@ -24,9 +24,9 @@ object DatasetsTest1 {
 
   def main(args: Array[String]) {
 
-//    testDS1
-//    println("...............................................................")
-//    rdd2DF_Test
+    testDS1
+    println("...............................................................")
+    rdd2DF_Test
     println("==============================================================")
     rdd2DF_Schema
 
@@ -36,7 +36,7 @@ object DatasetsTest1 {
     val caseDS = Seq(Student(123, "hochoy", 23)).toDS()
     caseDS.show()
 
-    val stus = spark.read.json(USER_SPARK_PATH + "sql\\students.sql").as[Student]
+    val stus = spark.read.json(USER_SPARK_PATH + s"${FILE_PATH}students.sql").as[Student]
     stus.show()
   }
 
@@ -46,7 +46,7 @@ object DatasetsTest1 {
       * http://spark.apache.org/docs/latest/sql-getting-started.html#inferring-the-schema-using-reflection
       */
     val stuDF = spark.sparkContext
-      .textFile(USER_SPARK_PATH + "sql\\students1.txt")
+      .textFile(USER_SPARK_PATH + s"${FILE_PATH}students1.txt")
       .map(_.split(","))
       .map(attributes => Student(attributes(0).trim.toLong, attributes(1), attributes(2).trim.toLong))
       .toDF
@@ -81,7 +81,7 @@ object DatasetsTest1 {
       *  3. Apply the schema to the RDD of Rows via `createDataFrame` method provided by SparkSession.
       */
     import spark.implicits._
-    val stuRDD = spark.sparkContext.textFile(USER_SPARK_PATH +"sql\\students1.txt")
+    val stuRDD = spark.sparkContext.textFile(USER_SPARK_PATH +s"${FILE_PATH}students1.txt")
     val schemaStr = "id,name,age"
 
     val fields = schemaStr.split(",")

@@ -15,5 +15,11 @@ object SQLDataSourceTest1 {
     val userDF = spark.read.load(s"${USER_SPARK_PATH}${FILE_PATH}users.parquet")
     userDF.select("name","favorite_color").show()
 
+    val pDF = spark.read.format("json").load(s"${USER_SPARK_PATH}${FILE_PATH}sql_datasource.json")
+    pDF.select("name","age").show()
+    pDF.select("name","age").write.format("parquet").save(s"r.parquet")
+
+    val rDF = spark.read.load("r.parquet")
+    rDF.select().show()
   }
 }

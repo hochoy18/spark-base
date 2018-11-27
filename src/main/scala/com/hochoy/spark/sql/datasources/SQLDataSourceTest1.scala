@@ -22,13 +22,13 @@ object SQLDataSourceTest1 {
     import spark.implicits._
 
     //  Generic Load/Save Functions
-    //    loadAndSave
+    loadAndSave
 
     //Run SQL on files directly
-    //    runSQLAndSave
+    runSQLAndSave
 
     //Loading Data Programmatically
-    //    runBasicParquetExample
+    runBasicParquetExample
 
     //Schema Merging
     runParquetSchemaMergingExample
@@ -130,20 +130,20 @@ object SQLDataSourceTest1 {
       s"${TARGET_DIR}\\schema_merging.parquet"
     }
     val squaresDF = spark.sparkContext.makeRDD(1 to 10).map(i => (i, Math.pow(i, 2))).toDF("value", "square")
-    squaresDF.write.mode(SaveMode.Overwrite)parquet(s"${path}\\key=1")
+    squaresDF.write.mode(SaveMode.Overwrite) parquet (s"${path}\\key=1")
 
-    val cobesDF = spark.sparkContext.makeRDD(1 to 10).map(i=>(i, Math.pow(i, 3))).toDF("value", "cube")
+    val cobesDF = spark.sparkContext.makeRDD(1 to 10).map(i => (i, Math.pow(i, 3))).toDF("value", "cube")
     cobesDF.write.mode(SaveMode.Overwrite).parquet(s"${path}\\key=2")
 
     //before merge
     println("===================================before merge =====================================")
     val v = spark.read.parquet(path)
     v.printSchema()
-    v.select("value","key","square").show()
+    v.select("value", "key", "square").show()
 
     println("===================================after merge =====================================")
     val mergedDF = spark.read.option("mergeSchema", "true").parquet(path)
-    mergedDF.select("value","key","square","cube").show()
+    mergedDF.select("value", "key", "square", "cube").show()
     mergedDF.printSchema()
 
 

@@ -1,6 +1,7 @@
 package com.hochoy.spark.utils
 
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.{SparkConf, SparkContext}
 
 
@@ -10,14 +11,15 @@ import org.apache.spark.{SparkConf, SparkContext}
   * @since :  Date : 2018年11月15日 10:12
   * @version :  V1.0
   */
-object SparkUtils {
+private [spark] object SparkUtils {
 
-  def hadoopHomeSet = System.setProperty("hadoop.home.dir", System.getProperty("user.dir") + "\\..\\..\\hadoop-common-2.2.0-bin");
+  def hadoopHomeSet:String = System.setProperty("hadoop.home.dir", System.getProperty("user.dir") + "\\..\\..\\hadoop-common-2.2.0-bin");
+
+  def conf(appName: String): SparkConf = new SparkConf().setMaster("local").setAppName(appName)
 
   def createSparkContext(appName: String): SparkContext = {
     hadoopHomeSet
-    val conf = new SparkConf().setMaster("local").setAppName(appName)
-    val sc = new SparkContext(conf)
+    val sc = new SparkContext(conf(appName))
     sc
   }
 
@@ -33,6 +35,12 @@ object SparkUtils {
       conf.foreach(x => spark.config(x))
     }
     spark.getOrCreate()
+  }
+
+  def createSparkStreamingContext(appName: String, seconds: Long): StreamingContext = {
+    hadoopHomeSet
+    val ssc = new StreamingContext(conf(appName), Seconds(seconds))
+    ssc
   }
 
 }

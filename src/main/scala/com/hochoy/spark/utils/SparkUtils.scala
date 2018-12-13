@@ -15,7 +15,13 @@ private [spark] object SparkUtils {
 
   def hadoopHomeSet:String = System.setProperty("hadoop.home.dir", System.getProperty("user.dir") + "\\..\\..\\hadoop-common-2.2.0-bin");
 
-  def conf(appName: String): SparkConf = new SparkConf().setMaster("local").setAppName(appName)
+  def conf(appName: String,num:Int=1): SparkConf = {
+    val conf =new SparkConf().setAppName(appName)
+    if(num == 1)
+      conf.setMaster("local")
+    else conf.setMaster(s"local[${num}]")
+    conf
+  }
 
   def createSparkContext(appName: String): SparkContext = {
     hadoopHomeSet

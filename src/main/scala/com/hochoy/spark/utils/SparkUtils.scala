@@ -11,13 +11,13 @@ import org.apache.spark.{SparkConf, SparkContext}
   * @since :  Date : 2018年11月15日 10:12
   * @version :  V1.0
   */
-private [spark] object SparkUtils {
+private[spark] object SparkUtils {
 
-  def hadoopHomeSet:String = System.setProperty("hadoop.home.dir", System.getProperty("user.dir") + "\\..\\..\\hadoop-common-2.2.0-bin");
+  def hadoopHomeSet: String = System.setProperty("hadoop.home.dir", System.getProperty("user.dir") + "\\..\\..\\hadoop-common-2.2.0-bin");
 
-  def conf(appName: String,num:Int=1): SparkConf = {
-    val conf =new SparkConf().setAppName(appName)
-    if(num == 1)
+  def conf(appName: String, num: Int = 1): SparkConf = {
+    val conf = new SparkConf().setAppName(appName)
+    if (num == 1)
       conf.setMaster("local")
     else conf.setMaster(s"local[${num}]")
     conf
@@ -43,9 +43,9 @@ private [spark] object SparkUtils {
     spark.getOrCreate()
   }
 
-  def createSparkStreamingContext(appName: String, seconds: Long): StreamingContext = {
+  def createSparkStreamingContext(appName: String, seconds: Long, num: Int = 1): StreamingContext = {
     hadoopHomeSet
-    val ssc = new StreamingContext(conf(appName), Seconds(seconds))
+    val ssc = new StreamingContext(conf(appName, num), Seconds(seconds))
     ssc
   }
 

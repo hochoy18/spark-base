@@ -5,7 +5,7 @@ object SocketTextStreamingTest {
 
   //nc -l -p 9999
   def main(args: Array[String]): Unit = {
-    val ssc = createSparkStreamingContext("SocketTextStreamingTest",1)
+    val ssc = createSparkStreamingContext("SocketTextStreamingTest",1,2)
 
     val lines = ssc.socketTextStream("localhost",9999)
 

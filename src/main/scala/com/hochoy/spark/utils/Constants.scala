@@ -15,6 +15,7 @@ object Constants {
   val FORMAT_ORC: String = "orc"
   val FORMAT_TEXT: String = "text"
   val FORMAT_LIBSVM: String = "libsvm"
+  val SPARK_SQL_WAREHOUSE_DIR: String = "spark.sql.warehouse.dir"
 
 
   val USER_DIR = {

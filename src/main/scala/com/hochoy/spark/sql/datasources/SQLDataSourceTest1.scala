@@ -18,9 +18,10 @@ object SQLDataSourceTest1 {
 
   val spark = createSparkSession("SQL Data Source ")
 
+  val warehouse_dir = spark.conf.get(SPARK_SQL_WAREHOUSE_DIR)
   def main(args: Array[String]) {
-    import spark.implicits._
 
+    println(s"warehouse_dir :   $warehouse_dir")
     //  Generic Load/Save Functions
     loadAndSave
 
@@ -45,14 +46,14 @@ object SQLDataSourceTest1 {
     val vs = v.select("name", "favorite_numbers", "favorite_color")
     vs.show()
 
-    seleUserDF.write.parquet(s"${USER_DIR}\\target\\nac.parquet")
+    seleUserDF.write.parquet(s"${warehouse_dir}\\nac.parquet")
 
     val pDF = spark.read.format("json").load(s"${USER_SPARK_PATH}${FILE_PATH}sql_datasource.json")
     val seleDF = pDF.select("name", "age")
-    seleDF.write.format("parquet").save(s"${USER_DIR}\\target\\r.parquet")
+    seleDF.write.format("parquet").save(s"${warehouse_dir}\\r.parquet")
 
     println("===================================load data from manually-save file and vie regex-path =====================================")
-    val getDF = spark.read.format("parquet").parquet(s"${USER_DIR}\\target\\r.parquet\\part-*.parquet")
+    val getDF = spark.read.format("parquet").parquet(s"${warehouse_dir}\\r.parquet\\part-*.parquet")
     getDF.printSchema()
     getDF.select("name", "age").show()
 
@@ -95,9 +96,9 @@ object SQLDataSourceTest1 {
       * SaveMode.Overwrite
       * SaveMode.Ignore
       */
-    sqlDF.write.mode(SaveMode.Append).format(FORMAT_JSON).save(s"${USER_DIR}\\target\\saveMode.json")
+    sqlDF.write.mode(SaveMode.Append).format(FORMAT_JSON).save(s"${warehouse_dir}\\saveMode.json")
 
-    val resDF = spark.read.json(s"${USER_DIR}\\target\\saveMode.json\\part-*.json")
+    val resDF = spark.read.json(s"${warehouse_dir}\\saveMode.json\\part-*.json")
     resDF.printSchema()
     resDF.select("favorite_color", "favorite_numbers", "name").show()
 
@@ -111,8 +112,8 @@ object SQLDataSourceTest1 {
       *
       */
     val peopleDF = spark.read.json(s"${USER_SPARK_PATH}${FILE_PATH}people.json")
-    peopleDF.write.mode(SaveMode.Append).parquet(s"${TARGET_DIR}\\peo.parquet")
-    val resDF = spark.read.parquet(s"${TARGET_DIR}\\peo.parquet")
+    peopleDF.write.mode(SaveMode.Append).parquet(s"${warehouse_dir}\\peo.parquet")
+    val resDF = spark.read.parquet(s"${warehouse_dir}\\peo.parquet")
     resDF.createOrReplaceTempView("peo_p")
     val nameDF = spark.sql("select name from peo_p ")
     nameDF.printSchema()
@@ -127,7 +128,7 @@ object SQLDataSourceTest1 {
       */
     import spark.implicits._
     val path = {
-      s"${TARGET_DIR}\\schema_merging.parquet"
+      s"${warehouse_dir}\\schema_merging.parquet"
     }
     val squaresDF = spark.sparkContext.makeRDD(1 to 10).map(i => (i, Math.pow(i, 2))).toDF("value", "square")
     squaresDF.write.mode(SaveMode.Overwrite) parquet (s"${path}\\key=1")

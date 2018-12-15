@@ -3,7 +3,7 @@ package com.hochoy.spark.utils
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.{SparkConf, SparkContext}
-
+import com.hochoy.spark.utils.Constants._
 
 /**
   * @note :  TODO
@@ -35,7 +35,7 @@ private[spark] object SparkUtils {
       .master("local")
       .appName(appName)
       .config("spark.some.config.option", "some-value")
-      .config("spark.sql.warehouse.dir", "target/spark-warehouse")
+      .config(SPARK_SQL_WAREHOUSE_DIR, "target/spark-warehouse")
 
     if (conf != null) {
       conf.foreach(x => spark.config(x))

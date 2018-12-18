@@ -34,12 +34,12 @@ object ArrarTest1{
 
     println(arr.foldRight(1)(_-_))
 
-    exit(1)
+    System.exit(1)
     println(arr.par.fold(1000000)(_+_))
     println(arr.par.fold(1000000)(_+_))
     println(arr.par.fold(1000000)(_+_))
     println(arr.reduce(_+_))
-    exit()
+    System.exit(1)
     val t1 = System.currentTimeMillis()
     println(+arr.sum+"....")
     println("t1:   %l",System.currentTimeMillis() - t1)

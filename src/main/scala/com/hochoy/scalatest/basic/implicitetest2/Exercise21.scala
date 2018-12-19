@@ -80,5 +80,12 @@ object exercise21_6_7 {
   def getFirstChar[T](arg: T)(implicit ev: T =:= String) = ev(arg).head
 }
 
+object ooo extends App{
+  import com.hochoy.scalatest.basic.implicitetest.RichString
+
+  val vv = "123111s1"
+  val v :Long = new RichString(vv).string2long()
+  println(v)
+}
 
 

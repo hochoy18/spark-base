@@ -22,3 +22,22 @@ object RichFile {
     println(content)
   }
 }
+
+class RichString(val numStr: String) {
+   def string2long(): Long = {
+    var f = 0L
+    try {
+       f = numStr.toLong
+    } catch {
+      case ex: Exception =>
+        println(ex)
+        f = 0L
+    }
+    f
+  }
+
+
+}
+
+
+

@@ -1,6 +1,5 @@
 package com.hochoy.concurrent;
 
-import scala.Int;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -10,8 +9,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class ConcurrentModificationExceptionTest {
 
     public static void main(String[] args) {
-//        test2();
-        arrayListTest();
+        test2();
+//        arrayListTest();
     }
     static void arrayListTest(){
         ArrayList<Integer> list = new ArrayList<Integer>();
@@ -80,7 +79,7 @@ public class ConcurrentModificationExceptionTest {
 
     }
     static void test2(){
-        final ArrayList<Integer> list = new ArrayList<Integer>();
+        final List<Integer> list = new CopyOnWriteArrayList<Integer>();
         list.add(1);
         list.add(2);
         list.add(3);

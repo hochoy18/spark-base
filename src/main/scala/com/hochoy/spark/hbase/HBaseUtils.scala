@@ -33,7 +33,7 @@ object HBaseUtils {
 
 
   def getResultByRow(table: Table, row: String): Result = {
-    val g = new Get(Bytes.toBytes(""))
+    val g = new Get(Bytes.toBytes(row))
     val r = table.get(g)
     r
   }

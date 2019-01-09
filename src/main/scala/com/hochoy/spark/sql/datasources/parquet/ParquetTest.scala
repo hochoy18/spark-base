@@ -11,10 +11,9 @@ import org.apache.spark.streaming.dstream.DStream
 object ParquetTest {
 
 
-
   def main(args: Array[String]): Unit = {
-//    println(spark.conf.get("spark.master"))
-//    readParquet
+    //    println(spark.conf.get("spark.master"))
+    //    readParquet
     streamingParquet
 
   }
@@ -31,28 +30,18 @@ object ParquetTest {
 
 
   def streamingParquet(): Unit = {
-//    val ssc = createSparkStreamingContext("StreamingParquet", 1L, 2)
-//    val line = ssc.socketTextStream("localhost", 9999)
-//    val words = line.flatMap(_.split(" "))
-//
-//    val pairs = words.map(w=>(w,1))
-//    val wcs = pairs.reduceByKey(_+_)
-//    wcs.print
-//
-//
-    val ssc = createSparkStreamingContext("SocketTextStreamingTest",1,2)
+    //    val ssc = createSparkStreamingContext("StreamingParquet", 1L, 2)
+    //    val line = ssc.socketTextStream("localhost", 9999)
+    //    val words = line.flatMap(_.split(" "))
+    //
+    //    val pairs = words.map(w=>(w,1))
+    //    val wcs = pairs.reduceByKey(_+_)
+    //    wcs.print
+    //
+    //
+    val ssc = createSparkStreamingContext("SocketTextStreamingTest", 1, 2)
 
-    val lines = ssc.socketTextStream("localhost",9999)
-
-    val words = lines.flatMap(_.split(" "))
-
-    val pairs = words.map(w=>(w,1))
-    val wcs = pairs.reduceByKey(_+_)
-    wcs.print()
-
-
-
-
+    val lines = ssc.socketTextStream("localhost", 9999)
 
     val hochoy = cleanupData(lines)
     println(s"hochoy.count()  .....       ${hochoy.count()}")
@@ -61,13 +50,35 @@ object ParquetTest {
     ssc.awaitTermination()
 
 
-
   }
-  def actionfun(v:DStream[(String, Map[String, _])]): Unit ={
-    v.foreachRDD((rdd:RDD[(String,Map[String,_])],time:Time) ⇒{
+
+  //{"data":[{"modulename":"G10","havebt":"true","phonenumber":"18958241528","devicename":"HTC A810e","network":"EDGE","platform":"Android","havegps":"true","os_version":"2.3.3","version":"2.1","isjailbreak":"1","latitude":"28.8464092000","event_identifier":"bottom_menu_blogrefresh","imsi":"525052342342345","havegravity":"true","useridentifier":"18958241528","lac":"39402","appkey":"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~","language":"zh_CN","wifimac":"74:ea:3a:41:a1:4c","havewifi":"true","longitude":"121.1300102000","mccmnc":"46001","ismobiledevice":"true","deviceid":"359990000000467","time":"2018-12-03 14:43:34","resolution":"1536*864","cellid":"4707"}]}#ip#197.3.156.14
+  def cleanUp(cdlines: DStream[String]): DStream[Map[String, _]] = {
+    cdlines.flatMap(line ⇒ {
+      val data = if (line.contains("#ip#")) {
+        val cd = line.split("#ip#", 2)(0)
+        val ip = if (line.split("#ip#", 2)(1).indexOf(',') > 0) {
+          line.split("#ip#", 2)(1)
+        } else {
+          line.split("#ip#", 2)(1).split(",", 2)(0)
+        }
+        val cdmap = JSON.toListMap(cd)
+        val area = Map("country"→"china",""→"",""→"")
+        cdmap ++ area
+
+      } else {
+        (line, null)
+      }
+      JSON.toListMap(line)
+    })
+  }
+
+
+  def actionfun(v: DStream[(String, Map[String, _])]): Unit = {
+    v.foreachRDD((rdd: RDD[(String, Map[String, _])], time: Time) ⇒ {
       println(s"time is $time")
-      rdd.foreachPartition(it⇒{
-        it.map{case (userid,json)⇒{
+      rdd.foreachPartition(it ⇒ {
+        it.map { case (userid, json) ⇒ {
           val action = json("action").toString
           println(action)
 
@@ -78,6 +89,7 @@ object ParquetTest {
       })
     })
   }
+
   def cleanupData(action: DStream[String]): DStream[(String, Map[String, _])] = {
     val keySets = Set("action", "appkey", "productid", "deviceid", "sessionid", "clienttime", "platform", "channelid", "version")
     action.flatMap(JSON.toListMap).filter { j ⇒

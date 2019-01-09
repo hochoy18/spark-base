@@ -63,7 +63,7 @@ object ParquetTest {
           line.split("#ip#", 2)(1).split(",", 2)(0)
         }
         val cdmap = JSON.toListMap(cd)
-        val area = Map("country"→"china",""→"",""→"")
+        val area = Map("country"→"china","province"→"jiangsu","county"→"nanjing")
         cdmap ++ area
 
       } else {

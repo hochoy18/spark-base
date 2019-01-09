@@ -8,6 +8,7 @@ import com.hochoy.spark.utils.SparkUtils._
   */
 object Constants {
 
+  val Unknown :String = "UNKNOWN"
   val FORMAT_CSV: String = "csv"
   val FORMAT_PARQUET: String = "parquet"
   val FORMAT_JSON: String = "json"
@@ -23,14 +24,10 @@ object Constants {
     System.getProperty("user.dir")
   }
 
-  val TARGET_DIR = {
-    USER_DIR + "\\target"
-  }
+  val TARGET_DIR = USER_DIR + "\\target"
 
-  val USER_SPARK_PATH = {
-    USER_DIR + "\\src\\main\\scala\\com\\hochoy\\spark\\"
-  }
-  val FILE_PATH = {
-    "sql\\data\\"
-  }
+  val USER_SPARK_PATH = USER_DIR + "\\src\\main\\scala\\com\\hochoy\\spark\\"
+
+  val FILE_PATH = "sql\\data\\"
+
 }

@@ -29,10 +29,10 @@ private[spark] object SparkUtils {
     sc
   }
 
-  def createSparkSession(appName: String, conf: SparkConf*): SparkSession = {
+  def createSparkSession(appName: String, conf: SparkConf*)(implicit num:Int = 1): SparkSession = {
     hadoopHomeSet
     val spark = SparkSession.builder()
-      .master("local")
+      .master(s"local[${num}]")
       .appName(appName)
       .config("spark.some.config.option", "some-value")
       .config(SPARK_SQL_WAREHOUSE_DIR, "target/spark-warehouse")

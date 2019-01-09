@@ -1,5 +1,7 @@
 package com.hochoy.spark.utils
 
+import org.apache.hadoop.hbase.util.Bytes
+
 object EnhancedMethods {
 
   /**
@@ -39,6 +41,9 @@ object EnhancedMethods {
     def toFloatZero:Double = catching(classOf[NumberFormatException]) opt s.toFloat match {
       case Some(n:Float) => n
       case _=> 0.0d
+    }
+    def toByteArray: Array[Byte] = {
+      Bytes.toBytes(s)
     }
   }
 

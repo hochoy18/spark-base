@@ -18,6 +18,8 @@
         <hadoop.version>2.6.0</hadoop.version>
         <spark.version>2.1.1</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
+        <akka.typesafe-artifactid.version>2.11</akka.typesafe-artifactid.version>
+        <akka.typesafe.version>2.5.20</akka.typesafe.version>
     </properties>
 
     <repositories>
@@ -190,8 +192,14 @@
         <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-actor -->
         <dependency>
             <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-actor_2.11</artifactId>
-            <version>2.5.20</version>
+            <artifactId>akka-actor_${akka.typesafe-artifactid.version}</artifactId>
+            <version>${akka.typesafe.version}</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-remote -->
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-remote_${akka.typesafe-artifactid.version}</artifactId>
+            <version>${akka.typesafe.version}</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.scala-lang/scala-actors -->
         <dependency>

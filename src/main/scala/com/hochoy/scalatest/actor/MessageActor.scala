@@ -80,8 +80,8 @@ object Server extends App {
         |akka.remote.netty.tcp.port=$port
      """.stripMargin
   )
-  val actorSystem : ActorSystem = ActorSystem("server", conf)
-  val serverActorRef :ActorRef = actorSystem.actorOf(Props[Server], "server")
+  val actorSystem : ActorSystem = ActorSystem("sys-hochoy", conf)
+  val serverActorRef :ActorRef = actorSystem.actorOf(Props[Server], "server-hochoy")
   serverActorRef ! "start"
 }
 
@@ -89,7 +89,7 @@ class Client(host: String, port: Int) extends Actor {
   var serverActorRef: ActorSelection = _
 
   override def preStart(): Unit = {
-    serverActorRef = context.actorSelection(s"akka.tcp://server@${host}:${port}/user/server")
+    serverActorRef = context.actorSelection(s"akka.tcp://sys-hochoy@${host}:${port}/user/server-hochoy")
   }
 
   override def receive: Receive = {

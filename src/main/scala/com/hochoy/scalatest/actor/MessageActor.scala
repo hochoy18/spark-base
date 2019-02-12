@@ -6,6 +6,9 @@ import com.typesafe.config.ConfigFactory
 import scala.io.StdIn
 
 /** Describe:
+  *
+  * https://blog.csdn.net/u012302681/article/details/50667783
+  *
   * Created by IntelliJ IDEA.
   * Time: 9:59
   *
@@ -81,6 +84,16 @@ object Server extends App {
      """.stripMargin
   )
   val actorSystem : ActorSystem = ActorSystem("sys-hochoy", conf)
+
+  /**
+    * 调用ActorSystem.actorOf(..) 创建Actor ，
+    *
+    * << actorOf / actorSelection / actorFor的区别 >>
+    *
+    * actorOf 创建一个新的actor，创建的actor为调用该方法所属的context的直接子actor。
+    *
+    * actorSelection 查找现有actor，并不会创建新的actor
+    */
   val serverActorRef :ActorRef = actorSystem.actorOf(Props[Server], "server-hochoy")
   serverActorRef ! "start"
 }

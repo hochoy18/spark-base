@@ -14,8 +14,43 @@ import java.util.Map;
  * @date 2019/2/26
  */
 public class ClickHouseJDBC {
-    private static String address = "jdbc:clickhouse://192.168.1.240:8123/default";
+    private static String address = "jdbc:clickhouse://192.168.1.243:8123/default";
     private static String driver = "ru.yandex.clickhouse.ClickHouseDriver";
+
+    private static String windowFunnel_action_5 = "select 3 = windowFunnel(10000)(time,  action = '$launch' ,  action = 'login_B', action = '$page') from action_data_c4j;";
+    private static String windowFunnel_action_3 = "select 5 = windowFunnel(10000)(time, action = '$launch' ,  action = 'login_B',  action = '$page',  action ='click_product_C',  action ='click_my') from action_data_c4j;";
+    private static String windoFunnel_page_3 = "select 3 = windowFunnel(10000)(time,  page = 'pages4/LoginActivity' ,  page = 'pages4/CameraActivity', page = 'pages5/FindContactActivity') from action_data_c4j;";
+    private static String windowFunnel_page_4 = "select 4 = windowFunnel(10000)(time,  page = 'pages4/LoginActivity' ,  page = 'pages4/CameraActivity', page = 'pages5/FindContactActivity'  ,  page = 'FindContactActivity' ) from action_data_c4j;";
+    private static String funnel_sql = "SELECT \n" +
+            "userid as stage0,\n" +
+            "groupArray(stage1)[1] as stage1, groupArray(stage2)[1] as stage2, groupArray(stage3)[1] AS stage3,\n" +
+            "      count(value) AS value\n" +
+            "FROM\n" +
+            "  (SELECT `userid`,\n" +
+            "    if(page=='pages2/SettingsActivity', page, NULL) AS stage1 ,\n" +
+            "          if(page =='pages5/CameraActivity', page, NULL) AS stage2,\n" +
+            "          if(page == 'pages1/RegistActivity', page, NULL) AS stage3,\n" +
+            "          count(*) AS value\n" +
+            "   FROM\n" +
+            "     (SELECT `userid`,\n" +
+            "             time,\n" +
+            "             page,\n" +
+            "             gap1/60 AS \"与第一个动作的间隔时间\",\n" +
+            "             if(gap1 == 0, 0, runningDifference(gap1)/60) AS \"与上一个动作的间隔时间\"\n" +
+            "      FROM\n" +
+            "        (SELECT `userid`,\n" +
+            "                time,\n" +
+            "                fist_created_at,\n" +
+            "                page,\n" +
+            "                time - fist_created_at AS gap1\n" +
+            "         FROM action_data_c4j ANY\n" +
+            "         LEFT JOIN\n" +
+            "           (SELECT `userid` ,\n" +
+            "                   min(time) AS fist_created_at\n" +
+            "            FROM action_data_c4j\n" +
+            "            GROUP BY `userid`) using(`userid`)) AS tt) AS test\n" +
+            "   GROUP BY `userid`, page) AS test1\n" +
+            "   group by `userid` ";
 
     private static String allUser = "select count(1) as ALL_USER_COUNT from (" +
             "select distinct deviceid from action_data_c4j_all  " +
@@ -64,6 +99,11 @@ public class ClickHouseJDBC {
             "group by  version ,channelid having GROUP_BY_VERSION_CHANNELID_HAVING > 50 and channelid like '1000%'";
     public static void main(String[] args) {
         connection = init();
+        exeSql(windowFunnel_action_3);
+        exeSql(windowFunnel_action_5);
+        exeSql(windoFunnel_page_3);
+        exeSql(windowFunnel_page_4);
+        exeSql(funnel_sql);
         exeSql(allUser);
         exeSql(activeUser);
         exeSql(sql_nanjing);
@@ -86,19 +126,20 @@ public class ClickHouseJDBC {
             long begin = System.currentTimeMillis();
             results = statement.executeQuery(sql);
             long end = System.currentTimeMillis();
+
+            ResultSetMetaData rsmd = results.getMetaData();
+            List<Map> list = new ArrayList();
+            while (results.next()) {
+                Map map = new HashMap();
+                for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                    map.put(rsmd.getColumnName(i), results.getString(rsmd.getColumnName(i)));
+                }
+                list.add(map);
+            }
+            for (Map map : list) {
+                System.err.println(map);
+            }
             System.out.println("耗时："+(end - begin) + "ms" + "  执行（" + sql + "）");
-//            ResultSetMetaData rsmd = results.getMetaData();
-//            List<Map> list = new ArrayList();
-//            while (results.next()) {
-//                Map map = new HashMap();
-//                for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-//                    map.put(rsmd.getColumnName(i), results.getString(rsmd.getColumnName(i)));
-//                }
-//                list.add(map);
-//            }
-//            for (Map map : list) {
-//                System.err.println(map);
-//            }
         } catch (Exception e) {
             e.printStackTrace();
         } finally {//关闭连接

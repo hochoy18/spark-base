@@ -11,7 +11,7 @@ import com.hochoy.spark.utils.Constants._
   * @since :  Date : 2018年11月15日 10:12
   * @version :  V1.0
   */
-private[spark] object SparkUtils {
+ object SparkUtils {
 
   def hadoopHomeSet: String = System.setProperty("hadoop.home.dir", System.getProperty("user.dir") + "\\..\\..\\hadoop-common-2.2.0-bin");
 

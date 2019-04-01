@@ -1,6 +1,9 @@
 package com.hochoy.concurrent;
 
+import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -61,5 +64,15 @@ public class Test {
             e.printStackTrace();
         }
         System.out.println("count........5 "+ latch.getCount());
+    }
+
+    void test001(){
+        Callable<List<String>> listCallable = new Callable<List<String>>(){
+            public List<String > call() throws Exception {
+                return null;
+            }
+        };
+        FutureTask<List<String > > task = new FutureTask<List<String > > (listCallable);
+        new Thread(task).start();
     }
 }

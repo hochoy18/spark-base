@@ -8,7 +8,13 @@ import com.hochoy.spark.utils.SparkUtils._
 object CreateRdd extends App{
 
   val sc = createSparkContext("createRdd")
+
+  /**
+    * 设置executor的日志级别
+    */
+  sc.setLogLevel("WARN")
   val rdd = sc.textFile(USER_SPARK_PATH+"rdd/README.md")
+
   val rdd1 = rdd.flatMap(x=>{x.split(" ")}).map((_,1))
   rdd1.foreach(x=>println(x._1,x._2))
   val rdd2 = sc.parallelize(List("hello","world","good","morning"))

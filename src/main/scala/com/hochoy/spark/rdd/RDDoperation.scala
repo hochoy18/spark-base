@@ -75,7 +75,7 @@ object RDDoperation {
     val avg: Double = sum_count._1.toDouble / sum_count._2
     println("avg........................ " + avg)
 
-    rdd1.aggregate()
+//    rdd1.aggregate()
 
 
     val count_ : RDD[(String, Int)] = rdd1.aggregateByKey(
@@ -146,6 +146,24 @@ object RDDoperation {
     println(s"sum。。。。。。。   $sum")
     sum
   }
+
+  def singleSum (data :Array[Range.Inclusive] ):Int ={
+    var sum = 0;
+    data.foreach(partition___ ⇒ {
+      var sum_partition = 0;
+      partition___.foreach(element_in_partition ⇒
+        //每个partition中求和
+        sum_partition = sum_partition + element_in_partition
+      )
+      println(s"sum_partition   $sum_partition")
+      sum += sum_partition
+    })
+    println(s"sum。。。。。。。   $sum")
+    sum
+  }
+
+
+
 
   def groupByKeyTest(): Unit = {
     //  RDD[(K, Iterable[V])]

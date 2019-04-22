@@ -13,14 +13,14 @@ object ParquetTest {
 
   def main(args: Array[String]): Unit = {
     //    println(spark.conf.get("spark.master"))
-    //    readParquet
-    streamingParquet
+        readParquet
+//    streamingParquet
 
   }
 
   def readParquet(): Unit = {
     val spark = createSparkSession("ParquetTest")(2)
-    val path = USER_SPARK_PATH + FILE_PATH + "users.parquet"
+    val path = USER_SPARK_PATH + FILE_PATH + "emptyDir"
     val user = spark.read.parquet(path)
     user.show()
     user.createOrReplaceTempView("tmp_user")
@@ -104,3 +104,52 @@ object ParquetTest {
   }
 
 }
+
+
+object o {
+  def singleSum (data :Array[Range.Inclusive] ):Int ={
+    // 在例子中，假设传递的参数是 Array((1 to 5), (2 to 6), (3 to 7))
+    // 我们假设看成三个分区 三个分区的数据分别是  ptn0： 1 to 5, ptn1: 2 to 6, ptn2: 3 to 7
+    var sum = 0;
+    data.foreach(partition___ ⇒ {     // partition___ 相当于我们的三个ptn
+      var sum_partition = 0;          // 相当于 ：aggregate[U: ClassTag](zeroValue: U)(seqOp: (U, T) => U, combOp: (U, U) => U)  zeroValue = 0
+      partition___.foreach(element_in_partition ⇒
+        //每个partition中求和
+        sum_partition = sum_partition + element_in_partition
+      )
+      println(s"sum_partition   $sum_partition")
+      sum += sum_partition
+    })
+    println(s"sum。。。。。。。   $sum")
+    sum
+  }
+
+  def main(args: Array[String]): Unit = {
+    val data = Array((1 to 5), (2 to 6), (3 to 7))
+    singleSum(data)
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

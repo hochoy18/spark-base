@@ -115,9 +115,35 @@ object SQLDataSourceTest1 {
     peopleDF.write.mode(SaveMode.Append).parquet(s"${warehouse_dir}\\peo.parquet")
     val resDF = spark.read.parquet(s"${warehouse_dir}\\peo.parquet")
     resDF.createOrReplaceTempView("peo_p")
+
+    resDF.printSchema()
+    resDF.show()
     val nameDF = spark.sql("select name from peo_p ")
     nameDF.printSchema()
     nameDF.show()
+
+    println("--------------------------------")
+
+
+    import org.apache.spark.sql.functions.monotonically_increasing_id
+    val addDF = nameDF.withColumn("group01",monotonically_increasing_id() )
+    addDF.printSchema()
+    addDF.show()
+
+    import org.apache.spark.sql.expressions.Window
+    import org.apache.spark.sql.functions.row_number
+    val w = Window.orderBy("name")
+    val frame = nameDF.withColumn("group001",row_number().over(w))
+    frame.printSchema()
+    frame.show()
+
+    println("==================================")
+    val frame1 = frame.withColumn("group00001",row_number().over(w))
+    frame1.printSchema()
+    frame1.show()
+
+    //
+
   }
 
   def runParquetSchemaMergingExample = {

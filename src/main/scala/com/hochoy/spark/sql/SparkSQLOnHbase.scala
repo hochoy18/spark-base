@@ -40,10 +40,12 @@ object SparkSQLOnHbase {
     val scan2String = Base64.encodeBytes(proto.toByteArray)
 
     configuration.set(TableInputFormat.SCAN,scan2String)
-    val hbaseRdd: RDD[(ImmutableBytesWritable, Result)] = sc.newAPIHadoopRDD(configuration
-      , Class[TableInputFormat]
-      , Class[ImmutableBytesWritable]
-      , Class[Result]
+    val hbaseRdd: RDD[(ImmutableBytesWritable, Result)] =
+      sc.newAPIHadoopRDD(
+        configuration,
+        classOf[TableInputFormat],
+        classOf[ImmutableBytesWritable],
+        classOf[Result]
     )
 
     hbaseRdd.map(x ⇒{

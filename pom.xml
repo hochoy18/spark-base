@@ -19,6 +19,7 @@
         <spark.version>2.1.1</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <java-version>1.8</java-version>
+        <phoenix.version>4.14.1-HBase-1.4</phoenix.version>
     </properties>
 
     <repositories>
@@ -54,6 +55,13 @@
     </pluginRepositories>
 
     <dependencies>
+        <dependency>
+            <groupId>org.apache.phoenix</groupId>
+            <artifactId>phoenix-spark</artifactId>
+            <version>${phoenix.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <dependency>
             <groupId>com.hortonworks</groupId>
             <artifactId>shc-core</artifactId>

@@ -4,6 +4,7 @@ import com.hochoy.spark.utils.Constants._
 import com.hochoy.spark.utils.SparkUtils._
 import org.apache.spark.sql.SaveMode
 
+import scala.collection.mutable
 /**
   *
   *
@@ -119,7 +120,26 @@ object SQLDataSourceTest1 {
     resDF.printSchema()
     resDF.show()
     val nameDF = spark.sql("select name from peo_p ")
-    nameDF.printSchema()
+
+    val propMap =  mutable.Map[String, String]()
+    if(spark.sql("show tables like 'peo_p' ").count() > 0){
+      println(1111)
+      val desc1 = spark.sql("desc  peo_p")
+      desc1.take(50).foreach(row ⇒ {
+        propMap += (row.getAs("col_name").toString →row.getAs("data_type").toString )
+      })
+    }
+
+    propMap.foreach(println(_))
+
+    val props  = mutable.Map[String, String]("country"→"string","age"→"int","group1"→"boolean")
+    props.toMap
+    props.foreach(x ⇒ {
+      propMap += ( x._1 → x._2)
+    })
+
+    propMap.toList.foreach(println)
+
     nameDF.show()
 
     println("--------------------------------")

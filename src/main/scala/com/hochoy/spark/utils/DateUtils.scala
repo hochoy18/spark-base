@@ -20,6 +20,8 @@ import scala.util.Try
   */
 object DateUtils {
 
+  final val NOT_USER_DEFAULT = "-9999999"
+
   /**
     * 处理 日期间隔 < 0 的数据，<= 0 则使用默认值 "0"
     *
@@ -30,37 +32,74 @@ object DateUtils {
     * @param f
     * @return
     */
-  def getDiffWithDefault(startDate: String, endDate: String, pattern: String = "yyyy-MM-dd", default: String = "0", f: (String, String, String) ⇒ String): String = {
+  def getDiffWithDefault(startDate: String,
+                         endDate: String,
+                         pattern: String = "yyyy-MM-dd",
+                         default: String = NOT_USER_DEFAULT,
+                         f: (String, String, String) ⇒ String): String = {
     val sub = f(startDate, endDate, pattern)
     try {
       val res = sub.toInt
-      if (res <= 0) default else sub
+      if (NOT_USER_DEFAULT == default || res >= 0) {
+        sub
+      } else {
+        default
+      }
     } catch {
       case e: NumberFormatException ⇒ null
     }
   }
 
+  def getFirstDay(date: String, pattern: String = "yyyy-MM-dd", f: (String, String) ⇒ String): String = {
+    val firstDay = f(date, pattern)
+    firstDay
+  }
+
+  def date_first(date: String, pattern: String = "yyyy-MM-dd", dateType: String): String = {
+    val diff = dateType match {
+      case "week" ⇒ getFirstDay(date, pattern, DateBasicFunction.getFirstDayOfWeek)
+      case "month" ⇒ getFirstDay(date, pattern, DateBasicFunction.getFirstDayOfMonth)
+      case _ ⇒ null
+    }
+    diff
+  }
 
   def main(args: Array[String]): Unit = {
-    val darwin = getDiffWithDefault("2019-05-01", "2019-04-30", pattern = "yyyy-MM-dd", default = "0", f = DateBasicFunction.getDateDiff)
-    println("darwin ........ ", darwin)
 
+
+    println(date_diff("20190611", "20190219", "yyyyMMdd", "month"))
+    println(date_diff("20190611", "20190915", "yyyyMMdd", "month"))
+    println(date_diff("20190611", "20190609", "yyyyMMdd", "month", "0"))
+    println(date_diff("20190611", "20190601", "yyyyMMdd", "month", "0"))
+
+
+    System.exit(-1)
+    (20190601 to 20190630).foreach(x ⇒ println(s"week : ", date_first(x.toString, "yyyyMMdd", "week")))
+    println("----------------------------")
+    (20190601 to 20190630).foreach(x ⇒ println(s"month : ", date_first(x.toString, "yyyyMMdd", "month")))
+    println("----------------------------")
+    (20190701 to 20190731).foreach(x ⇒ println(s"month : ", date_first(x.toString, "yyyyMMdd", "month")))
 
   }
 
   /**
     * 获取两个日期间的 间隔的天/周/月数
+    *
     * @param startDate
     * @param endDate
     * @param pattern
     * @param dateType
     * @return
     */
-  def date_diff(startDate: String, endDate: String, pattern: String = "yyyy-MM-dd", dateType: String): String = {
+  def date_diff(startDate: String, endDate: String, pattern: String, dateType: String): String = {
+    date_diff(startDate, endDate, pattern, dateType, NOT_USER_DEFAULT)
+  }
+
+  def date_diff(startDate: String, endDate: String, pattern: String, dateType: String, defaultValue: String): String = {
     val diff = dateType match {
-      case "day" ⇒ getDiffWithDefault(startDate,endDate,pattern,"",DateBasicFunction.getDateDiff)
-      case "week" ⇒ getDiffWithDefault(startDate,endDate,pattern,"",DateBasicFunction.getWeekDiff)
-      case "month" ⇒ getDiffWithDefault(startDate,endDate,pattern,"",DateBasicFunction.getMonthDiff)
+      case "day" ⇒ getDiffWithDefault(startDate, endDate, pattern, defaultValue, DateBasicFunction.getDateDiff)
+      case "week" ⇒ getDiffWithDefault(startDate, endDate, pattern, defaultValue, DateBasicFunction.getWeekDiff)
+      case "month" ⇒ getDiffWithDefault(startDate, endDate, pattern, defaultValue, DateBasicFunction.getMonthDiff)
       case _ ⇒ null
     }
     diff
@@ -72,6 +111,26 @@ object DateUtils {
 
 object DateBasicFunction {
   val logger = LoggerFactory.getLogger(getClass)
+
+
+  def dateOp(start: String, end: String, endDate: String, unit: String = "day"): List[Int] = {
+    unit match {
+      case "day" ⇒ {
+
+        null
+      }
+      case "week" ⇒ {
+
+        null
+      }
+      case "month" ⇒ {
+
+        null
+      }
+      case _ ⇒ List.empty
+    }
+
+  }
 
 
   /**
@@ -181,6 +240,7 @@ object DateBasicFunction {
 
   /**
     * 获取两个日期间的自然周间隔数
+    *
     * @param startDate
     * @param endDate
     * @param pattern
@@ -201,7 +261,7 @@ object DateBasicFunction {
         val weekEndDate = weekInterval.split("~")(1)
         //如果开始时间和结束时间在一周内
         if (getDayOfRange(weekStartDate, weekEndDate, pattern).contains(endDate)) "0" else
-          Math.ceil((to - from) * 1.0 / (1000 * 3600 * 24 * 7)).toInt.toString
+          Math.floor((to - from) * 1.0 / (1000 * 3600 * 24 * 7)).toInt.toString
       } catch {
         case e: ParseException ⇒
           logger.error("ParseException", e)
@@ -320,7 +380,7 @@ object DateBasicFunction {
       val startTime = startCal.getTimeInMillis()
       endCal.setTime(endDt)
       val endTime = endCal.getTimeInMillis()
-      val daysDiff = (endTime - startTime ) / (1000 * 3600 * 24)
+      val daysDiff = (endTime - startTime) / (1000 * 3600 * 24)
       daysDiff.toInt.toString
     }
   }

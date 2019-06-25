@@ -732,7 +732,7 @@ public class CustomActionServiceImpl   {
      * @return 五元组：(
      * action的where条件，user的where条件，用户分群id的set集合，查询条件中action属性列名set集合，用户属性名及其类型的map)
      */
-    Tuple5<
+   private Tuple5<
             StringJoiner, StringJoiner,
             Set<String>, Set<String>,
             Map<String, String>

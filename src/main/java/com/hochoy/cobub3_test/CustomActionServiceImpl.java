@@ -194,15 +194,26 @@ public class CustomActionServiceImpl   {
     String separator = "@@@@@@@";
     private JSONObject resultOp(JSONObject jo, Tuple3<JSONArray,JSONArray,JSONArray> commReturn) {
 
-        JSONArray idxs = commReturn._1();
+//        JSONArray idxs = commReturn._1();
 
         JSONArray series = commReturn._2();
 
         JSONArray by_fields = commReturn._3();
 
 
+        Set idxs__ = new HashSet();
         JSONArray result = jo.getJSONArray("result");
 
+        result.forEach(x->{
+            String[] split = x.toString().split(Constants.SEPARATOR_U0001);
+            int len = split.length;
+            String flag = split[len-3];
+            String indicator = split[len-4];
+            String action = split[len-5];
+            idxs__.add(String.join(separator,action,indicator,flag));
+        });
+        LinkedList idxs = new LinkedList();
+        idxs__.forEach(x-> idxs.add(x.toString()));
         Map<String, Map<String, Map<String, String>>> result1 = new HashMap<>();
         //  分组        event_idx    date      num
         //  分组        date        event_idx  num
@@ -212,15 +223,20 @@ public class CustomActionServiceImpl   {
             int len = split.length;
             String num = split[len - 1]; //
             String date = split[len - 2];
-            String indicator = split[len - 3];
-            String action = split[len - 4];
+            String flag = split[len-3];
+            String indicator = split[len-4];
+            String action = split[len-5];
 
             if ("null".equals(date)){
                 date = "cnt";
             }
             Set bySet = new LinkedHashSet();
-            for (int i = 0; i < len - 4; i++) {
-                bySet.add(split[i]);
+            for (int i = 0; i < len - 5; i++) {
+                if(!"null".equals(split[i])){
+                    bySet.add(split[i]);
+                }else {
+                    bySet.add("unknown");
+                }
             }
             String by;
             if(bySet.isEmpty() ||  (by_fields.size()==1 && "all".equalsIgnoreCase(by_fields.getString(0)))){
@@ -229,7 +245,7 @@ public class CustomActionServiceImpl   {
                 by = String.join(separator,bySet);
             }
             Map<String,Map<String,String>> dateIdxNum = result1.get(by); // date:<idx,num>
-            String idx = action + separator + indicator;
+            String idx = String.join(separator,action,indicator,flag);
 
             Map<String,String> idxNum;
             if (dateIdxNum == null) {
@@ -254,6 +270,13 @@ public class CustomActionServiceImpl   {
         });
         System.out.println(result1);
 
+
+        LinkedList eventIndicatorList = new LinkedList();
+        idxs.forEach(v ->{
+            String[] split = v.toString().split(separator, 3);
+            eventIndicatorList.add(split[0]+"->"+split[1]);
+        });
+        JSONArray indicator = new JSONArray(eventIndicatorList);
 
         JSONArray detailRows = new JSONArray();
         JSONArray rollupRows = new JSONArray();
@@ -301,21 +324,16 @@ public class CustomActionServiceImpl   {
 
             JSONArray byValues = new JSONArray();
             Arrays.asList(groupBy.split(separator)).forEach(x-> byValues.add(x));
-            TreeMap eventIndicator = new TreeMap();
-            idxs.forEach(v ->{
-                String[] split = v.toString().split(separator, 2);
-                eventIndicator.put(split[0],split[1]);
-            });
-            TreeMap rollupEventIndicator =  (TreeMap)eventIndicator.clone();
+
             detailRowChild.put("values",values);
             detailRowChild.put("by_values",byValues);
-            detailRowChild.put("event_indicator",eventIndicator);
+            detailRowChild.put("event_indicator",indicator);
             detailRows.add(detailRowChild);
 
 
             rollupRowChild.put("values",rollupValues);
             rollupRowChild.put("by_values",byValues);
-            rollupRowChild.put("event_indicator",rollupEventIndicator);
+            rollupRowChild.put("event_indicator",indicator);
             rollupRows.add(rollupRowChild);
 
 
@@ -658,9 +676,9 @@ public class CustomActionServiceImpl   {
         SQL = String.join(" UNION ", sqlList);
         String allSelect ;
         if (!groupByJoiner.toString().isEmpty()){
-            allSelect = String.join(", ", groupByJoiner.toString(), "action","INDICATORTYPE", "day", "SUM(ct)");
+            allSelect = String.join(", ", groupByJoiner.toString(), "action","INDICATORTYPE","an", "day", "SUM(ct)");
         }else{
-            allSelect = String.join(", ", "action","INDICATORTYPE", "day", "SUM(ct)");
+            allSelect = String.join(", ", "action","INDICATORTYPE","an", "day", "SUM(ct)");
         }
 //        String allSelect = String.join(", ", partialAggGroupBy,"INDICATORTYPE", "SUM(ct)");
 
@@ -668,11 +686,11 @@ public class CustomActionServiceImpl   {
 
         String grouping;
         if(!groupByJoiner.toString().isEmpty()){
-            grouping = String.join(",", groupByJoiner.toString(), "action", "INDICATORTYPE");
+            grouping = String.join(",", groupByJoiner.toString(), "action", "INDICATORTYPE","an");
         }else {
-            grouping = String.join(",", "action", "INDICATORTYPE");
+            grouping = String.join(",", "action", "INDICATORTYPE","an");
         }
-        String groupingSet = String.format("GROUPING SETS(( %s ),(%s) ) ORDER BY %s", String.join(",",partialAggGroupBy,"INDICATORTYPE"), grouping,partialAggGroupBy); // groupby + action
+        String groupingSet = String.format("GROUPING SETS(( %s ),(%s) ) ORDER BY %s", String.join(",",partialAggGroupBy,"INDICATORTYPE","an"), grouping,partialAggGroupBy); // groupby + action
 
         String group = String.join(" ", allGroupBy, groupingSet);
         String allSQL = String.format("select %s from (%s) group by %s ", allSelect, SQL, group);
@@ -696,8 +714,8 @@ public class CustomActionServiceImpl   {
         System.out.println("props:                   \"" + prop.toString() + "\"");
         System.out.println("groupIds:                   \"" + groupIds.toString() + "\"");
 
-        System.out.println("taskSql:                   \"" + taskSql.toString() + "\"");
-        System.out.println("allSQL:                   \"" + allSQL.toString() + "\"");
+        System.out.println("taskSql:                   " + taskSql   );
+        System.out.println("allSQL:                    " + allSQL     );
 
 
         return new Tuple2<>(allSQL,taskSql);
@@ -976,6 +994,8 @@ public class CustomActionServiceImpl   {
         text = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"all\"],\"to_date\":\"20190615\",\"productId\":\"11148\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"cf_aefzt_ccxq\",\"childFilterParam\":{\"conditions\":[{\"type\":\"event.platform\",\"function\":\"equal\",\"params\":[\"Android\",\"iOS\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\"}],\"relation\":\"and\"}},{\"eventType\":\"userid\",\"eventOriginal\":\"cf_lc_lccp_gm\",\"childFilterParam\":{\"conditions\":[]}}]}";
         text = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"event.country\",\"event.region\"],\"to_date\":\"20190615\",\"productId\":\"11148\",\"action\":[{\"eventType\":\"userid\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"loginUser\",\"eventOriginal\":\"cf_aefzt\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"acc\",\"eventOriginal\":\"cf_aefzt\",\"childFilterParam\":{\"conditions\":[]}}]}\n";
         text = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"event.country\",\"event.region\",\"event.city\"],\"to_date\":\"20190613\",\"productId\":\"10940\",\"action\":[{\"eventType\":\"userid\",\"eventOriginal\":\"dbyq_cf\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"loginUser\",\"eventOriginal\":\"dbyq_sh\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"acc\",\"eventOriginal\":\"dbyq_wd\",\"childFilterParam\":{\"conditions\":[]}}]}\n";
+        //多指标的事件相同
+        text = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"event.country\",\"event.region\",\"event.city\"],\"to_date\":\"20190614\",\"productId\":\"11148\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"acc\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}}]}";
         JSONObject jo = JSONObject.parseObject(text);
         impl.getQueryResult(jo);
 
@@ -983,6 +1003,8 @@ public class CustomActionServiceImpl   {
         String res0 = "{\"jobId\":\"91b67898-6c91-4d58-b368-22214139df6a\",\"result\":[\"cf_aefzt_ccxq\\u0001acc\\u0001null\\u000171\",\"cf_aefzt_ccxq\\u0001acc\\u000120190611\\u000119\",\"cf_aefzt_ccxq\\u0001acc\\u000120190612\\u000116\",\"cf_aefzt_ccxq\\u0001acc\\u000120190613\\u00011\",\"cf_aefzt_ccxq\\u0001acc\\u000120190614\\u000120\",\"cf_aefzt_ccxq\\u0001acc\\u000120190615\\u000115\",\"cf_lc_lccp_gm\\u0001userid\\u0001null\\u00018315\",\"cf_lc_lccp_gm\\u0001userid\\u000120190611\\u00012333\",\"cf_lc_lccp_gm\\u0001userid\\u000120190612\\u00012041\",\"cf_lc_lccp_gm\\u0001userid\\u000120190613\\u00011875\",\"cf_lc_lccp_gm\\u0001userid\\u000120190614\\u00011669\",\"cf_lc_lccp_gm\\u0001userid\\u000120190615\\u0001397\"]}";
 
         res0 = "{\"jobId\":\"1b8a3a31-b619-44e0-a4ea-8e1c55f26cb2\",\"result\":[\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u0001null\\u000136\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u000120190611\\u000110\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u000120190612\\u000111\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u000120190613\\u000115\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u0001null\\u000118\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u000120190611\\u00019\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u000120190612\\u00014\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u000120190613\\u00015\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u0001null\\u0001276\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u000120190611\\u000175\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u000120190612\\u000186\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u000120190613\\u0001115\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u0001null\\u000126\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u000120190611\\u000116\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u000120190612\\u00018\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u000120190613\\u00012\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u0001null\\u000114\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u000120190611\\u00015\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u000120190612\\u00015\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u000120190613\\u00014\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u0001null\\u0001407\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u000120190611\\u0001181\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u000120190612\\u0001149\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u000120190613\\u000177\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u0001null\\u00019\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u000120190611\\u00013\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u000120190612\\u00014\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u000120190613\\u00012\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_sh\\u0001loginUser\\u0001null\\u00012\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_sh\\u0001loginUser\\u000120190612\\u00011\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_sh\\u0001loginUser\\u000120190613\\u00011\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u0001null\\u000151\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u000120190611\\u000117\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u000120190612\\u000119\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u000120190613\\u000115\"]}";
+        res0 = "{\"jobId\":\"ccc8431d-4c0b-4dde-a06f-c66c3ed7d6ea\",\"result\":[\"中国\\u0001江苏\\u0001null\\u0001dbyq_cf\\u0001userid\\u0001A\\u0001null\\u000162\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190611\\u000123\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190612\\u000118\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190613\\u000121\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u0001null\\u000129\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190611\\u000115\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190612\\u00016\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190613\\u00018\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_wd\\u0001acc\\u0001C\\u0001null\\u0001632\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190611\\u0001219\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190612\\u0001200\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190613\\u0001213\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u0001A\\u0001null\\u000136\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190611\\u000110\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190612\\u000111\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190613\\u000115\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u0001null\\u000118\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190611\\u00019\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190612\\u00014\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190613\\u00015\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u0001C\\u0001null\\u0001276\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190611\\u000175\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190612\\u000186\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190613\\u0001115\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u0001A\\u0001null\\u000126\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190611\\u000116\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190612\\u00018\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190613\\u00012\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u0001null\\u000114\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190611\\u00015\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190612\\u00015\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190613\\u00014\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u0001C\\u0001null\\u0001407\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190611\\u0001181\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190612\\u0001149\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190613\\u000177\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u0001A\\u0001null\\u00019\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190611\\u00013\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190612\\u00014\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190613\\u00012\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u0001null\\u00012\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190612\\u00011\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190613\\u00011\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u0001C\\u0001null\\u000151\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190611\\u000117\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190612\\u000119\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190613\\u000115\",]}";
+        res0 = "{\"jobId\":\"982ad3bb-165f-4bb1-9632-191683b8a43e\",\"result\":[\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001A\\u0001null\\u0001356\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001B\\u0001null\\u0001356\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190611\\u000173\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190611\\u000173\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190612\\u000191\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190612\\u000191\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190613\\u000191\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190613\\u000191\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190614\\u0001101\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190614\\u0001101\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001B\\u0001null\\u0001104\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001A\\u0001null\\u0001104\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190611\\u000135\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190611\\u000135\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190612\\u000128\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190612\\u000128\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190613\\u000123\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190613\\u000123\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190614\\u000118\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190614\\u000118\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001B\\u0001null\\u000180\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001A\\u0001null\\u000180\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190611\\u000116\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190611\\u000116\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190612\\u000127\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190612\\u000127\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190613\\u000116\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190613\\u000116\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190614\\u000121\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190614\\u000121\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001B\\u0001null\\u000133\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001A\\u0001null\\u000133\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190611\\u000110\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190611\\u000110\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190612\\u000111\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190612\\u000111\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190613\\u00017\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190613\\u00017\",]}";
         JSONObject jo1 =JSONObject.parseObject(res0);
         Tuple3<JSONArray, JSONArray, JSONArray> commReturn = impl.commRetrunOp(jo);
         JSONObject res = impl.resultOp(jo1, commReturn);

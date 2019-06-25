@@ -16,6 +16,7 @@ public class Constants {
     public static final String REPORT_CHAR_TYPE_LINE = "line";
     public static final String REPORT_CHAR_TYPE_TABLE = "table";
     public static final String REPORT_CHAR_TYPE_NUMBER = "number";
+    public static final String SEPARATOR_U0001 = "\\u0001";
 
     /**
      * 以下为事件分析

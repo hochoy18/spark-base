@@ -202,7 +202,7 @@ public class CustomActionServiceImpl   {
         JSONArray by_fields = commReturn._3();
 
 
-        Set idxs__ = new HashSet();
+        Set idxs__ = new LinkedHashSet();
         JSONArray result = jo.getJSONArray("result");
 
         Map m = new HashMap();
@@ -1079,7 +1079,7 @@ public class CustomActionServiceImpl   {
 //        Map<String,String> ms = Maps.newLinkedHashMap();
 //        m.entrySet().stream().sorted(Map.Entry.<String,String>comparingByKey()).forEachOrdered(e -> {Map.Entry em = (Map.Entry)e; ms.put((String)em.getKey(), (String)em.getValue());});
 
-        String text;
+       /* String text;
         text = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"event.country\",\"event.region\",\"event.city\"],\"to_date\":\"20190614\",\"productId\":\"11148\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"acc\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}}]}";
 
         JSONObject jo = JSONObject.parseObject(text);
@@ -1094,7 +1094,7 @@ public class CustomActionServiceImpl   {
         CustomActionServiceImpl impl = new CustomActionServiceImpl();
 
 
-        impl.saveDataToHbase(action,reportId,tableName,data);
+        impl.saveDataToHbase(action,reportId,tableName,data);*/
         resultOpTest();
 
 

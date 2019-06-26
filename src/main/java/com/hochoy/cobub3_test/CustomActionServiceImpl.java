@@ -92,78 +92,79 @@ public class CustomActionServiceImpl   {
 //    private JobHistoryDao jobHistoryDao;
 
 //    @Override
-    public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
+public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
 
 
-        String productId = jsonObject.getString(Constants.PRODUCTID);
-        String from = jsonObject.getString(Constants.FROM_DATE);
-        String to = jsonObject.getString(Constants.TO_DATE);
-        String unit = jsonObject.getString(Constants.UNIT);
+    String productId = jsonObject.getString(Constants.PRODUCTID);
+    String from = jsonObject.getString(Constants.FROM_DATE);
+    String to = jsonObject.getString(Constants.TO_DATE);
+    String unit = jsonObject.getString(Constants.UNIT);
+    if (!"day".equalsIgnoreCase(unit)){
+        return new JSONObject();
+    }
 
-        StringJoiner commWhere = new StringJoiner(" AND ");
+    StringJoiner commWhere = new StringJoiner(" AND ");
 //
-        String dateCon = String.format("( productid = '%s' AND day >= '%s' AND  day <= '%s' )", productId, from, to);
-        commWhere.add(dateCon);
+    String dateCon = String.format("( productid = '%s' AND day >= '%s' AND  day <= '%s' )", productId, from, to);
+    commWhere.add(dateCon);
 
 
-        JSONObject filters = jsonObject.getJSONObject(Constants.FILTER);//外部筛选条件
-        JSONArray fields = jsonObject.getJSONArray(Constants.BY_FIELDS);
+    JSONObject filters = jsonObject.getJSONObject(Constants.FILTER);//外部筛选条件
+    JSONArray fields = jsonObject.getJSONArray(Constants.BY_FIELDS);
 
 
-        JSONArray conditions = filters.getJSONArray(Constants.CONDITIONS);
-        String relation = filters.getString("relation"); // 主查询条件 逻辑关系 and / or
+    JSONArray conditions = filters.getJSONArray(Constants.CONDITIONS);
+    String relation = filters.getString("relation"); // 主查询条件 逻辑关系 and / or
 
 
-        JSONArray actions = jsonObject.getJSONArray(Constants.ACTION);//多指标
+    JSONArray actions = jsonObject.getJSONArray(Constants.ACTION);//多指标
 
-        // 根据分组字段 by_fields 拼接 需要 【select 的字段和 group by 字段 】
-        /**
-         *  返回 分组 + 查询 字段
-         *  return (outGroupByUser, outGroupByAction, outSelectFieldUser, outSelectFieldAction)
-         */
+    // 根据分组字段 by_fields 拼接 需要 【select 的字段和 group by 字段 】
+    /**
+     *  返回 分组 + 查询 字段
+     *  return (outGroupByUser, outGroupByAction, outSelectFieldUser, outSelectFieldAction)
+     */
 
-        Tuple6 selectAndGroupBy = byFieldOp(fields,productId);
+    Tuple6 selectAndGroupBy = byFieldOp(fields,productId);
 //        Tuple4 selectAndGroupBy = new Tuple4(by._1(), by._2(), by._3(), by._4());
 
 
-        /**
-         * 外部查询 where 条件
-         * return ( userWhere,actionWhere)
-         */
-        Tuple5 filter = queryConditionOp(conditions, relation);
+    /**
+     * 外部查询 where 条件
+     * return ( userWhere,actionWhere)
+     */
+    Tuple5 filter = queryConditionOp(conditions, relation);
 //        Tuple2 filter = new Tuple2(queryCondition._1(), queryCondition._2());
 
 
-        Map map = new HashMap();
-        map.put("relation", relation);
-        map.put("commWhere", commWhere);
-        map.put("productId", productId);
+    Map map = new HashMap();
+    map.put("relation", relation);
+    map.put("commWhere", commWhere);
+    map.put("productId", productId);
 
-        /**
-         * 结合 {@link filter}、{@link selectAndGroupBy}  拼接 单指标 SQL
-         */
-        Tuple2<String,String> sqlOps = actionToSingleIndicatorSQL(actions, selectAndGroupBy, filter, map);
+    /**
+     * 结合 {@link filter}、{@link selectAndGroupBy}  拼接 单指标 SQL
+     */
+    Tuple2<String,String> sqlOps = actionToSingleIndicatorSQL(actions, selectAndGroupBy, filter, map);
 
+    JSONObject responseResult = new JSONObject() ;//= querySparkSql(new StringBuilder(sqlOps._1), maxLine,sqlOps._2);
 
-        String res0 = "";
-        JSONObject responseResult = JSONObject.parseObject(res0);//querySparkSql(new StringBuilder(sqlOps._1), maxLine,sqlOps._2);
-
-        if (responseResult == null || (responseResult.containsKey("status") && responseResult.getString("status").equalsIgnoreCase("error"))) {
-            return new JSONObject();
-        }
-        System.out.println("responseResult.....................\n"+responseResult);
-
-        JSONArray jsonArray = responseResult.getJSONArray("result");
-        System.out.println("jsonArray........................    \n"+jsonArray);
-
-        Tuple3<JSONArray, JSONArray, JSONArray> commReturn = commRetrunOp(jsonObject);
-
-        JSONObject result = resultOp(responseResult, commReturn);
-
-
-
-        return result;
+    if (responseResult == null || (responseResult.containsKey("status") && responseResult.getString("status").equalsIgnoreCase("error"))) {
+        return new JSONObject();
     }
+    System.out.println("responseResult.....................\n"+responseResult);
+
+    JSONArray jsonArray = responseResult.getJSONArray("result");
+    System.out.println("jsonArray........................    \n"+jsonArray);
+
+    Tuple3<JSONArray, JSONArray, JSONArray> commReturn = commRetrunOp(jsonObject);
+
+    JSONObject result = resultOp(responseResult, commReturn);
+
+
+
+    return result;
+}
 
     private Tuple3<JSONArray,JSONArray,JSONArray> commRetrunOp(JSONObject jsonObject ) {
         JSONArray idxs = new JSONArray();
@@ -202,7 +203,7 @@ public class CustomActionServiceImpl   {
         JSONArray by_fields = commReturn._3();
 
 
-        Set idxs__ = new LinkedHashSet();
+        LinkedHashSet idxs__ = new LinkedHashSet();
         JSONArray result = jo.getJSONArray("result");
 
         Map m = new HashMap();
@@ -392,9 +393,9 @@ public class CustomActionServiceImpl   {
      * @param map
      */
     private Tuple2<String,String> actionToSingleIndicatorSQL(JSONArray actions,
-                                              Tuple6 byFields,
-                                              Tuple5 outFilters,
-                                              Map map) {
+                                                             Tuple6 byFields,
+                                                             Tuple5 outFilters,
+                                                             Map map) {
         String parquetSQL = "SELECT  %s  FROM parquetTmpTable WHERE %s  GROUP BY %s";
         String joinSQL = "(SELECT %s  FROM parquetTmpTable WHERE %s )  ta JOIN ( SELECT %s FROM usersTable WHERE   %s  ) tu " +
                 "ON concat_ws('_', '%s', ta.global_user_id) = tu.pk where %s ";
@@ -740,7 +741,7 @@ public class CustomActionServiceImpl   {
      * @return 五元组：(
      * action的where条件，user的where条件，用户分群id的set集合，查询条件中action属性列名set集合，用户属性名及其类型的map)
      */
-   private Tuple5<
+    private Tuple5<
             StringJoiner, StringJoiner,
             Set<String>, Set<String>,
             Map<String, String>

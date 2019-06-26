@@ -10,6 +10,7 @@ import com.alibaba.fastjson.JSONObject;
 //import com.cobub.analytics.web.util.http.CobubHttpClient;
 //import com.cobub.analytics.web.util.http.JobServer;
 import com.google.common.base.Joiner;
+import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -204,14 +205,21 @@ public class CustomActionServiceImpl   {
         Set idxs__ = new HashSet();
         JSONArray result = jo.getJSONArray("result");
 
+        Map m = new HashMap();
         result.forEach(x->{
             String[] split = x.toString().split(Constants.SEPARATOR_U0001);
             int len = split.length;
             String flag = split[len-3];
             String indicator = split[len-4];
             String action = split[len-5];
-            idxs__.add(String.join(separator,action,indicator,flag));
+            m.putIfAbsent(flag,String.join(separator,action,indicator));
+//            idxs__.add(String.join(separator,action,indicator,flag));
         });
+        Map<String,String> ms = new LinkedHashMap<>();
+        m.entrySet().stream().sorted(Map.Entry.<String,String>comparingByKey()).forEachOrdered(e -> {Map.Entry em = (Map.Entry)e; ms.putIfAbsent((String)em.getKey(), (String)em.getValue());});
+        ms.forEach((k,v)-> idxs__.add(String.join(separator,v,k)));
+
+
         LinkedList idxs = new LinkedList();
         idxs__.forEach(x-> idxs.add(x.toString()));
         Map<String, Map<String, Map<String, String>>> result1 = new HashMap<>();
@@ -985,7 +993,117 @@ public class CustomActionServiceImpl   {
     }
 
 
-    public static void main(String[] args) throws  IOException{
+
+    private void saveDataToHbase(JSONArray actions, Integer reportId, String tableName, JSONObject data) throws IOException {
+        JSONArray values = data.getJSONArray("originalValue");
+
+        if (values != null && !values.isEmpty()) {
+            JSONArray dates = data.getJSONArray("date");
+            JSONObject action = actions.getJSONObject(0);
+            String eventType = action.getString(Constants.EVENT_TYPE);
+
+            // 分别为总次数、触发用户数、登录用户数
+            String qualifier = "";
+            switch (eventType) {
+                case "acc":
+                    qualifier = "count(action)";
+                    break;
+                case "userid":
+                    qualifier = "count(distinct deviceid)";
+                    break;
+                case "loginUser":
+                    qualifier = "count(distinct userid)";
+                    break;
+                default:
+                    break;
+            }
+
+            Table table = Connection2hbase.getTable(tableName);
+            List<Put> puts = new ArrayList<>();
+            final int size = values.size();
+            int count = 0;
+            for (int i = 0; i < size; i++) {
+                JSONObject value = values.getJSONObject(i);
+                JSONArray byValues = value.getJSONArray(Constants.BY_VALUES);
+                JSONArray counts = value.getJSONArray(Constants.COUNT);
+
+                // 针对单个总体
+                if (!byValues.isEmpty() && byValues.size() == 1 && "总体".equals(byValues.getString(0))){
+                    for (int j = 0; j < counts.size(); j++) {
+                        String rowKey = String.valueOf(reportId) + Constants.SEPARATOR +
+                                dates.getString(j).replaceAll("-", "") + Constants.SEPARATOR;
+                        Put put = new Put(Bytes.toBytes(rowKey));
+                        String stringValue = String.valueOf(counts.getJSONArray(j).getInteger(0));
+                        put.addColumn(Bytes.toBytes("f"), Bytes.toBytes(qualifier), Bytes.toBytes(stringValue));
+                        puts.add(put);
+                        count++;
+                        if (count % 200 == 0) {
+                            table.put(puts);
+                            puts.clear();
+                        }
+                    }
+                }else {
+                    for (int j = 0; j < counts.size(); j++) {
+                        String rowKey = String.valueOf(reportId) + Constants.SEPARATOR + dates.getString(j).replaceAll("-", "") +
+                                Constants.SEPARATOR + Joiner.on(Constants.SEPARATOR).join(byValues).trim();
+                        Put put = new Put(Bytes.toBytes(rowKey));
+                        String stringValue = String.valueOf(counts.getJSONArray(j).getInteger(0));
+                        put.addColumn(Bytes.toBytes("f"), Bytes.toBytes(qualifier), Bytes.toBytes(stringValue));
+                        puts.add(put);
+                        count++;
+                        if (count % 200 == 0) {
+                            table.put(puts);
+                            puts.clear();
+                        }
+                    }
+                }
+            }
+
+            if (!puts.isEmpty()) {
+                table.put(puts);
+            }
+
+            table.close();
+        }
+    }
+
+
+    public static void main(String[] args)  throws  IOException{
+
+//        Map m = new LinkedHashMap();
+//        m.put("C","ccc");
+//        m.put("D","ccc");
+//        m.put("A","aaa");
+//        m.put("B","bbb");
+//
+//        Map<String,String> ms = Maps.newLinkedHashMap();
+//        m.entrySet().stream().sorted(Map.Entry.<String,String>comparingByKey()).forEachOrdered(e -> {Map.Entry em = (Map.Entry)e; ms.put((String)em.getKey(), (String)em.getValue());});
+
+        String text;
+        text = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"event.country\",\"event.region\",\"event.city\"],\"to_date\":\"20190614\",\"productId\":\"11148\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"acc\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}}]}";
+
+        JSONObject jo = JSONObject.parseObject(text);
+        JSONArray action = jo.getJSONArray("action");
+        Integer reportId  = 10001;
+        String tableName = "razor_100011";
+
+        String dataStr;
+        dataStr = "{\"rollup_result\":{\"series\":[\"20190611\",\"20190612\",\"20190613\",\"20190614\"],\"total_rows\":4,\"by_fields\":[\"event.country\",\"event.region\",\"event.city\"],\"num_rows\":4,\"rows\":[{\"values\":[[\"356\",\"356\"]],\"by_values\":[\"中国\",\"江苏\",\"unknown\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]},{\"values\":[[\"80\",\"80\"]],\"by_values\":[\"中国\",\"江苏\",\"南通\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]},{\"values\":[[\"33\",\"33\"]],\"by_values\":[\"中国\",\"江苏\",\"宿迁\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]},{\"values\":[[\"104\",\"104\"]],\"by_values\":[\"中国\",\"江苏\",\"南京\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]}]},\"detail_result\":{\"series\":[\"20190611\",\"20190612\",\"20190613\",\"20190614\"],\"total_rows\":4,\"by_fields\":[\"event.country\",\"event.region\",\"event.city\"],\"num_rows\":4,\"rows\":[{\"values\":[[\"73\",\"73\"],[\"91\",\"91\"],[\"91\",\"91\"],[\"101\",\"101\"]],\"by_values\":[\"中国\",\"江苏\",\"unknown\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]},{\"values\":[[\"16\",\"16\"],[\"27\",\"27\"],[\"16\",\"16\"],[\"21\",\"21\"]],\"by_values\":[\"中国\",\"江苏\",\"南通\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]},{\"values\":[[\"10\",\"10\"],[\"11\",\"11\"],[\"7\",\"7\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"江苏\",\"宿迁\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]},{\"values\":[[\"35\",\"35\"],[\"28\",\"28\"],[\"23\",\"23\"],[\"18\",\"18\"]],\"by_values\":[\"中国\",\"江苏\",\"南京\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]}]}}";
+        JSONObject data = JSONObject.parseObject(dataStr);
+
+        CustomActionServiceImpl impl = new CustomActionServiceImpl();
+
+
+        impl.saveDataToHbase(action,reportId,tableName,data);
+        resultOpTest();
+
+
+    }
+
+
+
+
+    public static void resultOpTest() throws  IOException{
         CustomActionServiceImpl impl = new CustomActionServiceImpl();
 
 

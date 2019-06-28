@@ -9,9 +9,7 @@ import com.alibaba.fastjson.JSONObject;
 //import com.cobub.analytics.web.util.*;
 //import com.cobub.analytics.web.util.http.CobubHttpClient;
 //import com.cobub.analytics.web.util.http.JobServer;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Maps;
-import org.apache.commons.lang3.StringUtils;
+//import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -29,7 +27,6 @@ import scala.Tuple3;
 import scala.Tuple5;
 import scala.Tuple6;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 自定义事件（事件分析）
  */
 //@Service
-public class CustomActionServiceImpl   {
+public class CustomActionServiceImpl  {
 
     private static final Logger logger = LoggerFactory.getLogger(CustomActionServiceImpl.class);
     public static final String AND = " and ";
@@ -53,25 +50,25 @@ public class CustomActionServiceImpl   {
     public static final String EQUAL_SINGLE_QUOTE = " = '";
     public static final String DB_PARQUET = " e1.";//表parquetTmpTable别名
     public static final String DB_USER = " e2.";//表usersTable别名
-
+    String separator = "@@@@@@@";
 //    @Autowired
 //    private JobServer jobServer;
 
-//    @Value("${spark.query.maxLine}")
+    //@Value("${spark.query.maxLine}")
     private String maxLine = "1000";
 
-//    @Value("${spark.export.query.maxLine}")
-    private String exportMaxLine;
+    //@Value("${spark.export.query.maxLine}")
+    private String exportMaxLine ="100";
 
-//    @Value("${hbasenamespace}")
+    //@Value("${hbasenamespace}")
     private String hbaseNameSpace = "cobub3";
 
 //    @Autowired
 //    private UserMetadataService userMetadataService;
-
+//
 //    @Autowired
 //    private ActionReportMapper actionReportMapper;
-
+//
 //    @Autowired
 //    private ReportIndividMapper reportIndividMapper;
 //
@@ -91,82 +88,88 @@ public class CustomActionServiceImpl   {
 //    @Autowired
 //    private JobHistoryDao jobHistoryDao;
 
-//    @Override
-public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
+    //@Override
+    public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
+        JSONObject filters = jsonObject.getJSONObject(Constants.FILTER);//外部筛选条件
+        String relation = filters.getString("relation"); // 主查询条件 逻辑关系 and / or
+        String unit = jsonObject.getString(Constants.UNIT);
+        String from = jsonObject.getString(Constants.FROM_DATE);
+        String to = jsonObject.getString(Constants.TO_DATE);
+        String productId = jsonObject.getString(Constants.PRODUCTID);
+        if (!"day".equalsIgnoreCase(unit)){
+            return new JSONObject();
+        }
+
+        StringJoiner commWhere = new StringJoiner(" AND ");
+//
+        String dateCon = String.format("( productid = '%s' AND day >= '%s' AND  day <= '%s' )", productId, from, to);
+        commWhere.add(dateCon);
+        JSONArray actions = jsonObject.getJSONArray(Constants.ACTION);//多指标
 
 
-    String productId = jsonObject.getString(Constants.PRODUCTID);
-    String from = jsonObject.getString(Constants.FROM_DATE);
-    String to = jsonObject.getString(Constants.TO_DATE);
-    String unit = jsonObject.getString(Constants.UNIT);
-    if (!"day".equalsIgnoreCase(unit)){
-        return new JSONObject();
+        Map map = new HashMap();
+        map.put("relation", relation);
+        map.put("commWhere", commWhere);
+        map.put("productId", productId);
+
+        Tuple2 queryOrSaveOp = queryOrSaveOp(jsonObject);
+        /**
+         * 结合 {@link filter}、{@link selectAndGroupBy}  拼接 单指标 SQL
+         */
+        Tuple3<String,String,Object> sqlOps = generateMultipleIndicatorsSQL(actions, (Tuple6)queryOrSaveOp._1, (Tuple5) queryOrSaveOp._2, map,true);
+
+        JSONObject responseResult = querySparkSql(new StringBuilder(sqlOps._1()), maxLine,sqlOps._2());
+
+        if (!responseResult.containsKey("result") ||responseResult.isEmpty() ||responseResult == null ||
+                (responseResult.containsKey("status") && responseResult.getString("status").equalsIgnoreCase("error"))) {
+            return new JSONObject();
+        }
+        System.out.println("responseResult.....................\n"+responseResult);
+
+        JSONArray jsonArray = responseResult.getJSONArray("result");
+        System.out.println("jsonArray........................    \n"+jsonArray);
+
+        Tuple3<JSONArray, JSONArray, JSONArray> commReturn = commReturnOp(jsonObject);
+
+        JSONObject result = resultOp(responseResult, commReturn,(LinkedList)sqlOps._3());
+
+        return result;
     }
 
-    StringJoiner commWhere = new StringJoiner(" AND ");
-//
-    String dateCon = String.format("( productid = '%s' AND day >= '%s' AND  day <= '%s' )", productId, from, to);
-    commWhere.add(dateCon);
+    private Tuple2<Tuple6,Tuple5>  queryOrSaveOp(JSONObject jsonObject){
+        String productId = jsonObject.getString(Constants.PRODUCTID);
+
+        JSONObject filters = jsonObject.getJSONObject(Constants.FILTER);//外部筛选条件
+        JSONArray fields = jsonObject.getJSONArray(Constants.BY_FIELDS);
+
+        JSONArray conditions = filters.getJSONArray(Constants.CONDITIONS);
+        String relation = filters.getString("relation"); // 主查询条件 逻辑关系 and / or
 
 
-    JSONObject filters = jsonObject.getJSONObject(Constants.FILTER);//外部筛选条件
-    JSONArray fields = jsonObject.getJSONArray(Constants.BY_FIELDS);
+        // 根据分组字段 by_fields 拼接 需要 【select 的字段和 group by 字段 】
+        /**
+         *  返回 分组 + 查询 字段
+         *  return (outGroupByUser, outGroupByAction, outSelectFieldUser, outSelectFieldAction)
+         */
 
-
-    JSONArray conditions = filters.getJSONArray(Constants.CONDITIONS);
-    String relation = filters.getString("relation"); // 主查询条件 逻辑关系 and / or
-
-
-    JSONArray actions = jsonObject.getJSONArray(Constants.ACTION);//多指标
-
-    // 根据分组字段 by_fields 拼接 需要 【select 的字段和 group by 字段 】
-    /**
-     *  返回 分组 + 查询 字段
-     *  return (outGroupByUser, outGroupByAction, outSelectFieldUser, outSelectFieldAction)
-     */
-
-    Tuple6 selectAndGroupBy = byFieldOp(fields,productId);
+        Tuple6 selectAndGroupBy = byFieldOp(fields,productId);
 //        Tuple4 selectAndGroupBy = new Tuple4(by._1(), by._2(), by._3(), by._4());
 
+        /**
+         * 外部查询 where 条件
+         * return ( userWhere,actionWhere)
+         */
+        Tuple5 filter = queryConditionOp(conditions, relation,productId);
 
-    /**
-     * 外部查询 where 条件
-     * return ( userWhere,actionWhere)
-     */
-    Tuple5 filter = queryConditionOp(conditions, relation);
-//        Tuple2 filter = new Tuple2(queryCondition._1(), queryCondition._2());
-
-
-    Map map = new HashMap();
-    map.put("relation", relation);
-    map.put("commWhere", commWhere);
-    map.put("productId", productId);
-
-    /**
-     * 结合 {@link filter}、{@link selectAndGroupBy}  拼接 单指标 SQL
-     */
-    Tuple2<String,String> sqlOps = actionToSingleIndicatorSQL(actions, selectAndGroupBy, filter, map);
-
-    JSONObject responseResult = new JSONObject() ;//= querySparkSql(new StringBuilder(sqlOps._1), maxLine,sqlOps._2);
-
-    if (responseResult == null || (responseResult.containsKey("status") && responseResult.getString("status").equalsIgnoreCase("error"))) {
-        return new JSONObject();
+        return new  Tuple2(selectAndGroupBy,filter);
     }
-    System.out.println("responseResult.....................\n"+responseResult);
-
-    JSONArray jsonArray = responseResult.getJSONArray("result");
-    System.out.println("jsonArray........................    \n"+jsonArray);
-
-    Tuple3<JSONArray, JSONArray, JSONArray> commReturn = commRetrunOp(jsonObject);
-
-    JSONObject result = resultOp(responseResult, commReturn);
 
 
 
-    return result;
-}
 
-    private Tuple3<JSONArray,JSONArray,JSONArray> commRetrunOp(JSONObject jsonObject ) {
+
+
+    private Tuple3<JSONArray,JSONArray,JSONArray> commReturnOp(JSONObject jsonObject ) {
         JSONArray idxs = new JSONArray();
 
         JSONArray action = jsonObject.getJSONArray("action");
@@ -193,36 +196,38 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
     }
 
 
-    String separator = "@@@@@@@";
-    private JSONObject resultOp(JSONObject jo, Tuple3<JSONArray,JSONArray,JSONArray> commReturn) {
 
-//        JSONArray idxs = commReturn._1();
+    private JSONObject resultOp(JSONObject jo, Tuple3<JSONArray,JSONArray,JSONArray> commReturn,LinkedList idxs) {
+
 
         JSONArray series = commReturn._2();
 
         JSONArray by_fields = commReturn._3();
 
 
-        LinkedHashSet idxs__ = new LinkedHashSet();
+//        LinkedHashSet idxs__ = new LinkedHashSet();
+        if (!jo.containsKey("result") || jo.getJSONArray("result").isEmpty()){
+            return new JSONObject();
+        }
         JSONArray result = jo.getJSONArray("result");
 
-        Map m = new HashMap();
-        result.forEach(x->{
-            String[] split = x.toString().split(Constants.SEPARATOR_U0001);
-            int len = split.length;
-            String flag = split[len-3];
-            String indicator = split[len-4];
-            String action = split[len-5];
-            m.putIfAbsent(flag,String.join(separator,action,indicator));
+//        Map m = new HashMap();
+//        result.forEach(x->{
+//            String[] split = x.toString().split(Constants.SEPARATOR_U0001);
+//            int len = split.length;
+//            String flag = split[len-3];
+//            String indicator = split[len-4];
+//            String action = split[len-5];
+//            m.putIfAbsent(flag,String.join(separator,action,indicator));
 //            idxs__.add(String.join(separator,action,indicator,flag));
-        });
-        Map<String,String> ms = new LinkedHashMap<>();
-        m.entrySet().stream().sorted(Map.Entry.<String,String>comparingByKey()).forEachOrdered(e -> {Map.Entry em = (Map.Entry)e; ms.putIfAbsent((String)em.getKey(), (String)em.getValue());});
-        ms.forEach((k,v)-> idxs__.add(String.join(separator,v,k)));
+//        });
+//        Map<String,String> ms = new LinkedHashMap<>();
+//        m.entrySet().stream().sorted(Map.Entry.<String,String>comparingByKey()).forEachOrdered(e -> {Map.Entry em = (Map.Entry)e; ms.putIfAbsent((String)em.getKey(), (String)em.getValue());});
+//        ms.forEach((k,v)-> idxs__.add(String.join(separator,v,k)));
 
 
-        LinkedList idxs = new LinkedList();
-        idxs__.forEach(x-> idxs.add(x.toString()));
+//        LinkedList idxs = new LinkedList();
+//        idxs__.forEach(x-> idxs.add(x.toString()));
         Map<String, Map<String, Map<String, String>>> result1 = new HashMap<>();
         //  分组        event_idx    date      num
         //  分组        date        event_idx  num
@@ -283,7 +288,7 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
         LinkedList eventIndicatorList = new LinkedList();
         idxs.forEach(v ->{
             String[] split = v.toString().split(separator, 3);
-            eventIndicatorList.add(split[0]+"->"+split[1]);
+            eventIndicatorList.add(String.join(Constants.SEPARATOR,split));
         });
         JSONArray indicator = new JSONArray(eventIndicatorList);
 
@@ -391,11 +396,12 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
      *                   )
      * @param outFilters Tuple2 ( outUserWhere,outActionWhere)
      * @param map
+     * @param isQuery 是否是查询，true :查询 false 保存
      */
-    private Tuple2<String,String> actionToSingleIndicatorSQL(JSONArray actions,
-                                                             Tuple6 byFields,
-                                                             Tuple5 outFilters,
-                                                             Map map) {
+    private Tuple3<String,String,Object> generateMultipleIndicatorsSQL(JSONArray actions,
+                                                                       Tuple6 byFields,
+                                                                       Tuple5 outFilters,
+                                                                       Map map, boolean isQuery) {
         String parquetSQL = "SELECT  %s  FROM parquetTmpTable WHERE %s  GROUP BY %s";
         String joinSQL = "(SELECT %s  FROM parquetTmpTable WHERE %s )  ta JOIN ( SELECT %s FROM usersTable WHERE   %s  ) tu " +
                 "ON concat_ws('_', '%s', ta.global_user_id) = tu.pk where %s ";
@@ -406,7 +412,7 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
         HashSet<String> groupId = new HashSet();
         JSONObject props = new JSONObject();
         List<String> sqlList = new ArrayList<>();
-
+        LinkedList idxs = new LinkedList();
 
         final StringJoiner outGroupByUser = (StringJoiner) byFields._1();
         final StringJoiner outGroupByAction = (StringJoiner) byFields._2();
@@ -466,9 +472,7 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
             String category = SQLUtil.getCategory(eventOriginal);
             String indicatorType = SQLUtil.getIndicatorType(eventType)._1;
             String eventCol = SQLUtil.getIndicatorType(eventType)._2;
-//            String partialAggGroupBy = String.join(", ", groupByJoiner.toString(), "action");
             commWhere1.add(commWhere).add(String.format("(category = '%s')", category)).add(String.format("( action = '%s' )",eventOriginal));
-//            System.out.println("commWhere1----------------------------------:               " + commWhere1.toString());
             JSONObject childFilterParam = action.getJSONObject(Constants.CHILDFILTERPARAM);
             String relate = childFilterParam.getString("relation");
             JSONArray conditions = childFilterParam.getJSONArray("conditions");
@@ -481,8 +485,7 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
              // _5:用户属性名及其类型的map
              // )
              */
-            Tuple5 queryCondition = queryConditionOp(conditions, relate);
-//            Tuple2<StringJoiner, StringJoiner> inCondition = new Tuple2(queryCondition._1(), queryCondition._2());
+            Tuple5 queryCondition = queryConditionOp(conditions, relate,productId);
             StringJoiner inUserWhere = (StringJoiner) queryCondition._1();
             StringJoiner inActionWhere = (StringJoiner) queryCondition._2();
             //用户分群id的set集合
@@ -497,7 +500,6 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
 
 
             Boolean inOr = Constants.OR.equalsIgnoreCase(relate) && (!inActionWhere.toString().isEmpty()) && (!inUserWhere.toString().isEmpty());
-//            Boolean outOr = !(outActionWhere.toString().isEmpty() || outUserWhere.toString().isEmpty());
 
 
             HashSet<String> actionSelectSet = new HashSet<>();
@@ -511,31 +513,26 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
 
             // actionSelect : global_user_id, 分组字段，action，day
 
-//            String actionSelect = String.join(", ", actionSelectSet);// actionSelect 基本筛选条件
             String userSelect = String.join(", ", userSelectSet);   //userSelect 基本筛选条件 : pk, 分组字段
 
 
             //joinselect : 分组字段，action，day, 指标 , 'A' AS an
             String joinSelect ;
+            char c = (char) (i.getAndAdd(1));
+            idxs.add(String.join(separator,eventOriginal,eventType,String.valueOf(c)));
             if (!groupByJoiner.toString().isEmpty()){
-                joinSelect = String.join(", ", groupByJoiner.toString(), "action", "day", String.format("'%s' AS INDICATORTYPE",eventType), String.format("'%s' AS an", (char) (i.getAndAdd(1))), indicatorType);
+                joinSelect = String.join(", ", groupByJoiner.toString(), "action", "day", String.format("'%s' AS INDICATORTYPE",eventType), String.format("'%s' AS an", c), indicatorType);
             }else {
-                joinSelect = String.join(", ",  "action", "day", String.format("'%s' AS INDICATORTYPE",eventType), String.format("'%s' AS an", (char) (i.getAndAdd(1))), indicatorType);
+                joinSelect = String.join(", ",  "action", "day", String.format("'%s' AS INDICATORTYPE",eventType), String.format("'%s' AS an", c), indicatorType);
             }
-//            String.join(",", joinSelect, indicatorType);
-//            vvv= vvv+1;
-            //String partialAggGroupBy = String.join(", ", groupByJoiner.toString(), "action","day");
 
             if (outGroupByUser.toString().isEmpty() && inUserWhere.toString().isEmpty() && outUserWhere.toString().isEmpty()) {
                 //分组、内部条件、外部条件中只有事件属性，只查 parquet 表
-//                String select = String.join(", ", "global_user_id", "action", outSelectFieldAction.toString());
-//                String groupBy = String.join(", ", "action", outGroupByAction.toString()); //
                 StringJoiner actionWhere = getAllActionWhere(commWhere1, outActionWhere, inActionWhere);
                 String singleSQL;
                 singleSQL = String.format(parquetSQL, joinSelect, actionWhere.toString(), partialAggGroupBy);
                 sqlList.add(singleSQL);
             } else {
-                // ( Constants.OR.equalsIgnoreCase(relate) && inOr)
                 if (inOr || outOr) {
                     // 在or 条件下，且查询条件同时含有action 和 user属性，则过滤条件不能下推到最底层的
                     // usersTable 和 parquetTmpTable 中过滤，需要放在 usersTable join parquetTmpTable
@@ -625,11 +622,9 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
                         String userSelectOr = String.join(", ", userSelectSetOr);
 
                         String joinWhere = String.join(Constants.OR, outActionWhere.toString(), outUserWhere.toString());
-//                        String actionWhere = String.join(Constants.AND, commWhere1.toString());
                         if (!inActionWhere.toString().isEmpty()) {
                             actionWhere1 = actionWhere.join(relate, inActionWhere.toString());
                         }
-//                        String userWhere = String.join(Constants.AND, userCommWhere);
                         if (!inUserWhere.toString().isEmpty()) {
                             userWhere1 = userWhere.join(relate, inUserWhere.toString());
                         }
@@ -650,15 +645,9 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
                     // userWhere ：outUserWhere and inUserWhere -->
                     //
                     StringJoiner actionWhere = getAllActionWhere(commWhere1, outActionWhere, inActionWhere);
-//                    new StringJoiner(Constants.AND);
-//                    actionWhere.add(commWhere1.toString());
-//                    if (!outActionWhere.toString().isEmpty()) {
-//                        actionWhere.add(outActionWhere.toString());
-//                    }
-//                    if (!inActionWhere.toString().isEmpty()) {
-//                        actionWhere.add(inActionWhere.toString());
-//                    }
-                    String actionSelect = String.join(", ", actionSelectSet).join(",",String.format("'%s' AS INDICATORTYPE",eventType));
+
+
+                    String actionSelect = String.join(",",String.join(", ", actionSelectSet),String.format("'%s' AS INDICATORTYPE",eventType));
                     StringJoiner userWhere = new StringJoiner(Constants.AND);
                     userWhere.add(userCommWhere);
                     if (!outUserWhere.toString().isEmpty()) {
@@ -683,13 +672,7 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
         String SQL = "";
 
         SQL = String.join(" UNION ", sqlList);
-        String allSelect ;
-        if (!groupByJoiner.toString().isEmpty()){
-            allSelect = String.join(", ", groupByJoiner.toString(), "action","INDICATORTYPE","an", "day", "SUM(ct)");
-        }else{
-            allSelect = String.join(", ", "action","INDICATORTYPE","an", "day", "SUM(ct)");
-        }
-//        String allSelect = String.join(", ", partialAggGroupBy,"INDICATORTYPE", "SUM(ct)");
+
 
         String allGroupBy = String.join(",", partialAggGroupBy,"INDICATORTYPE", "an");
 
@@ -699,15 +682,33 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
         }else {
             grouping = String.join(",", "action", "INDICATORTYPE","an");
         }
-        String groupingSet = String.format("GROUPING SETS(( %s ),(%s) ) ORDER BY %s", String.join(",",partialAggGroupBy,"INDICATORTYPE","an"), grouping,partialAggGroupBy); // groupby + action
 
-        String group = String.join(" ", allGroupBy, groupingSet);
+
+        String group;
+        String allSelect ;
+        if( isQuery ){
+            String groupingSet = String.format("GROUPING SETS(( %s ),(%s) ) ORDER BY %s", String.join(",",partialAggGroupBy,"INDICATORTYPE","an"), grouping,partialAggGroupBy); // groupby + action
+            group = String.join(" ", allGroupBy, groupingSet);
+            if (!groupByJoiner.toString().isEmpty()){
+                allSelect = String.join(", ", groupByJoiner.toString(), "action","INDICATORTYPE","an", "day", "SUM(ct)");
+            }else{
+                allSelect = String.join(", ", "action","INDICATORTYPE","an", "day", "SUM(ct)");
+            }
+
+        }else {
+            group = String.join(" ", allGroupBy);
+
+            if (!groupByJoiner.toString().isEmpty()){
+                allSelect = String.join(", ","action","INDICATORTYPE", groupByJoiner.toString(), "an",  "SUM(ct) as num");
+            }else{
+                allSelect = String.join(", ", "action","INDICATORTYPE","'all'","an", "SUM(ct) as num");
+            }
+
+        }
         String allSQL = String.format("select %s from (%s) group by %s ", allSelect, SQL, group);
-
 
         userGroupIds.forEach(v -> groupId.add(v));
         groupIdOut.forEach(v -> groupId.add(v));
-
 
         props.putAll(groupByUserProp2Type);
 
@@ -727,7 +728,11 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
         System.out.println("allSQL:                    " + allSQL     );
 
 
-        return new Tuple2<>(allSQL,taskSql);
+        if (isQuery){
+            return new Tuple3<>(allSQL,taskSql,idxs);
+        }else {
+            return new Tuple3<>(allSQL,prop.toString(),groupIds.toString());
+        }
     }
 
 
@@ -745,7 +750,7 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
             StringJoiner, StringJoiner,
             Set<String>, Set<String>,
             Map<String, String>
-            > queryConditionOp(JSONArray conditions, String relation) {
+            > queryConditionOp(JSONArray conditions, String relation,String productId) {
 
         StringJoiner actionWhere = new StringJoiner(String.format(" %s ", relation)); // action where 条件
         StringJoiner userWhere = new StringJoiner(String.format(" %s ", relation));
@@ -907,8 +912,9 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
                     if ("isTrue".equals(function)) {
                         param = "true";
                     }
-                    userWhere.add(String.format("((%s IS NOT NULL ) AND (%s = %s) )", column, column, param));
-                    groupId.add(column);
+                    String groupIdInHBase = productId+"_"+column;
+                    userWhere.add(String.format("((%s IS NOT NULL ) AND (%s = %s) )", groupIdInHBase, groupIdInHBase, param));
+                    groupId.add(groupIdInHBase);
                     break;
                 }
             }
@@ -960,9 +966,10 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
 
             } else if ("userGroup".equals(type)) {
                 //usersTable  表的用户分群属性处理
-                outGroupByUser.add(column);// group by 字段拼接
-                groupId.add(column);
-                outSelectFieldUser.add(column);// select 字段拼接
+                String groupIdInHBase = productId+"_"+column;
+                outGroupByUser.add(groupIdInHBase);// group by 字段拼接
+                groupId.add(groupIdInHBase);
+                outSelectFieldUser.add(groupIdInHBase);// select 字段拼接
             }
 
         });
@@ -972,8 +979,8 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
     //todo 用户属性及其类型
     private Map<String, String> getUserPropertiesAndTypes(String productId) {
         Map<String, String> map = new HashMap<>();
-//        UserMetaType  userMetaType2  = new UserMetaType();
-//        userMetaType2.setProductId(Long.parseLong(productId));
+        UserMetaType  userMetaType2  = new UserMetaType();
+        userMetaType2.setProductId(Long.parseLong(productId));
 //        userMetaTypeMapper.getAllActiveMetaTypeListForFilter(userMetaType2).forEach(domain->map.put(domain.getType(),domain.getDatatype()) );
         return map;
     }
@@ -995,144 +1002,175 @@ public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
 
 
 
-    private void saveDataToHbase(JSONArray actions, Integer reportId, String tableName, JSONObject data) throws IOException {
-        JSONArray values = data.getJSONArray("originalValue");
 
-        if (values != null && !values.isEmpty()) {
-            JSONArray dates = data.getJSONArray("date");
-            JSONObject action = actions.getJSONObject(0);
-            String eventType = action.getString(Constants.EVENT_TYPE);
 
-            // 分别为总次数、触发用户数、登录用户数
-            String qualifier = "";
-            switch (eventType) {
-                case "acc":
-                    qualifier = "count(action)";
-                    break;
-                case "userid":
-                    qualifier = "count(distinct deviceid)";
-                    break;
-                case "loginUser":
-                    qualifier = "count(distinct userid)";
-                    break;
-                default:
-                    break;
-            }
 
-            Table table = Connection2hbase.getTable(tableName);
-            List<Put> puts = new ArrayList<>();
-            final int size = values.size();
-            int count = 0;
-            for (int i = 0; i < size; i++) {
-                JSONObject value = values.getJSONObject(i);
-                JSONArray byValues = value.getJSONArray(Constants.BY_VALUES);
-                JSONArray counts = value.getJSONArray(Constants.COUNT);
+    //@Override
+    //@Transactional
+    public int saveQueryTask(JSONObject jsonObject) throws IOException {
+        // 保存自定义查询任务
+        String unit = jsonObject.getString(Constants.UNIT);
+        String reportName = jsonObject.getString(Constants.REPORT_NAME);
+        String description = jsonObject.getString("description");
+        String productId = jsonObject.getString(Constants.PRODUCTID);
+        String fromDate = jsonObject.getString(Constants.FROM_DATE);
+        String toDate = jsonObject.getString(Constants.TO_DATE);
 
-                // 针对单个总体
-                if (!byValues.isEmpty() && byValues.size() == 1 && "总体".equals(byValues.getString(0))){
-                    for (int j = 0; j < counts.size(); j++) {
-                        String rowKey = String.valueOf(reportId) + Constants.SEPARATOR +
-                                dates.getString(j).replaceAll("-", "") + Constants.SEPARATOR;
-                        Put put = new Put(Bytes.toBytes(rowKey));
-                        String stringValue = String.valueOf(counts.getJSONArray(j).getInteger(0));
-                        put.addColumn(Bytes.toBytes("f"), Bytes.toBytes(qualifier), Bytes.toBytes(stringValue));
-                        puts.add(put);
-                        count++;
-                        if (count % 200 == 0) {
+        JSONObject filters = jsonObject.getJSONObject(Constants.FILTER);
+        String relation = filters.getString(Constants.RELATION);
+        JSONArray conditions = filters.getJSONArray(Constants.CONDITIONS);
+        if(conditions.size()<= 1){
+            relation = Constants.AND;
+        }
+        StringJoiner commWhere = new StringJoiner(" AND ");
+//
+        String dateCon = String.format("( productid = '%s' )", productId);
+        commWhere.add(dateCon);
+        JSONArray actions = jsonObject.getJSONArray(Constants.ACTION);//多指标
+        // 数据
+        JSONObject data = jsonObject.getJSONObject("data");
+
+
+
+        Map map = new HashMap();
+        map.put("relation", relation);
+        map.put("commWhere", commWhere);
+        map.put("productId", productId);
+
+        Tuple2 queryOrSaveOp = queryOrSaveOp(jsonObject);
+        /**
+         * 结合 {@link filter}、{@link selectAndGroupBy}  拼接 单指标 SQL
+         */
+        Tuple3<String,String,Object> sqlOps = generateMultipleIndicatorsSQL(actions, (Tuple6)queryOrSaveOp._1, (Tuple5) queryOrSaveOp._2, map,false);
+
+        String taskSQL = sqlOps._1();
+        String prop = sqlOps._2();
+        String groupid = (String)sqlOps._3();
+
+
+
+        // 保存事件任务
+        ActionReport actionReport = new ActionReport();
+        actionReport.setReportName(reportName);
+        final String dateRange = LocalDateTimeUtil.getDateTimePeriodDay(fromDate) + Constants.TASK_DATE_RANGE_JOINER + LocalDateTimeUtil.getDateTimePeriodDay(toDate);
+        actionReport.setDateRange(dateRange);
+        actionReport.setTaskSql(taskSQL);
+        actionReport.setDescription(null == description ? "" : description);
+        actionReport.setUnit(unit);
+        actionReport.setProductId(Integer.parseInt(productId));
+
+        // 保存条件时删除前端传过来的图表数据
+        jsonObject.remove("data");
+        actionReport.setTaskConditions(jsonObject.toString());
+        actionReport.setTableName("temp");
+
+        actionReport.setUserProp(prop);
+        actionReport.setUserGroupid(groupid);
+        actionReport.setCreateTime(new Date());
+//        actionReportMapper.insert(actionReport);
+
+        // 更新表名
+        ActionReport updateHbaseTableName = new ActionReport();
+        final Integer reportId = actionReport.getReportId();
+        updateHbaseTableName.setReportId(reportId);
+        final String tableName = hbaseNameSpace + Constants.TASK_ACTION_TABLE_NAME + reportId;
+        updateHbaseTableName.setTableName(tableName);
+//        actionReportMapper.updateByPrimaryKeySelective(updateHbaseTableName);
+
+        // 创建hbase表
+        Connection2hbase.createTable(tableName);
+
+        // 保存数据到hbase
+        saveDataToHbase( reportId, tableName, data);
+
+        logger.debug("task's sql: {}", taskSQL);
+        return reportId;
+    }
+
+    /**
+     * 把事件分析实时查询出的数据保存到hbase
+     *
+     * @param reportId  报表ID
+     * @param tableName hbase表名
+     * @param data      数据
+     * @throws IOException 异常
+     */
+    private void saveDataToHbase( Integer reportId, String tableName, JSONObject data)  {
+        String qualifier = "num";
+        int PUT_NUM_PER_BATCH = 200;
+        Table table = Connection2hbase.getTable(tableName);
+        JSONObject detailResult = data.getJSONObject("detail_result");
+        JSONArray rows = detailResult.getJSONArray("rows");
+        JSONArray series = detailResult.getJSONArray("series");
+        List<Put> puts = new ArrayList<>();
+        int count = 0;
+
+        for (int i = 0; i < rows.size(); i++) {
+            String day = (String)series.get(i);
+
+            JSONObject jo = rows.getJSONObject(i);
+            JSONArray joValues = jo.getJSONArray("values");
+            JSONArray byValues = jo.getJSONArray("by_values");
+            JSONArray eventIndicator = jo.getJSONArray("event_indicator");
+            StringJoiner byJoiner = new StringJoiner(Constants.SEPARATOR);
+            byValues.forEach(x-> byJoiner.add(x.toString()));
+            for (int d = 0; d < joValues.size(); d++) {
+                JSONArray eachDatas = joValues.getJSONArray(d);
+
+                for (int x = 0; x < eachDatas.size(); x++) {
+                    String actionIndicator =  eventIndicator.getString(x);
+                    String eachData = eachDatas.getString(x);
+                    // row
+                    String rowKey = String.join (Constants.SEPARATOR,
+                            Integer.toString(reportId),
+                            day,
+                            actionIndicator,
+                            byJoiner.toString());
+                    Put put = new Put(Bytes.toBytes(rowKey));
+                    put.addColumn(Bytes.toBytes("f"), Bytes.toBytes(qualifier), Bytes.toBytes(eachData));
+                    puts.add(put);
+                    if (count % PUT_NUM_PER_BATCH == 0) {
+                        try {
                             table.put(puts);
                             puts.clear();
-                        }
-                    }
-                }else {
-                    for (int j = 0; j < counts.size(); j++) {
-                        String rowKey = String.valueOf(reportId) + Constants.SEPARATOR + dates.getString(j).replaceAll("-", "") +
-                                Constants.SEPARATOR + Joiner.on(Constants.SEPARATOR).join(byValues).trim();
-                        Put put = new Put(Bytes.toBytes(rowKey));
-                        String stringValue = String.valueOf(counts.getJSONArray(j).getInteger(0));
-                        put.addColumn(Bytes.toBytes("f"), Bytes.toBytes(qualifier), Bytes.toBytes(stringValue));
-                        puts.add(put);
-                        count++;
-                        if (count % 200 == 0) {
-                            table.put(puts);
-                            puts.clear();
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
                     }
                 }
             }
-
             if (!puts.isEmpty()) {
-                table.put(puts);
+                try {
+                    table.put(puts);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-
-            table.close();
         }
+        try {
+            table.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
 
-    public static void main(String[] args)  throws  IOException{
-
-//        Map m = new LinkedHashMap();
-//        m.put("C","ccc");
-//        m.put("D","ccc");
-//        m.put("A","aaa");
-//        m.put("B","bbb");
-//
-//        Map<String,String> ms = Maps.newLinkedHashMap();
-//        m.entrySet().stream().sorted(Map.Entry.<String,String>comparingByKey()).forEachOrdered(e -> {Map.Entry em = (Map.Entry)e; ms.put((String)em.getKey(), (String)em.getValue());});
-
-       /* String text;
-        text = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"event.country\",\"event.region\",\"event.city\"],\"to_date\":\"20190614\",\"productId\":\"11148\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"acc\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}}]}";
-
-        JSONObject jo = JSONObject.parseObject(text);
-        JSONArray action = jo.getJSONArray("action");
-        Integer reportId  = 10001;
-        String tableName = "razor_100011";
-
-        String dataStr;
-        dataStr = "{\"rollup_result\":{\"series\":[\"20190611\",\"20190612\",\"20190613\",\"20190614\"],\"total_rows\":4,\"by_fields\":[\"event.country\",\"event.region\",\"event.city\"],\"num_rows\":4,\"rows\":[{\"values\":[[\"356\",\"356\"]],\"by_values\":[\"中国\",\"江苏\",\"unknown\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]},{\"values\":[[\"80\",\"80\"]],\"by_values\":[\"中国\",\"江苏\",\"南通\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]},{\"values\":[[\"33\",\"33\"]],\"by_values\":[\"中国\",\"江苏\",\"宿迁\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]},{\"values\":[[\"104\",\"104\"]],\"by_values\":[\"中国\",\"江苏\",\"南京\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]}]},\"detail_result\":{\"series\":[\"20190611\",\"20190612\",\"20190613\",\"20190614\"],\"total_rows\":4,\"by_fields\":[\"event.country\",\"event.region\",\"event.city\"],\"num_rows\":4,\"rows\":[{\"values\":[[\"73\",\"73\"],[\"91\",\"91\"],[\"91\",\"91\"],[\"101\",\"101\"]],\"by_values\":[\"中国\",\"江苏\",\"unknown\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]},{\"values\":[[\"16\",\"16\"],[\"27\",\"27\"],[\"16\",\"16\"],[\"21\",\"21\"]],\"by_values\":[\"中国\",\"江苏\",\"南通\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]},{\"values\":[[\"10\",\"10\"],[\"11\",\"11\"],[\"7\",\"7\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"江苏\",\"宿迁\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]},{\"values\":[[\"35\",\"35\"],[\"28\",\"28\"],[\"23\",\"23\"],[\"18\",\"18\"]],\"by_values\":[\"中国\",\"江苏\",\"南京\"],\"event_indicator\":[\"axzh_sz->acc\",\"axzh_sz->acc\"]}]}}";
-        JSONObject data = JSONObject.parseObject(dataStr);
-
+    public static void main(String[] args) throws Exception {
         CustomActionServiceImpl impl = new CustomActionServiceImpl();
 
-
-        impl.saveDataToHbase(action,reportId,tableName,data);*/
-        resultOpTest();
-
-
-    }
-
-
-
-
-    public static void resultOpTest() throws  IOException{
-        CustomActionServiceImpl impl = new CustomActionServiceImpl();
-
-
-        String text;
-        // all group by
-        text = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"all\"],\"to_date\":\"20190615\",\"productId\":\"11148\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"cf_aefzt_ccxq\",\"childFilterParam\":{\"conditions\":[{\"type\":\"event.platform\",\"function\":\"equal\",\"params\":[\"Android\",\"iOS\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\"}],\"relation\":\"and\"}},{\"eventType\":\"userid\",\"eventOriginal\":\"cf_lc_lccp_gm\",\"childFilterParam\":{\"conditions\":[]}}]}";
-        text = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"event.country\",\"event.region\"],\"to_date\":\"20190615\",\"productId\":\"11148\",\"action\":[{\"eventType\":\"userid\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"loginUser\",\"eventOriginal\":\"cf_aefzt\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"acc\",\"eventOriginal\":\"cf_aefzt\",\"childFilterParam\":{\"conditions\":[]}}]}\n";
-        text = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"event.country\",\"event.region\",\"event.city\"],\"to_date\":\"20190613\",\"productId\":\"10940\",\"action\":[{\"eventType\":\"userid\",\"eventOriginal\":\"dbyq_cf\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"loginUser\",\"eventOriginal\":\"dbyq_sh\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"acc\",\"eventOriginal\":\"dbyq_wd\",\"childFilterParam\":{\"conditions\":[]}}]}\n";
-        //多指标的事件相同
-        text = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"event.country\",\"event.region\",\"event.city\"],\"to_date\":\"20190614\",\"productId\":\"11148\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"acc\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}}]}";
-        JSONObject jo = JSONObject.parseObject(text);
-        impl.getQueryResult(jo);
-
-
-        String res0 = "{\"jobId\":\"91b67898-6c91-4d58-b368-22214139df6a\",\"result\":[\"cf_aefzt_ccxq\\u0001acc\\u0001null\\u000171\",\"cf_aefzt_ccxq\\u0001acc\\u000120190611\\u000119\",\"cf_aefzt_ccxq\\u0001acc\\u000120190612\\u000116\",\"cf_aefzt_ccxq\\u0001acc\\u000120190613\\u00011\",\"cf_aefzt_ccxq\\u0001acc\\u000120190614\\u000120\",\"cf_aefzt_ccxq\\u0001acc\\u000120190615\\u000115\",\"cf_lc_lccp_gm\\u0001userid\\u0001null\\u00018315\",\"cf_lc_lccp_gm\\u0001userid\\u000120190611\\u00012333\",\"cf_lc_lccp_gm\\u0001userid\\u000120190612\\u00012041\",\"cf_lc_lccp_gm\\u0001userid\\u000120190613\\u00011875\",\"cf_lc_lccp_gm\\u0001userid\\u000120190614\\u00011669\",\"cf_lc_lccp_gm\\u0001userid\\u000120190615\\u0001397\"]}";
-
-        res0 = "{\"jobId\":\"1b8a3a31-b619-44e0-a4ea-8e1c55f26cb2\",\"result\":[\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u0001null\\u000136\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u000120190611\\u000110\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u000120190612\\u000111\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u000120190613\\u000115\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u0001null\\u000118\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u000120190611\\u00019\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u000120190612\\u00014\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u000120190613\\u00015\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u0001null\\u0001276\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u000120190611\\u000175\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u000120190612\\u000186\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u000120190613\\u0001115\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u0001null\\u000126\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u000120190611\\u000116\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u000120190612\\u00018\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u000120190613\\u00012\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u0001null\\u000114\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u000120190611\\u00015\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u000120190612\\u00015\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u000120190613\\u00014\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u0001null\\u0001407\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u000120190611\\u0001181\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u000120190612\\u0001149\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u000120190613\\u000177\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u0001null\\u00019\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u000120190611\\u00013\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u000120190612\\u00014\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u000120190613\\u00012\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_sh\\u0001loginUser\\u0001null\\u00012\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_sh\\u0001loginUser\\u000120190612\\u00011\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_sh\\u0001loginUser\\u000120190613\\u00011\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u0001null\\u000151\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u000120190611\\u000117\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u000120190612\\u000119\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u000120190613\\u000115\"]}";
-        res0 = "{\"jobId\":\"ccc8431d-4c0b-4dde-a06f-c66c3ed7d6ea\",\"result\":[\"中国\\u0001江苏\\u0001null\\u0001dbyq_cf\\u0001userid\\u0001A\\u0001null\\u000162\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190611\\u000123\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190612\\u000118\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190613\\u000121\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u0001null\\u000129\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190611\\u000115\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190612\\u00016\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190613\\u00018\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_wd\\u0001acc\\u0001C\\u0001null\\u0001632\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190611\\u0001219\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190612\\u0001200\",\"中国\\u0001江苏\\u0001null\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190613\\u0001213\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u0001A\\u0001null\\u000136\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190611\\u000110\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190612\\u000111\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190613\\u000115\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u0001null\\u000118\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190611\\u00019\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190612\\u00014\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190613\\u00015\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u0001C\\u0001null\\u0001276\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190611\\u000175\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190612\\u000186\",\"中国\\u0001江苏\\u0001南京\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190613\\u0001115\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u0001A\\u0001null\\u000126\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190611\\u000116\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190612\\u00018\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190613\\u00012\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u0001null\\u000114\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190611\\u00015\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190612\\u00015\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190613\\u00014\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u0001C\\u0001null\\u0001407\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190611\\u0001181\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190612\\u0001149\",\"中国\\u0001江苏\\u0001南通\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190613\\u000177\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u0001A\\u0001null\\u00019\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190611\\u00013\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190612\\u00014\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_cf\\u0001userid\\u0001A\\u000120190613\\u00012\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u0001null\\u00012\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190612\\u00011\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_sh\\u0001loginUser\\u0001B\\u000120190613\\u00011\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u0001C\\u0001null\\u000151\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190611\\u000117\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190612\\u000119\",\"中国\\u0001江苏\\u0001宿迁\\u0001dbyq_wd\\u0001acc\\u0001C\\u000120190613\\u000115\",]}";
-        res0 = "{\"jobId\":\"982ad3bb-165f-4bb1-9632-191683b8a43e\",\"result\":[\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001A\\u0001null\\u0001356\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001B\\u0001null\\u0001356\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190611\\u000173\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190611\\u000173\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190612\\u000191\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190612\\u000191\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190613\\u000191\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190613\\u000191\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190614\\u0001101\",\"中国\\u0001江苏\\u0001null\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190614\\u0001101\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001B\\u0001null\\u0001104\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001A\\u0001null\\u0001104\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190611\\u000135\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190611\\u000135\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190612\\u000128\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190612\\u000128\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190613\\u000123\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190613\\u000123\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190614\\u000118\",\"中国\\u0001江苏\\u0001南京\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190614\\u000118\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001B\\u0001null\\u000180\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001A\\u0001null\\u000180\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190611\\u000116\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190611\\u000116\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190612\\u000127\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190612\\u000127\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190613\\u000116\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190613\\u000116\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190614\\u000121\",\"中国\\u0001江苏\\u0001南通\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190614\\u000121\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001B\\u0001null\\u000133\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001A\\u0001null\\u000133\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190611\\u000110\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190611\\u000110\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190612\\u000111\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190612\\u000111\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001A\\u000120190613\\u00017\",\"中国\\u0001江苏\\u0001宿迁\\u0001axzh_sz\\u0001acc\\u0001B\\u000120190613\\u00017\",]}";
-        JSONObject jo1 =JSONObject.parseObject(res0);
-        Tuple3<JSONArray, JSONArray, JSONArray> commReturn = impl.commRetrunOp(jo);
-        JSONObject res = impl.resultOp(jo1, commReturn);
-        System.out.println(res);
-
+        String jo1s = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190622\",\"by_fields\":[\"event.country\"],\"to_date\":\"20190628\",\"productId\":\"11128\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"userGroup.sixfirst\",\"function\":\"isTrue\",\"params\":[],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\"}],\"relation\":\"and\"}},{\"eventType\":\"userid\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"user.network\",\"function\":\"equal\",\"params\":[\"wifi001\",\"wifi002\",\"wifi003\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\"}],\"relation\":\"and\"}},{\"eventType\":\"loginUser\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"user.latitude\",\"function\":\"equal\",\"params\":[\"22004.3938\",\"22005.3938\",\"22006.3938\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\"}],\"relation\":\"and\"}}]}";
+        String jo2s = "{\"jobId\":\"4dead637-b9ef-4853-b02f-92b7b8b90cd4\",\"result\":[\"中国\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u000113\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u0001null\\u00017\",\"中国\\u0001$appClick\\u0001acc\\u0001A\\u000120190626\\u00016\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u000120190626\\u00013\",\"中国\\u0001$appClick\\u0001acc\\u0001A\\u000120190627\\u00016\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u000120190627\\u00013\",\"中国\\u0001$appClick\\u0001acc\\u0001A\\u000120190628\\u00011\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u000120190628\\u00011\"]}";
+        JSONObject jo1 = JSONObject.parseObject(jo1s);
+        impl.getQueryResult(jo1);
 
     }
 
-
+    private JSONObject querySparkSql(StringBuilder sb, String s,String ss){
+        String jo2s = "{\"jobId\":\"4dead637-b9ef-4853-b02f-92b7b8b90cd4\",\"result\":[\"中国\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u000113\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u0001null\\u00017\",\"中国\\u0001$appClick\\u0001acc\\u0001A\\u000120190626\\u00016\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u000120190626\\u00013\",\"中国\\u0001$appClick\\u0001acc\\u0001A\\u000120190627\\u00016\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u000120190627\\u00013\",\"中国\\u0001$appClick\\u0001acc\\u0001A\\u000120190628\\u00011\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u000120190628\\u00011\"]}";
+        JSONObject jo2 = JSONObject.parseObject(jo2s);
+        return jo2;
+    }
 
 
 }

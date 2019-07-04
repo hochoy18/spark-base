@@ -56,7 +56,7 @@ public class Connection2hbase {
             }
 
             //init kerberos before
-            KerberosUtil.kinit(hbaseConfig);
+//            KerberosUtil.kinit(hbaseConfig);
             hConn = ConnectionFactory.createConnection(hbaseConfig);
         } catch (IOException e) {
             logger.error("io exception", e);

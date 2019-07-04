@@ -124,10 +124,7 @@ public class CustomActionServiceImpl  {
                 (responseResult.containsKey("status") && responseResult.getString("status").equalsIgnoreCase("error"))) {
             return new JSONObject();
         }
-        System.out.println("responseResult.....................\n"+responseResult);
-
-        JSONArray jsonArray = responseResult.getJSONArray("result");
-        System.out.println("jsonArray........................    \n"+jsonArray);
+        logger.debug("responseResult : {}"+responseResult);
 
         Tuple3<JSONArray, JSONArray, JSONArray> commReturn = commReturnOp(jsonObject);
 
@@ -151,15 +148,14 @@ public class CustomActionServiceImpl  {
          *  返回 分组 + 查询 字段
          *  return (outGroupByUser, outGroupByAction, outSelectFieldUser, outSelectFieldAction)
          */
-
-        Tuple6 selectAndGroupBy = byFieldOp(fields,productId);
-//        Tuple4 selectAndGroupBy = new Tuple4(by._1(), by._2(), by._3(), by._4());
+        Map<String, String> userPropertiesMap = getUserPropertiesAndTypes(productId);
+        Tuple6 selectAndGroupBy = SQLUtil.byFieldOp(fields,productId,userPropertiesMap);
 
         /**
          * 外部查询 where 条件
          * return ( userWhere,actionWhere)
          */
-        Tuple5 filter = queryConditionOp(conditions, relation,productId);
+        Tuple5 filter = SQLUtil.queryConditionOp(conditions, relation,productId);
 
         return new  Tuple2(selectAndGroupBy,filter);
     }
@@ -205,29 +201,10 @@ public class CustomActionServiceImpl  {
         JSONArray by_fields = commReturn._3();
 
 
-//        LinkedHashSet idxs__ = new LinkedHashSet();
         if (!jo.containsKey("result") || jo.getJSONArray("result").isEmpty()){
             return new JSONObject();
         }
         JSONArray result = jo.getJSONArray("result");
-
-//        Map m = new HashMap();
-//        result.forEach(x->{
-//            String[] split = x.toString().split(Constants.SEPARATOR_U0001);
-//            int len = split.length;
-//            String flag = split[len-3];
-//            String indicator = split[len-4];
-//            String action = split[len-5];
-//            m.putIfAbsent(flag,String.join(separator,action,indicator));
-//            idxs__.add(String.join(separator,action,indicator,flag));
-//        });
-//        Map<String,String> ms = new LinkedHashMap<>();
-//        m.entrySet().stream().sorted(Map.Entry.<String,String>comparingByKey()).forEachOrdered(e -> {Map.Entry em = (Map.Entry)e; ms.putIfAbsent((String)em.getKey(), (String)em.getValue());});
-//        ms.forEach((k,v)-> idxs__.add(String.join(separator,v,k)));
-
-
-//        LinkedList idxs = new LinkedList();
-//        idxs__.forEach(x-> idxs.add(x.toString()));
         Map<String, Map<String, Map<String, String>>> result1 = new HashMap<>();
         //  分组        event_idx    date      num
         //  分组        date        event_idx  num
@@ -268,7 +245,6 @@ public class CustomActionServiceImpl  {
                 idxNum.put(idx,num);
                 dateIdxNum.put(date, idxNum);
             } else {
-//                eventIdxMap.put(eventIdx, date_num);
                 Map<String, String> idx_Num = dateIdxNum.get(date);
                 if (null == idx_Num){
 
@@ -282,7 +258,7 @@ public class CustomActionServiceImpl  {
             }
             result1.put(by, dateIdxNum);
         });
-        System.out.println(result1);
+        logger.debug("result1: {}",result1.toString());
 
 
         LinkedList eventIndicatorList = new LinkedList();
@@ -375,7 +351,7 @@ public class CustomActionServiceImpl  {
         JSONObject  res0 = new JSONObject();
         res0.put("detail_result",detailResult);
         res0.put("rollup_result",rollupResult);
-        System.out.println("res0............"+res0);
+        logger.debug("res0: {}",res0);
 
 
         return res0 ;
@@ -485,7 +461,7 @@ public class CustomActionServiceImpl  {
              // _5:用户属性名及其类型的map
              // )
              */
-            Tuple5 queryCondition = queryConditionOp(conditions, relate,productId);
+            Tuple5 queryCondition = SQLUtil.queryConditionOp(conditions, relate,productId);
             StringJoiner inUserWhere = (StringJoiner) queryCondition._1();
             StringJoiner inActionWhere = (StringJoiner) queryCondition._2();
             //用户分群id的set集合
@@ -578,7 +554,6 @@ public class CustomActionServiceImpl  {
                     } else if (inOr && (!outOr)) {
                         // inWhere 条件   放到  usersTable join parquetTmpTable 后,
                         // outWhere 放到 对应 usersTable 和 parquetTmpTable 表 的where 后
-//                        System.out.println("inOr: " + inOr + " outOr:   " + outOr + "  " + (inOr && (!outOr)));
 
                         //   parquetTmpTable 的select列中需要包含 or 条件中包含的列（ in)
                         //   usersTable 的select列中需要包含 or 条件中包含的列（ in)
@@ -590,11 +565,11 @@ public class CustomActionServiceImpl  {
                         userSelectSetOr.addAll(groupIdOut);
                         String userSelectOr = String.join(", ", userSelectSetOr);
                         String joinWhere = String.join(Constants.OR, inActionWhere.toString(), inUserWhere.toString());
-//                        String actionWhere = String.join(Constants.AND, commWhere1.toString());
+
                         if (!outActionWhere.toString().isEmpty()) {
                             actionWhere1 = actionWhere.join(relate, outActionWhere.toString());
                         }
-//                        String userWhere = String.join(Constants.AND, userCommWhere);
+
                         if (!outUserWhere.toString().isEmpty()) {
                             userWhere1 = userWhere.join(Constants.AND, outUserWhere.toString());
                         }
@@ -611,7 +586,6 @@ public class CustomActionServiceImpl  {
                         //2. inActionWhere inUserWhere 可能为空 或 为 and 关系
                         // outWhere 条件   放到  usersTable join parquetTmpTable 后
                         // ,inWhere 放到 对应的 usersTable 和 parquetTmpTable 表 的where 后
-//                        System.out.println("inOr: " + inOr + " outOr:   " + outOr + "  " + (inOr && (!outOr)));
                         //   parquetTmpTable 的select列中需要包含 or 条件中包含的列（ out ，把 out 条件中的 action 列加到parquet表的 select 字段中)
                         //   usersTable 的select列中需要包含 or 条件中包含的列（ out 把 out 条件中的 users列加到parquet表的 select 字段中))
 
@@ -633,9 +607,6 @@ public class CustomActionServiceImpl  {
                         sqlList.add(partialAggSQL);
 
                     }
-//                    String joinSQL1 = String.format(joinSQL, actionSelect, actionWhere1, userSelect, userWhere1, productId, joinWhere);
-//                    String partialAggSQL = String.format(partialAggSQLFormat, String.join(",", joinSelect, indicatorType), joinSQL1, groupBy);
-//                    System.out.println("partialAggSQL........................." + partialAggSQL);
 
                 } else {
                     // 所有条件均分别下推到 userTable 和 parquetTmpTable 表的where  后
@@ -721,11 +692,11 @@ public class CustomActionServiceImpl  {
         groupId.forEach(xx->groupIds.add(xx));
         String taskSql = "\",namespace=\""+hbaseNameSpace+"\",prop=\""+prop.toString()+"\",groupid=\""+groupIds.toString()+"\"";
 
-        System.out.println("props:                   \"" + prop.toString() + "\"");
-        System.out.println("groupIds:                   \"" + groupIds.toString() + "\"");
+        logger.debug("props: {}" , prop.toString() );
+        logger.debug("groupIds: {}" , groupIds.toString() );
 
-        System.out.println("taskSql:                   " + taskSql   );
-        System.out.println("allSQL:                    " + allSQL     );
+        logger.debug("taskSql: {}", taskSql );
+        logger.debug("allSQL: {}", allSQL);
 
 
         if (isQuery){
@@ -738,243 +709,10 @@ public class CustomActionServiceImpl  {
 
 
 
-    /**
-     * 根据 每一组的 查询条件 和 条件关系(adn/or) 拼接 每一组 action 表和user表的where 条件
-     *
-     * @param conditions 查询条件集合
-     * @param relation   条件间的逻辑关系 ：and / or
-     * @return 五元组：(
-     * action的where条件，user的where条件，用户分群id的set集合，查询条件中action属性列名set集合，用户属性名及其类型的map)
-     */
-    private Tuple5<
-            StringJoiner, StringJoiner,
-            Set<String>, Set<String>,
-            Map<String, String>
-            > queryConditionOp(JSONArray conditions, String relation,String productId) {
-
-        StringJoiner actionWhere = new StringJoiner(String.format(" %s ", relation)); // action where 条件
-        StringJoiner userWhere = new StringJoiner(String.format(" %s ", relation));
-        Map<String, String> userProps = new HashMap<>();
-        Set<String> groupId = new HashSet<>();
-        Set<String> actionFields = new HashSet<>();
-
-        conditions.forEach(v -> {
-            JSONObject condition = JSONObject.parseObject(String.valueOf(v));
-            String type = condition.getString("type");  //event.country, user.age, userGroup.benyueqianzaitouziyonghu
-            String function = condition.getString("function");
-            JSONArray params = condition.getJSONArray("params");
-            String isNumber = condition.getString("isNumber");
-            String[] split = type.split("\\.", 2);
-            String column = split[1];
-            String con;
-            switch (split[0]) {
-                case "event": {
-                    actionFields.add(column);// eventWhere = eventWhereFunctionOp(type, function, params, eventWhere);
-                    switch (function) {
-                        case "equal": { // string  and  Number
-                            StringJoiner joiner = new StringJoiner(", ", "(", ")");
-                            if ("isTrue".equals(isNumber)) {
-                                params.forEach(x -> joiner.add(String.format("'%s'", x)));
-                            } else {
-                                params.forEach(x -> joiner.add(String.format("'%s'", x)));
-                            }
-
-                            con = String.format("(%s IN  %s)", column, joiner.toString());
-                            actionWhere.add(con);
-                            break;
-                        }
-                        case "notEqual": {  // string  and  Number
-                            StringJoiner joiner = new StringJoiner(", ", "(", ")");
-                            params.forEach(x -> joiner.add(String.format("'%s'", x)));
-                            con = String.format("(%s NOT IN  %s)", column, joiner.toString());
-                            actionWhere.add(con);// IN  v.s NOT IN
-                            break;
-                        }
-                        case "contain": { //string
-                            String param = params.getString(0);
-                            actionWhere.add(String.format("((%s IS NOT NULL ) AND ( %s LIKE  '%s') )", column, column, param));// LIKE  v.s    LIKE
-                            break;
-                        }
-                        case "isTrue":
-                            actionWhere.add(String.format("(%s  IS NOT NULL AND %s = true)", column, column));
-                            break;
-                        case "isFalse":
-                            actionWhere.add(String.format("(%s  IS NOT NULL AND %s = false)", column, column));
-                            break;
-                        case "notContain": { //string
-                            String param = params.getString(0);
-                            actionWhere.add(String.format("((%s IS NOT NULL ) AND (%s NOT LIKE  '%s') )", column, column, param));// LIKE  v.s NOT LIKE
-                            break;
-                        }
-                        case "more": {  // Number >
-                            String param = params.getString(0);
-                            con = String.format("(%s  >  %s)", column, param);
-                            actionWhere.add(con);
-                            break;
-                        }
-                        case "less": { // Number <
-                            String param = params.getString(0);
-                            con = String.format("(%s  <  %s)", column, param);
-                            actionWhere.add(con);
-                            break;
-                        }
-                        case "region": {  // Number  between ：  >= and <=
-                            String param1 = condition.getString("param1");
-                            String param2 = condition.getString("param2");
-                            con = String.format("(%s  >=  %s AND  %s  <=  %s)", column, param1, column, param2);
-                            actionWhere.add(con);
-                            break;
-                        }
-                    }
-
-
-                    break;
-                }
-                case "user": {
-                    switch (function) {
-                        // String:
-                        case "equal": { // string  and  Number
-                            StringJoiner joiner = new StringJoiner(" or ", "(", ")");
-                            if ("isTrue".equals(isNumber)) {
-                                params.forEach(x -> joiner.add(String.format("  %s = %s", column, x)));
-                                userProps.put(column, "int");
-                            } else {
-                                params.forEach(x -> joiner.add(String.format("  %s = '%s'", column, x)));
-                                userProps.put(column, "string");
-                            }
-                            con = String.format("( %s IS NOT NULL  AND  %s )", column, joiner.toString());
-                            userWhere.add(con);
-                            break;
-                        }
-                        case "notEqual": {  // string  and  Number
-                            StringJoiner joiner = new StringJoiner(" AND ", "(", ")");  // and v.s and  or
-                            if ("isTrue".equals(isNumber)) {
-                                params.forEach(x -> joiner.add(String.format("  %s <> %s", column, x)));
-                                userProps.put(column, "int");
-                            } else {
-                                params.forEach(x -> joiner.add(String.format("  %s <> '%s'", column, x)));
-                                userProps.put(column, "string");
-                            }
-                            userWhere.add(String.format("((%s IS NOT NULL ) AND  %s )", column, joiner.toString()));
-                            break;
-                        }
-                        case "contain": { //string like
-                            String param = params.getString(0);
-                            con = String.format("((%s IS NOT NULL ) AND ( %s LIKE  '%s') )", column, column, param);
-                            userWhere.add(con);// LIKE  v.s    LIKE
-                            userProps.put(column, "string");
-                            break;
-                        }
-                        case "notContain": { //string
-                            String param = params.getString(0);
-                            con = String.format("((%s IS NOT NULL ) AND (%s NOT LIKE  '%s') )", column, column, param);
-                            userWhere.add(con);//NOT LIKE    v.s NOT LIKE
-                            userProps.put(column, "string");
-                            break;
-                        }
-                        case "isTrue":
-                            userWhere.add(String.format("(%s  IS NOT NULL AND %s = true)", column, column));
-                            userProps.put(column, "boolean");
-                            break;
-                        case "isFalse":
-                            userWhere.add(String.format("(%s  IS NOT NULL AND %s = false)", column, column));
-                            userProps.put(column, "boolean");
-                            break;
-                        case "more": {  // Number >
-                            String param = params.getString(0);
-                            con = String.format("(%s  >  %s)", column, param);
-                            userProps.put(column, "int");
-                            userWhere.add(con);
-                            break;
-                        }
-                        case "less": { // Number <
-                            String param = params.getString(0);
-                            con = String.format("(%s  <  %s)", column, param);
-                            userProps.put(column, "int");
-                            userWhere.add(con);
-                            break;
-                        }
-                        case "region": {  // Number  between ：  >= and <=
-                            String param1 = condition.getString("param1");
-                            String param2 = condition.getString("param2");
-                            con = String.format("(%s  >=  %s AND  %s  <=  %s)", column, param1, column, param2);
-                            userProps.put(column, "int");
-                            userWhere.add(con);
-                            break;
-                        }
-
-
-                    }
-                    break;
-                }
-                case "userGroup": {
-                    String param = "false";
-                    if ("isTrue".equals(function)) {
-                        param = "true";
-                    }
-                    String groupIdInHBase = productId+"_"+column;
-                    userWhere.add(String.format("((%s IS NOT NULL ) AND (%s = %s) )", groupIdInHBase, groupIdInHBase, param));
-                    groupId.add(groupIdInHBase);
-                    break;
-                }
-            }
-
-
-        });
-        return new Tuple5<>(userWhere, actionWhere, groupId, actionFields, userProps);
-
-    }
 
 
 
 
-    /**
-     * 根据分组字段获取 usersTable 和 parquetTmpTable 的 group by 和 select 字段
-     * todo 获取usersTable 的 schema
-     *
-     * @param by_field
-     * @return
-     */
-    private Tuple6<StringJoiner, StringJoiner, HashSet, HashSet,
-            HashMap<String, String>,
-            HashSet<String>
-            > byFieldOp(JSONArray by_field,String productId) {
-        Map<String, String> userPropertiesMap = getUserPropertiesAndTypes(productId);
-        StringJoiner outGroupByUser = new StringJoiner(", "); // user group by 字段
-        StringJoiner outGroupByAction = new StringJoiner(", "); //  action group by 字段
-
-        HashSet outSelectFieldUser = new HashSet(); //  user select  字段
-        HashSet outSelectFieldAction = new HashSet(); // action select  字段
-
-        Map<String, String> userProps = new HashMap<>();
-        HashSet<String> groupId = new HashSet<>();
-
-        by_field.stream().filter(x->!"all".equalsIgnoreCase(x.toString())).forEach(field -> {
-            String[] split = field.toString().split("\\.", 2);
-            String type = split[0];
-            String column = split[1];
-            if ("event".equals(type)) {
-                //parquetTmpTable 表
-                outGroupByAction.add(column);//  group by 字段拼接
-                outSelectFieldAction.add(column); // select 字段拼接
-
-            } else if ("user".equals(type)) {
-                //usersTable  表的用户属性
-                outGroupByUser.add(column);// group by 字段拼接
-                userProps.put(column, userPropertiesMap.get(column));
-                outSelectFieldUser.add(column);// select 字段拼接
-
-            } else if ("userGroup".equals(type)) {
-                //usersTable  表的用户分群属性处理
-                String groupIdInHBase = productId+"_"+column;
-                outGroupByUser.add(groupIdInHBase);// group by 字段拼接
-                groupId.add(groupIdInHBase);
-                outSelectFieldUser.add(groupIdInHBase);// select 字段拼接
-            }
-
-        });
-        return new Tuple6(outGroupByUser, outGroupByAction, outSelectFieldUser, outSelectFieldAction, userProps, groupId);
-    }
 
     //todo 用户属性及其类型
     private Map<String, String> getUserPropertiesAndTypes(String productId) {
@@ -1005,8 +743,6 @@ public class CustomActionServiceImpl  {
 
 
 
-    //@Override
-    //@Transactional
     public int saveQueryTask(JSONObject jsonObject) throws IOException {
         // 保存自定义查询任务
         String unit = jsonObject.getString(Constants.UNIT);
@@ -1071,14 +807,14 @@ public class CustomActionServiceImpl  {
 
         // 更新表名
         ActionReport updateHbaseTableName = new ActionReport();
-        final Integer reportId = actionReport.getReportId();
+        final Integer reportId = 11048;// actionReport.getReportId();
         updateHbaseTableName.setReportId(reportId);
         final String tableName = hbaseNameSpace + Constants.TASK_ACTION_TABLE_NAME + reportId;
         updateHbaseTableName.setTableName(tableName);
 //        actionReportMapper.updateByPrimaryKeySelective(updateHbaseTableName);
 
         // 创建hbase表
-        Connection2hbase.createTable(tableName);
+//        Connection2hbase.createTable(tableName);
 
         // 保存数据到hbase
         saveDataToHbase( reportId, tableName, data);
@@ -1098,15 +834,21 @@ public class CustomActionServiceImpl  {
     private void saveDataToHbase( Integer reportId, String tableName, JSONObject data)  {
         String qualifier = "num";
         int PUT_NUM_PER_BATCH = 200;
-        Table table = Connection2hbase.getTable(tableName);
+//        Table table = Connection2hbase.getTable(tableName);
+        if (!data.containsKey("detail_result") || data.isEmpty()){
+            return;
+        }
         JSONObject detailResult = data.getJSONObject("detail_result");
+        if(!detailResult.containsKey("rows") || detailResult.isEmpty()){
+            return;
+        }
         JSONArray rows = detailResult.getJSONArray("rows");
         JSONArray series = detailResult.getJSONArray("series");
         List<Put> puts = new ArrayList<>();
         int count = 0;
 
         for (int i = 0; i < rows.size(); i++) {
-            String day = (String)series.get(i);
+
 
             JSONObject jo = rows.getJSONObject(i);
             JSONArray joValues = jo.getJSONArray("values");
@@ -1116,48 +858,63 @@ public class CustomActionServiceImpl  {
             byValues.forEach(x-> byJoiner.add(x.toString()));
             for (int d = 0; d < joValues.size(); d++) {
                 JSONArray eachDatas = joValues.getJSONArray(d);
-
+                String day = (String)series.get(d);
                 for (int x = 0; x < eachDatas.size(); x++) {
                     String actionIndicator =  eventIndicator.getString(x);
                     String eachData = eachDatas.getString(x);
                     // row
+                    String[] split = actionIndicator.split(Constants.SEPARATOR,3);
+
                     String rowKey = String.join (Constants.SEPARATOR,
                             Integer.toString(reportId),
                             day,
-                            actionIndicator,
-                            byJoiner.toString());
+                            split[0],split[1],
+                            byJoiner.toString(),split[2]);
                     Put put = new Put(Bytes.toBytes(rowKey));
                     put.addColumn(Bytes.toBytes("f"), Bytes.toBytes(qualifier), Bytes.toBytes(eachData));
                     puts.add(put);
+                    count ++;
                     if (count % PUT_NUM_PER_BATCH == 0) {
                         try {
-                            table.put(puts);
+//                            table.put(puts);
                             puts.clear();
-                        } catch (IOException e) {
+                        } catch ( Exception e) {
                             e.printStackTrace();
                         }
                     }
                 }
             }
-            if (!puts.isEmpty()) {
-                try {
-                    table.put(puts);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+
         }
-        try {
-            table.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        if (!puts.isEmpty()) {
+//            try {
+//                table.put(puts);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//        try {
+//            table.close();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 
     }
 
 
+
     public static void main(String[] args) throws Exception {
         CustomActionServiceImpl impl = new CustomActionServiceImpl();
+
+
+        String ooo = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"event.country\",\"event.region\"],\"to_date\":\"20190613\",\"productId\":\"11148\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"loginUser\",\"eventOriginal\":\"cf_aefzt_ccxq\",\"childFilterParam\":{\"conditions\":[]}}],\"data\":{\"rollup_result\":{\"series\":[\"20190611\",\"20190612\",\"20190613\"],\"total_rows\":26,\"by_fields\":[\"event.country\",\"event.region\"],\"num_rows\":26,\"rows\":[{\"values\":[[\"5\",\"0\"]],\"by_values\":[\"中国\",\"山东\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"6\",\"0\"]],\"by_values\":[\"中国\",\"福建\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"中国\",\"河北\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"6\",\"0\"]],\"by_values\":[\"中国\",\"河南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"4\",\"0\"]],\"by_values\":[\"中国\",\"江西\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"3\",\"0\"]],\"by_values\":[\"中国\",\"湖北\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"4\",\"0\"]],\"by_values\":[\"中国\",\"湖南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"2\",\"0\"]],\"by_values\":[\"中国\",\"辽宁\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"63\",\"0\"]],\"by_values\":[\"中国\",\"广东\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"21\",\"2\"]],\"by_values\":[\"中国\",\"北京\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"越南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"35\",\"0\"]],\"by_values\":[\"中国\",\"上海\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"7\",\"0\"]],\"by_values\":[\"中国\",\"甘肃\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"中国\",\"黑龙江\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"3\",\"0\"]],\"by_values\":[\"中国\",\"四川\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"17\",\"0\"]],\"by_values\":[\"中国\",\"浙江\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"中国\",\"广西\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"5\",\"0\"]],\"by_values\":[\"中国\",\"云南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"马来西亚\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"中国\",\"陕西\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"35\",\"0\"]],\"by_values\":[\"中国\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"中国\",\"贵州\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"澳大利亚\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"3\",\"0\"]],\"by_values\":[\"中国\",\"内蒙古\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1058\",\"12\"]],\"by_values\":[\"中国\",\"江苏\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"9\",\"0\"]],\"by_values\":[\"中国\",\"安徽\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]}]},\"detail_result\":{\"series\":[\"20190611\",\"20190612\",\"20190613\"],\"total_rows\":26,\"by_fields\":[\"event.country\",\"event.region\"],\"num_rows\":26,\"rows\":[{\"values\":[[\"2\",\"0\"],[\"1\",\"0\"],[\"2\",\"0\"]],\"by_values\":[\"中国\",\"山东\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"],[\"3\",\"0\"],[\"2\",\"0\"]],\"by_values\":[\"中国\",\"福建\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"],[\"0\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"河北\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"4\",\"0\"],[\"2\",\"0\"]],\"by_values\":[\"中国\",\"河南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"2\",\"0\"],[\"2\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"江西\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"],[\"0\",\"0\"],[\"2\",\"0\"]],\"by_values\":[\"中国\",\"湖北\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"2\",\"0\"],[\"2\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"湖南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"2\",\"0\"],[\"0\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"辽宁\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"27\",\"0\"],[\"14\",\"0\"],[\"22\",\"0\"]],\"by_values\":[\"中国\",\"广东\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"8\",\"2\"],[\"2\",\"0\"],[\"11\",\"0\"]],\"by_values\":[\"中国\",\"北京\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"1\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"越南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"11\",\"0\"],[\"10\",\"0\"],[\"14\",\"0\"]],\"by_values\":[\"中国\",\"上海\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"5\",\"0\"],[\"2\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"甘肃\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"0\",\"0\"],[\"1\",\"0\"]],\"by_values\":[\"中国\",\"黑龙江\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"3\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"四川\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"5\",\"0\"],[\"7\",\"0\"],[\"5\",\"0\"]],\"by_values\":[\"中国\",\"浙江\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"0\",\"0\"],[\"1\",\"0\"]],\"by_values\":[\"中国\",\"广西\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"4\",\"0\"],[\"0\",\"0\"],[\"1\",\"0\"]],\"by_values\":[\"中国\",\"云南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"1\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"马来西亚\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"1\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"陕西\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"14\",\"0\"],[\"10\",\"0\"],[\"11\",\"0\"]],\"by_values\":[\"中国\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"0\",\"0\"],[\"1\",\"0\"]],\"by_values\":[\"中国\",\"贵州\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"],[\"0\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"澳大利亚\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"2\",\"0\"],[\"1\",\"0\"]],\"by_values\":[\"中国\",\"内蒙古\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"358\",\"4\"],[\"357\",\"7\"],[\"343\",\"1\"]],\"by_values\":[\"中国\",\"江苏\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"6\",\"0\"],[\"1\",\"0\"],[\"2\",\"0\"]],\"by_values\":[\"中国\",\"安徽\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]}]}},\"report_name\":\"hhoo\",\"description\":\"\"}";
+        JSONObject ooo1 = JSONObject.parseObject(ooo);
+        impl.saveQueryTask(ooo1);
+
+        String oo1 = "{\"rollup_result\":{\"series\":[\"20190622\",\"20190623\",\"20190624\",\"20190625\",\"20190626\",\"20190627\",\"20190628\"],\"total_rows\":1,\"by_fields\":[\"all\"],\"num_rows\":1,\"rows\":[{\"values\":[[\"43\",\"43\",\"43\"]],\"by_values\":[\"all\"],\"event_indicator\":[\"$appClick\\u0001acc\\u0001A\",\"$appClick\\u0001userid\\u0001B\",\"$appClick\\u0001loginUser\\u0001C\"]}]},\"detail_result\":{\"series\":[\"20190622\",\"20190623\",\"20190624\",\"20190625\",\"20190626\",\"20190627\",\"20190628\"],\"total_rows\":1,\"by_fields\":[\"all\"],\"num_rows\":1,\"rows\":[{\"values\":[[\"0\",\"0\",\"0\"],[\"0\",\"0\",\"0\"],[\"0\",\"0\",\"0\"],[\"0\",\"0\",\"0\"],[\"21\",\"21\",\"21\"],[\"21\",\"21\",\"21\"],[\"1\",\"1\",\"1\"]],\"by_values\":[\"all\"],\"event_indicator\":[\"$appClick\\u0001acc\\u0001A\",\"$appClick\\u0001userid\\u0001B\",\"$appClick\\u0001loginUser\\u0001C\"]}]}}";
+        JSONObject oo = JSONObject.parseObject(oo1);
+        impl.saveDataToHbase(1000,"action_1000",oo);
+
 
         String jo1s = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190622\",\"by_fields\":[\"event.country\"],\"to_date\":\"20190628\",\"productId\":\"11128\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"userGroup.sixfirst\",\"function\":\"isTrue\",\"params\":[],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\"}],\"relation\":\"and\"}},{\"eventType\":\"userid\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"user.network\",\"function\":\"equal\",\"params\":[\"wifi001\",\"wifi002\",\"wifi003\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\"}],\"relation\":\"and\"}},{\"eventType\":\"loginUser\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"user.latitude\",\"function\":\"equal\",\"params\":[\"22004.3938\",\"22005.3938\",\"22006.3938\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\"}],\"relation\":\"and\"}}]}";
         String jo2s = "{\"jobId\":\"4dead637-b9ef-4853-b02f-92b7b8b90cd4\",\"result\":[\"中国\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u000113\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u0001null\\u00017\",\"中国\\u0001$appClick\\u0001acc\\u0001A\\u000120190626\\u00016\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u000120190626\\u00013\",\"中国\\u0001$appClick\\u0001acc\\u0001A\\u000120190627\\u00016\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u000120190627\\u00013\",\"中国\\u0001$appClick\\u0001acc\\u0001A\\u000120190628\\u00011\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u000120190628\\u00011\"]}";

@@ -2,13 +2,14 @@ package com.hochoy.cobub3_test;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+//import com.cobub.analytics.web.service.UserMetadataService;
 import org.apache.commons.lang3.StringUtils;
+//import org.springframework.beans.factory.annotation.Autowired;
 import scala.Tuple2;
+import scala.Tuple5;
+import scala.Tuple6;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 拼SQL语句
@@ -22,22 +23,24 @@ public class SQLUtil {
     private static final String LIKE = " like '%";
 
 
+//    @Autowired
+//    private UserMetadataService userMetadataService;
+
     private SQLUtil() {
     }
-
     /**
      * 拼凑子查询字段
      *
      * @param sqlForEvent 事件属性语句
-     * @param sqlForUser  用户属性语句
-     * @param outField    用户外部查询字段
-     * @param fields      字段，即分组
-     * @param actions     事件
-     * @param unit        聚合单位
+     * @param sqlForUser 用户属性语句
+     * @param outField  用户外部查询字段
+     * @param fields     字段，即分组
+     * @param actions    事件
+     * @param unit       聚合单位
      */
-    public static void pieceInnerSql(StringBuilder sqlBuilder, StringBuilder sqlForEvent, StringBuilder sqlForUser,
-                                     StringBuilder outField, List<String> groupidList, List<String> propList, JSONArray fields,
-                                     JSONArray actions, String unit, String productId) {
+    public static void pieceInnerSql(StringBuilder sqlBuilder,StringBuilder sqlForEvent, StringBuilder sqlForUser,
+                                     StringBuilder outField,  List<String>  groupidList, List<String> propList,JSONArray fields,
+                                     JSONArray actions, String unit,String productId) {
         // 如果多个事件会出错
         for (int i = 0; i < actions.size(); i++) {
             JSONObject action = actions.getJSONObject(i);
@@ -58,28 +61,28 @@ public class SQLUtil {
         }
         sqlForUser.append("SELECT pk ,");
         sqlBuilder.append("SELECT ");
-        //  groupid.append("{");
+      //  groupid.append("{");
         for (int i = 0; i < fields.size(); i++) {
             if ("all".equals(fields.getString(i))) {
                 continue;
             }
-            if (fields.getString(i).startsWith("event.")) {//事件属性
-                String event = fields.getString(i).substring(6);
+            if(fields.getString(i).startsWith("event.")){//事件属性
+                String event= fields.getString(i).substring(6);
                 sqlForEvent.append(event).append(",");
                 outField.append(event).append(",");
-            } else if (fields.getString(i).startsWith("user.")) {//用户属性
-                String metaType = fields.getString(i).substring(5);
+            }else if(fields.getString(i).startsWith("user.")){//用户属性
+                String metaType= fields.getString(i).substring(5);
                 sqlForUser.append(metaType).append(",");
                 outField.append(metaType).append(",");
-                if (!propList.contains(metaType)) {
+                if(!propList.contains(metaType)){
                     propList.add(metaType);
                 }
-            } else if (fields.getString(i).startsWith("userGroup.")) {//用户属性
-                String userGroup = fields.getString(i).substring(10);
+            }else if(fields.getString(i).startsWith("userGroup.")){//用户属性
+                String userGroup= fields.getString(i).substring(10);
                 sqlForUser.append(productId).append("_").append(userGroup).append(",");
                 outField.append(productId).append("_").append(userGroup).append(",");
-                if (!groupidList.contains(productId + "_" + userGroup)) {
-                    groupidList.add(productId + "_" + userGroup);
+                if(!groupidList.contains(productId+"_"+userGroup)){
+                    groupidList.add(productId+"_"+userGroup);
                 }
             }
         }
@@ -89,11 +92,11 @@ public class SQLUtil {
         if (StringUtils.isNotEmpty(unit)) {
             sqlForEvent.append(unit).append(",action FROM parquetTmpTable WHERE(");
             sqlBuilder.append(unit);
-        } else {
+        }else{
             sqlForEvent.append(" action FROM parquetTmpTable WHERE(");
         }
 
-        if (!outField.toString().endsWith(",")) {
+            if (!outField.toString().endsWith(",")) {
             outField.append(",");
         }
         if (!sqlBuilder.toString().endsWith(",")) {
@@ -128,12 +131,12 @@ public class SQLUtil {
      * 拼凑where条件
      *
      * @param sqlForEvent sql事件属性字符串
-     * @param sqlForUser  sql用户属性字符串
-     * @param conditions  过滤条件
-     * @param relation    关系 and 或者 or
+     * @param sqlForUser sql用户属性字符串
+     * @param conditions 过滤条件
+     * @param relation   关系 and 或者 or
      */
-    public static void pieceSqlWhere(StringBuilder sqlForEvent, StringBuilder sqlForUser, List<String> groupidList,
-                                     List<String> propList, JSONArray conditions, String relation, String productId) {
+    public static void pieceSqlWhere(StringBuilder sqlForEvent,StringBuilder sqlForUser,  List<String> groupidList,
+                                     List<String> propList,JSONArray conditions, String relation,String productId) {
 
         if (null == conditions || conditions.isEmpty()) {
             return;
@@ -149,49 +152,49 @@ public class SQLUtil {
                 String isNumber = condition.getString("isNumber");
                 String isRegion = condition.getString("isRegion");
                 JSONArray params = condition.getJSONArray(PARAMS);
-                if (params.size() == 0 && "isTrue".equals(isNumber) && "isFalse".equals(isRegion)) {
+                if(params.size() == 0 && "isTrue".equals(isNumber) && "isFalse".equals(isRegion)){
                     String inputForint = condition.getString("inputForInt");
                     String[] inputValues = inputForint.split(",");
-                    if (inputValues != null && inputValues.length > 0) {
+                    if(inputValues !=null && inputValues.length >0){
                         for (int k = 0; k < inputValues.length; k++) {
                             params.add(inputValues[k]);
                         }
                     }
                 }
-                if (params.size() == 0 && "isTrue".equals(isNumber) && "isTrue".equals(isRegion)) {
+                if(params.size() == 0 && "isTrue".equals(isNumber) && "isTrue".equals(isRegion)){
                     String param1 = condition.getString("param1");
                     String param2 = condition.getString("param2");
                     params.add(param1);
                     params.add(param2);
                 }
 
-                if (type.startsWith("event.")) {//事件属性
-                    if (!sqlForEvent.toString().trim().endsWith("and")) {
+                if(type.startsWith("event.")){//事件属性
+                    if(!sqlForEvent.toString().trim().endsWith("and")){
                         sqlForEvent.append(AND);
                     }
-                    String tableType = "";
+                    String tableType="";
                     judgeSymbol(sqlForEvent, type.substring(6), function, params, fieldType, tableType);
-                } else if (type.startsWith("user.")) {//用户属性
-                    String tableType = "";
-                    judgeUserSymbolForAnd(sqlForUser, type.substring(5), function, params, fieldType, isNumber, isRegion, tableType);
-                    if (!sqlForUser.toString().trim().endsWith("and")) {
+                }else if(type.startsWith("user.")){//用户属性
+                    String tableType="";
+                    judgeUserSymbolForAnd(sqlForUser, type.substring(5), function, params, fieldType,isNumber, isRegion ,tableType);
+                    if(!sqlForUser.toString().trim().endsWith("and")){
                         sqlForUser.append(AND);
                     }
-                    if (!propList.contains(type.substring(5))) {
-                        propList.add(type.substring(5));
+                    if(!propList.contains(type.substring(5))){
+                        propList.add( type.substring(5));
                     }
-                } else if (type.startsWith("userGroup.")) {//用户分群
-                    judgeSymbolForUserGroup(sqlForUser, type.substring(10), function, params, fieldType, productId);
-                    //   groupid.append(productId).append("_").append(type.substring(10)).append(",");
+                }else if(type.startsWith("userGroup.")){//用户分群
+                    judgeSymbolForUserGroup(sqlForUser, type.substring(10), function, params, fieldType,productId);
+                 //   groupid.append(productId).append("_").append(type.substring(10)).append(",");
 
-                    if (!groupidList.contains(productId + "_" + type.substring(10))) {
-                        groupidList.add(productId + "_" + type.substring(10));
+                    if(!groupidList.contains(productId+"_"+type.substring(10))){
+                        groupidList.add(productId+"_"+type.substring(10));
                     }
 
                 }
             }
         } else if ("or".equals(relation)) {
-            sqlForEvent.append(AND).append("( ");
+           sqlForEvent.append(AND).append("( ");
             for (int i = 0; i < size; i++) {
                 JSONObject condition = conditions.getJSONObject(i);
                 String type = condition.getString("type");
@@ -200,85 +203,85 @@ public class SQLUtil {
                 JSONArray params = condition.getJSONArray(PARAMS);
                 String isNumber = condition.getString("isNumber");
                 String isRegion = condition.getString("isRegion");
-                if (params.size() == 0 && "isTrue".equals(isNumber) && "isFalse".equals(isRegion)) {
+                if(params.size() == 0 && "isTrue".equals(isNumber) && "isFalse".equals(isRegion)){
                     String inputForint = condition.getString("inputForInt");
                     params.add(inputForint);
                 }
-                if (params.size() == 0 && "isTrue".equals(isNumber) && "isTrue".equals(isRegion)) {
+                if(params.size() == 0 && "isTrue".equals(isNumber) && "isTrue".equals(isRegion)){
                     String param1 = condition.getString("param1");
                     String param2 = condition.getString("param2");
                     params.add(param1);
                     params.add(param2);
                 }
 
-                if (type.startsWith("event.")) {//事件属性
+                if(type.startsWith("event.")){//事件属性
 //                    String tableType="e1.";
-                    String tableType = "";
+                    String tableType="";
                     judgeSymbol(sqlForEvent, type.substring(6), function, params, fieldType, tableType);
-                    if (sqlForEvent.toString().trim().endsWith("and")) {
+                    if(sqlForEvent.toString().trim().endsWith("and")){
                         sqlForEvent.delete(sqlForEvent.lastIndexOf("and"), sqlForEvent.length());
                     }
                     sqlForEvent.append(" or ");
-                } else if (type.startsWith("user.")) {//用户属性
-                    if (sqlForUser.toString().trim().endsWith("AND")) {
+                }else if(type.startsWith("user.")){//用户属性
+                    if(sqlForUser.toString().trim().endsWith("AND")){
                         sqlForUser.append("( (");
-                    } else {
+                    }else{
                         sqlForUser.append("( ");
                     }
 //                    String tableType="e2.";
-                    String tableType = "";
-                    judgeUserSymbolForAnd(sqlForUser, type.substring(5), function, params, fieldType, isNumber, isRegion, tableType);
+                    String tableType="";
+                    judgeUserSymbolForAnd(sqlForUser, type.substring(5), function, params, fieldType,isNumber, isRegion,  tableType );
 
-                    if (sqlForUser.toString().trim().endsWith("and")) {
+                    if(sqlForUser.toString().trim().endsWith("and")){
                         sqlForUser.delete(sqlForUser.lastIndexOf("and"), sqlForUser.length());
                     }
                     sqlForUser.append(" )");
                     sqlForUser.append(" or ");
-                    if (!propList.contains(type.substring(5))) {
-                        propList.add(type.substring(5));
+                    if(!propList.contains(type.substring(5))){
+                        propList.add( type.substring(5));
                     }
-                } else if (type.startsWith("userGroup.")) {//用户分群
-                    if (sqlForUser.toString().trim().endsWith("AND")) {
+                }else if(type.startsWith("userGroup.")){//用户分群
+                    if(sqlForUser.toString().trim().endsWith("AND")){
                         sqlForUser.append("( (");
-                    } else {
+                    }else{
                         sqlForUser.append("( ");
                     }
 //                    String tableType="e2.";
-                    String tableType = "";
-                    //  judgeSymbol(sqlForUser, type.substring(10), function, params, fieldType, tableType);
-                    judgeSymbolForUserGroup(sqlForUser, type.substring(10), function, params, fieldType, productId);
-                    if (sqlForUser.toString().trim().endsWith("and")) {
+                    String tableType="";
+                  //  judgeSymbol(sqlForUser, type.substring(10), function, params, fieldType, tableType);
+                    judgeSymbolForUserGroup(sqlForUser, type.substring(10), function, params, fieldType,productId);
+                    if(sqlForUser.toString().trim().endsWith("and")){
                         sqlForUser.delete(sqlForUser.lastIndexOf("and"), sqlForUser.length());
                     }
                     sqlForUser.append(" )");
                     sqlForUser.append(" or ");
-                    // groupid.append(productId).append("_").append(type.substring(10)).append(",");
+                   // groupid.append(productId).append("_").append(type.substring(10)).append(",");
 
-                    if (!groupidList.contains(productId + "_" + type.substring(10))) {
-                        groupidList.add(productId + "_" + type.substring(10));
+                    if(!groupidList.contains(productId+"_"+type.substring(10))){
+                        groupidList.add(productId+"_"+type.substring(10));
                     }
                 }
             }
-            if (sqlForEvent.toString().trim().endsWith("AND")) {
+            if(sqlForEvent.toString().trim().endsWith("AND")){
                 sqlForEvent.delete(sqlForEvent.lastIndexOf("AND"), sqlForEvent.length());
             }
 
-            if (sqlForEvent.toString().trim().endsWith("or")) {
+            if(sqlForEvent.toString().trim().endsWith("or")){
                 sqlForEvent.delete(sqlForEvent.lastIndexOf("or"), sqlForEvent.length());
             }
 
 
-            if (sqlForUser.toString().trim().endsWith("or")) {
+            if(sqlForUser.toString().trim().endsWith("or")){
                 sqlForUser.delete(sqlForUser.lastIndexOf("or"), sqlForUser.length());
             }
             sqlForUser.append(")");
-            if (sqlForUser.toString().trim().endsWith("AND )")) {
+            if(sqlForUser.toString().trim().endsWith("AND )")){
                 sqlForUser.delete(sqlForUser.lastIndexOf("AND )"), sqlForUser.length());
             }
 
             if (sqlForEvent.toString().endsWith("and ( ")) {
                 sqlForEvent.delete(sqlForEvent.lastIndexOf("and ( "), sqlForEvent.length());
-            } else {
+            }else{
                 sqlForEvent.append(")");
             }
         }
@@ -288,114 +291,114 @@ public class SQLUtil {
      * 拼凑where条件
      *
      * @param sqlWhereForEvent sql事件属性字符串
-     * @param sqlWhereForUser  sql用户属性字符串
-     * @param conditions       过滤条件
-     * @param relation         关系 and 或者 or
+     * @param sqlWhereForUser sql用户属性字符串
+     * @param conditions 过滤条件
+     * @param relation   关系 and 或者 or
      */
-    public static void pieceSqlWhereOr(StringBuilder sqlWhereForEvent, StringBuilder sqlWhereForUser, List<String> groupidList,
-                                       List<String> propList, JSONArray conditions, String relation, String productId, List<String> whereEventFields, List<String> whereUserFields) {
+    public static void pieceSqlWhereOr(StringBuilder sqlWhereForEvent,StringBuilder sqlWhereForUser, List<String>  groupidList,
+                                     List<String> propList,JSONArray conditions, String relation,String productId,List<String> whereEventFields,List<String> whereUserFields) {
 
         if (null == conditions || conditions.isEmpty()) {
             return;
         }
 
         final int size = conditions.size();
-        for (int i = 0; i < size; i++) {
-            JSONObject condition = conditions.getJSONObject(i);
-            String type = condition.getString("type");
-            String function = condition.getString(FUNCTION);
-            String fieldType = condition.getString("fieldType");
-            JSONArray params = condition.getJSONArray(PARAMS);
-            String isNumber = condition.getString("isNumber");
-            String isRegion = condition.getString("isRegion");
-            if (params.size() == 0 && "isTrue".equals(isNumber) && "isFalse".equals(isRegion)) {
-                String inputForint = condition.getString("inputForInt");
-                params.add(inputForint);
+            for (int i = 0; i < size; i++) {
+                JSONObject condition = conditions.getJSONObject(i);
+                String type = condition.getString("type");
+                String function = condition.getString(FUNCTION);
+                String fieldType = condition.getString("fieldType");
+                JSONArray params = condition.getJSONArray(PARAMS);
+                String isNumber = condition.getString("isNumber");
+                String isRegion = condition.getString("isRegion");
+                if(params.size() == 0 && "isTrue".equals(isNumber) && "isFalse".equals(isRegion)){
+                    String inputForint = condition.getString("inputForInt");
+                    params.add(inputForint);
+                }
+                if(params.size() == 0 && "isTrue".equals(isNumber) && "isTrue".equals(isRegion)){
+                    String param1 = condition.getString("param1");
+                    String param2 = condition.getString("param2");
+                    params.add(param1);
+                    params.add(param2);
+                }
+
+                if(type.startsWith("event.")){//事件属性
+                   // judgeSymbol(sqlWhereForEvent, type.substring(6), function, params, fieldType);
+                    String tableType ="e1.";
+                    judgeSymbolOr(sqlWhereForEvent, type.substring(6), function, params, fieldType, tableType);
+                    if(sqlWhereForEvent.toString().trim().endsWith("and")){
+                        sqlWhereForEvent.delete(sqlWhereForEvent.lastIndexOf("and"), sqlWhereForEvent.length());
+                    }
+                    sqlWhereForEvent.append(" or ");
+                     if(!whereEventFields.contains(type.substring(6))){
+                       whereEventFields.add(type.substring(6));
+                     }
+                }else if(type.startsWith("user.")){//用户属性
+                    if(sqlWhereForUser.toString().trim().endsWith("AND")){
+                        sqlWhereForUser.append("( (");
+                    }else{
+                        sqlWhereForUser.append("( ");
+                    }
+                    String tableType ="e2.";
+                    judgeUserSymbolForOr(sqlWhereForUser, type.substring(5), function, params, fieldType,isNumber, isRegion ,tableType);
+
+                    if(sqlWhereForUser.toString().trim().endsWith("and")){
+                        sqlWhereForUser.delete(sqlWhereForUser.lastIndexOf("and"), sqlWhereForUser.length());
+                    }
+                    sqlWhereForUser.append(" )");
+                    sqlWhereForUser.append(" or ");
+                    if(!propList.contains(type.substring(5))){
+                        propList.add( type.substring(5));
+                    }
+
+                    if(!whereUserFields.contains(type.substring(5))){
+                        whereUserFields.add(type.substring(5));
+                    }
+
+                }else if(type.startsWith("userGroup.")){//用户分群
+                    if(sqlWhereForUser.toString().trim().endsWith("AND")){
+                        sqlWhereForUser.append("( (");
+                    }else{
+                        sqlWhereForUser.append("( ");
+                    }
+                    String tableType ="e2.";
+                    judgeSymbolUserGroupOr(sqlWhereForUser, type.substring(10), function, params, fieldType, tableType, productId);
+                    if(sqlWhereForUser.toString().trim().endsWith("and")){
+                        sqlWhereForUser.delete(sqlWhereForUser.lastIndexOf("and"), sqlWhereForUser.length());
+                    }
+                    sqlWhereForUser.append(" )");
+                    sqlWhereForUser.append(" or ");
+                    if(!groupidList.contains(productId+"_"+type.substring(10))){
+                        groupidList.add(productId+"_"+type.substring(10));
+                    }
+
+                    if(!whereUserFields.contains(type.substring(10))){
+                        whereUserFields.add(productId+"_"+type.substring(10));
+                    }
+                }
             }
-            if (params.size() == 0 && "isTrue".equals(isNumber) && "isTrue".equals(isRegion)) {
-                String param1 = condition.getString("param1");
-                String param2 = condition.getString("param2");
-                params.add(param1);
-                params.add(param2);
+            if(sqlWhereForEvent.toString().trim().endsWith("AND")){
+                sqlWhereForEvent.delete(sqlWhereForEvent.lastIndexOf("AND"), sqlWhereForEvent.length());
             }
 
-            if (type.startsWith("event.")) {//事件属性
-                // judgeSymbol(sqlWhereForEvent, type.substring(6), function, params, fieldType);
-                String tableType = "e1.";
-                judgeSymbolOr(sqlWhereForEvent, type.substring(6), function, params, fieldType, tableType);
-                if (sqlWhereForEvent.toString().trim().endsWith("and")) {
-                    sqlWhereForEvent.delete(sqlWhereForEvent.lastIndexOf("and"), sqlWhereForEvent.length());
-                }
-                sqlWhereForEvent.append(" or ");
-                if (!whereEventFields.contains(type.substring(6))) {
-                    whereEventFields.add(type.substring(6));
-                }
-            } else if (type.startsWith("user.")) {//用户属性
-                if (sqlWhereForUser.toString().trim().endsWith("AND")) {
-                    sqlWhereForUser.append("( (");
-                } else {
-                    sqlWhereForUser.append("( ");
-                }
-                String tableType = "e2.";
-                judgeUserSymbolForOr(sqlWhereForUser, type.substring(5), function, params, fieldType, isNumber, isRegion, tableType);
-
-                if (sqlWhereForUser.toString().trim().endsWith("and")) {
-                    sqlWhereForUser.delete(sqlWhereForUser.lastIndexOf("and"), sqlWhereForUser.length());
-                }
-                sqlWhereForUser.append(" )");
-                sqlWhereForUser.append(" or ");
-                if (!propList.contains(type.substring(5))) {
-                    propList.add(type.substring(5));
-                }
-
-                if (!whereUserFields.contains(type.substring(5))) {
-                    whereUserFields.add(type.substring(5));
-                }
-
-            } else if (type.startsWith("userGroup.")) {//用户分群
-                if (sqlWhereForUser.toString().trim().endsWith("AND")) {
-                    sqlWhereForUser.append("( (");
-                } else {
-                    sqlWhereForUser.append("( ");
-                }
-                String tableType = "e2.";
-                judgeSymbolUserGroupOr(sqlWhereForUser, type.substring(10), function, params, fieldType, tableType, productId);
-                if (sqlWhereForUser.toString().trim().endsWith("and")) {
-                    sqlWhereForUser.delete(sqlWhereForUser.lastIndexOf("and"), sqlWhereForUser.length());
-                }
-                sqlWhereForUser.append(" )");
-                sqlWhereForUser.append(" or ");
-                if (!groupidList.contains(productId + "_" + type.substring(10))) {
-                    groupidList.add(productId + "_" + type.substring(10));
-                }
-
-                if (!whereUserFields.contains(type.substring(10))) {
-                    whereUserFields.add(productId + "_" + type.substring(10));
-                }
+            if(sqlWhereForEvent.toString().trim().endsWith("or")){
+                sqlWhereForEvent.delete(sqlWhereForEvent.lastIndexOf("or"), sqlWhereForEvent.length());
             }
-        }
-        if (sqlWhereForEvent.toString().trim().endsWith("AND")) {
-            sqlWhereForEvent.delete(sqlWhereForEvent.lastIndexOf("AND"), sqlWhereForEvent.length());
-        }
-
-        if (sqlWhereForEvent.toString().trim().endsWith("or")) {
-            sqlWhereForEvent.delete(sqlWhereForEvent.lastIndexOf("or"), sqlWhereForEvent.length());
-        }
 
 
-        if (sqlWhereForUser.toString().trim().endsWith("or")) {
-            sqlWhereForUser.delete(sqlWhereForUser.lastIndexOf("or"), sqlWhereForUser.length());
-        }
-        sqlWhereForUser.append(")");
-        if (sqlWhereForUser.toString().trim().endsWith("AND )")) {
-            sqlWhereForUser.delete(sqlWhereForUser.lastIndexOf("AND )"), sqlWhereForUser.length());
-        }
+            if(sqlWhereForUser.toString().trim().endsWith("or")){
+                sqlWhereForUser.delete(sqlWhereForUser.lastIndexOf("or"), sqlWhereForUser.length());
+            }
+              sqlWhereForUser.append(")");
+            if(sqlWhereForUser.toString().trim().endsWith("AND )")){
+                sqlWhereForUser.delete(sqlWhereForUser.lastIndexOf("AND )"), sqlWhereForUser.length());
+            }
 
-        if (sqlWhereForEvent.toString().endsWith("and ( ")) {
-            sqlWhereForEvent.delete(sqlWhereForEvent.lastIndexOf("and ( "), sqlWhereForEvent.length());
-        } else {
-            sqlWhereForEvent.append(")");
-        }
+            if (sqlWhereForEvent.toString().endsWith("and ( ")) {
+                sqlWhereForEvent.delete(sqlWhereForEvent.lastIndexOf("and ( "), sqlWhereForEvent.length());
+            }else{
+                sqlWhereForEvent.append(")");
+            }
     }
 
 
@@ -497,11 +500,8 @@ public class SQLUtil {
 
     /**
      * 根据eventOriginal获取category
-     *
      * @param eventOriginal 事件
      * @return 结果
-     * // SDK默认占用的actionId,包含
-     * // $launch、$exitPage、$appClick、$crash、$error
      */
     public static String getCategory(String eventOriginal) {
         String category;
@@ -515,38 +515,6 @@ public class SQLUtil {
             category = "event";
         }
         return category;
-    }
-
-    /**
-     * // eventType：指标类型，类型和起对应指标计算方式：
-     * // "acc" :COUNT(action)
-     * // userid:COUNT(DISTINCT deviceid)
-     * // loginUser ：COUNT(DISTINCT userid)
-     *
-     * @param eventType
-     * @return
-     * 查询的指标,
-     */
-    public static Tuple2<String, String> getIndicatorType(String eventType) {
-        String indicatorType = "";
-        String event = "";
-        switch (eventType) {
-            case "acc":
-                indicatorType = "COUNT(1) AS ct";
-                event = "1";
-                break;
-            case "userid":
-                indicatorType = "COUNT(DISTINCT deviceid)  AS ct";
-                event = "deviceid";
-                break;
-            case "loginUser":
-                indicatorType = "COUNT(DISTINCT userid)  AS ct";
-                event = "userid";
-                break;
-            default:
-                break;
-        }
-        return new Tuple2<>(indicatorType, event);
     }
 
     /**
@@ -573,13 +541,13 @@ public class SQLUtil {
                 String function = condition.getString(FUNCTION);
                 String fieldType = condition.getString("fieldType");
                 JSONArray params = condition.getJSONArray(PARAMS);
-                String tableType = "";
-                judgeSymbol(sqlBuilder, type, function, params, fieldType, tableType);
+                String tableType ="";
+                judgeSymbol(sqlBuilder, type, function, params, fieldType,tableType);
             }
         } else if ("or".equals(relation)) {
             if (!sqlBuilder.toString().trim().endsWith("and")) {
                 sqlBuilder.append(AND).append("( ");
-            } else {
+            }else{
                 sqlBuilder.append("( ");
             }
             for (int i = 0; i < size; i++) {
@@ -588,8 +556,8 @@ public class SQLUtil {
                 String function = condition.getString(FUNCTION);
                 String fieldType = condition.getString("fieldType");
                 JSONArray params = condition.getJSONArray(PARAMS);
-                String tableType = "";
-                judgeSymbol(sqlBuilder, type, function, params, fieldType, tableType);
+                String tableType ="";
+                judgeSymbol(sqlBuilder, type, function, params, fieldType,tableType);
                 if (sqlBuilder.toString().trim().endsWith("and")) {
                     sqlBuilder.delete(sqlBuilder.lastIndexOf("and"), sqlBuilder.length());
                 }
@@ -626,25 +594,25 @@ public class SQLUtil {
                 String isNumber = condition.getString("isNumber");
                 String isRegion = condition.getString("isRegion");
                 JSONArray params = condition.getJSONArray(PARAMS);
-                if (params.size() == 0 && "isTrue".equals(isNumber) && "isFalse".equals(isRegion)) {
+                if(params.size() == 0 && "isTrue".equals(isNumber) && "isFalse".equals(isRegion)){
                     String inputForint = condition.getString("inputForInt");
                     params.add(inputForint);
                 }
-                if (params.size() == 0 && "isTrue".equals(isNumber) && "isTrue".equals(isRegion)) {
+                if(params.size() == 0 && "isTrue".equals(isNumber) && "isTrue".equals(isRegion)){
                     String param1 = condition.getString("param1");
                     String param2 = condition.getString("param2");
                     params.add(param1);
                     params.add(param2);
                 }
 
-                String tableType = "";
-                judgeSymbol(sqlBuilder, type.substring(6), function, params, fieldType, tableType);
+                String tableType ="";
+                judgeSymbol(sqlBuilder, type.substring(6), function, params, fieldType,tableType);
             }
         } else if ("or".equals(relation)) {
 
             if (!sqlBuilder.toString().trim().endsWith("and")) {
                 sqlBuilder.append(AND).append("( ");
-            } else {
+            }else{
                 sqlBuilder.append("( ");
             }
             for (int i = 0; i < size; i++) {
@@ -653,15 +621,15 @@ public class SQLUtil {
                 String function = condition.getString(FUNCTION);
                 String fieldType = condition.getString("fieldType");
                 JSONArray params = condition.getJSONArray(PARAMS);
-                String tableType = "";
-                judgeSymbol(sqlBuilder, type.substring(6), function, params, fieldType, tableType);
+                String tableType ="";
+                judgeSymbol(sqlBuilder, type.substring(6), function, params, fieldType,tableType);
                 if (sqlBuilder.toString().trim().endsWith("and")) {
                     sqlBuilder.delete(sqlBuilder.lastIndexOf("and"), sqlBuilder.length());
                 }
                 sqlBuilder.append(" or ");
             }
             sqlBuilder.delete(sqlBuilder.lastIndexOf("or"), sqlBuilder.length());
-            if (sqlBuilder.toString().trim().endsWith("and")) {
+            if(sqlBuilder.toString().trim().endsWith("and")){
                 sqlBuilder.delete(sqlBuilder.lastIndexOf("and"), sqlBuilder.length());
             }
             sqlBuilder.append(")");
@@ -676,7 +644,7 @@ public class SQLUtil {
      * @param function   符号
      * @param params     参数hhhh
      */
-    private static void judgeUserSymbol(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType, String isNumber, String isRegion, String tableType) {
+    private static void judgeUserSymbol(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType,String isNumber ,String isRegion,String tableType) {
         switch (function) {
             case "equal":
                 pieceEqualWhere(sqlBuilder, type, params, fieldType, tableType);
@@ -719,10 +687,10 @@ public class SQLUtil {
      * @param function   符号
      * @param params     参数hhhh
      */
-    private static void judgeUserSymbolForAnd(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType, String isNumber, String isRegion, String tableType) {
+    private static void judgeUserSymbolForAnd(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType,String isNumber ,String isRegion,String tableType) {
         switch (function) {
             case "equal":
-                pieceEqualWhereForAnd(sqlBuilder, type, params, fieldType, isNumber, tableType);
+                pieceEqualWhereForAnd(sqlBuilder, type, params, fieldType,isNumber, tableType);
                 break;
             case "notEqual":
                 pieceNotEqualWhereForAnd(sqlBuilder, type, params, fieldType, isNumber);
@@ -762,13 +730,13 @@ public class SQLUtil {
      * @param function   符号
      * @param params     参数
      */
-    private static void judgeSymbol(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType, String tableType) {
+    private static void judgeSymbol(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType,String tableType) {
         switch (function) {
             case "equal":
-                pieceEqualWhere(sqlBuilder, type, params, fieldType, tableType);
+                pieceEqualWhere(sqlBuilder, type, params, fieldType,  tableType);
                 break;
             case "notEqual":
-                pieceNotEqualWhere(sqlBuilder, type, params, fieldType, tableType);
+                pieceNotEqualWhere(sqlBuilder, type, params, fieldType,  tableType);
                 break;
             case "contain":
                 pieceContainWhere(sqlBuilder, type, params);
@@ -804,14 +772,14 @@ public class SQLUtil {
      * @param function   符号
      * @param params     参数
      */
-    private static void judgeSymbolUserGroupOr(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType, String tableType, String productId) {
+    private static void judgeSymbolUserGroupOr(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType,  String tableType,String productId) {
         switch (function) {
 
             case "isTrue":
-                pieceIsTrueUserGroupOr(sqlBuilder, type, tableType, productId);
+                pieceIsTrueUserGroupOr(sqlBuilder, type,  tableType,  productId);
                 break;
             case "isFalse":
-                pieceIsFalseUserGroupOr(sqlBuilder, type, tableType, productId);
+                pieceIsFalseUserGroupOr(sqlBuilder, type,   tableType,  productId);
                 break;
 
             default:
@@ -827,39 +795,40 @@ public class SQLUtil {
      * @param function   符号
      * @param params     参数
      */
-    private static void judgeSymbolOr(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType, String tableType) {
+    private static void judgeSymbolOr(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType,  String tableType) {
         switch (function) {
             case "equal":
-                pieceEqualWhereOr(sqlBuilder, type, params, fieldType, tableType);
+                pieceEqualWhereOr(sqlBuilder, type, params, fieldType,  tableType);
                 break;
             case "notEqual":
-                pieceNotEqualWhereOr(sqlBuilder, type, params, fieldType, tableType);
+                pieceNotEqualWhereOr(sqlBuilder, type, params, fieldType,  tableType);
                 break;
             case "contain":
-                pieceContainWhereOr(sqlBuilder, type, params, tableType);
+                pieceContainWhereOr(sqlBuilder, type, params,  tableType);
                 break;
             case "notContain":
-                pieceNotContainWhereOr(sqlBuilder, type, params, tableType);
+                pieceNotContainWhereOr(sqlBuilder, type, params,  tableType);
                 break;
             case "isTrue":
-                pieceIsTrueWhereOr(sqlBuilder, type, tableType);
+                pieceIsTrueWhereOr(sqlBuilder, type,  tableType);
                 break;
             case "isFalse":
-                pieceIsFalseWhereOr(sqlBuilder, type, tableType);
+                pieceIsFalseWhereOr(sqlBuilder, type,   tableType);
                 break;
             case "more":
-                pieceMoreWhereOr(sqlBuilder, type, params, tableType);
+                pieceMoreWhereOr(sqlBuilder, type, params , tableType);
                 break;
             case "less":
                 pieceLessWhereOr(sqlBuilder, type, params, tableType);
                 break;
             case "region":
-                pieceRegionWhereOr(sqlBuilder, type, params, tableType);
+                pieceRegionWhereOr(sqlBuilder, type, params,  tableType);
                 break;
             default:
                 break;
         }
     }
+
 
 
     /**
@@ -918,7 +887,7 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceNotEqualWhere(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType, String tableType) {
+    private static void pieceNotEqualWhere(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType,String tableType) {
         StringBuilder in = new StringBuilder();
         in.append("(");
         pieceParams(params, in, fieldType);
@@ -935,7 +904,7 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceNotEqualWhereForAnd(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType, String isNumber) {
+    private static void pieceNotEqualWhereForAnd(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType,String isNumber) {
         StringBuilder andstr = new StringBuilder();
         pieceParamsForNoAnd(params, andstr, fieldType, type, isNumber);
         if (andstr.toString().endsWith("and ")) {
@@ -952,7 +921,7 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceNotEqualWhereForOr(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType, String isNumber, String tableType) {
+    private static void pieceNotEqualWhereForOr(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType,String isNumber,String tableType) {
         StringBuilder andstr = new StringBuilder();
         pieceParamsForNoAnd(params, andstr, fieldType, type, isNumber);
         if (andstr.toString().endsWith("and ")) {
@@ -962,6 +931,7 @@ public class SQLUtil {
     }
 
 
+
     /**
      * 拼凑等于
      *
@@ -969,7 +939,7 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceEqualWhere(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType, String tableType) {
+    private static void pieceEqualWhere(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType,String tableType) {
         StringBuilder in = new StringBuilder();
         in.append("(");
         pieceParams(params, in, fieldType);
@@ -985,7 +955,7 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceEqualWhereForAnd(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType, String isNumber, String tableType) {
+    private static void pieceEqualWhereForAnd(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType,String isNumber,String tableType) {
         StringBuilder andstr = new StringBuilder();
         pieceParamsForAnd(params, andstr, fieldType, type, isNumber, tableType);
         if (andstr.toString().endsWith("or ")) {
@@ -1003,10 +973,9 @@ public class SQLUtil {
      * @param params     参数
      */
     private static void pieceMoreWhere(StringBuilder sqlBuilder, String type, JSONArray params) {
-        sqlBuilder.append("((").append(type).append(" is not null ) AND (").append(type).append(">").append(Long.valueOf(params.getString(0))).append("))");
+        sqlBuilder.append("((").append(type).append(" is not null ) AND (").append(type).append(">").append(Long.valueOf( params.getString(0))).append("))");
     }
-
-    /**
+  /**
      * 拼凑小于
      *
      * @param sqlBuilder sql
@@ -1014,7 +983,7 @@ public class SQLUtil {
      * @param params     参数
      */
     private static void pieceLessWhere(StringBuilder sqlBuilder, String type, JSONArray params) {
-        sqlBuilder.append("((").append(type).append(" is not null ) AND (").append(type).append("<").append(Long.valueOf(params.getString(0))).append("))");
+        sqlBuilder.append("((").append(type).append(" is not null ) AND (").append(type).append("<").append(Long.valueOf( params.getString(0))).append("))");
     }
 
     /**
@@ -1025,8 +994,8 @@ public class SQLUtil {
      * @param params     参数
      */
     private static void pieceRegionWhere(StringBuilder sqlBuilder, String type, JSONArray params) {
-        sqlBuilder.append("((").append(type).append(" is not null ) AND ( ").append(type).append(">=").append(Long.valueOf(params.getString(0))).append(") AND");
-        sqlBuilder.append("(").append(type).append("<=").append(Long.valueOf(params.getString(1))).append("))");
+        sqlBuilder.append("((").append(type).append(" is not null ) AND ( ").append(type).append(">=").append(Long.valueOf( params.getString(0))).append(") AND");
+        sqlBuilder.append("(").append(type).append("<=").append(Long.valueOf( params.getString(1))).append("))");
     }
 
 
@@ -1037,9 +1006,9 @@ public class SQLUtil {
      * @param type       元数据类型
      */
     private static void pieceIsTrueWhere(StringBuilder sqlBuilder, String type) {
-        if (type.startsWith("event.")) {
+        if(type.startsWith("event.")){
             sqlBuilder.append("((").append(type.substring(6)).append(" is not null ) AND (").append(type.substring(6)).append(" = true ").append("))").append(" and ");
-        } else {
+        }else{
             sqlBuilder.append("((").append(type).append(" is not null ) AND (").append(type).append(" = true ").append("))").append(" and ");
         }
     }
@@ -1061,10 +1030,10 @@ public class SQLUtil {
      * @param in     拼凑的sql
      */
     private static void pieceParams(JSONArray params, StringBuilder in, String fieldType) {
-        if (StringUtils.isEmpty(fieldType)) {
+        if (StringUtils.isEmpty(fieldType)){
             dealParamForString(params, in);
-        } else {
-            switch (fieldType) {
+        }else {
+            switch (fieldType){
                 case "StringType":
                     dealParamForString(params, in);
                     break;
@@ -1088,21 +1057,21 @@ public class SQLUtil {
      * @param params 参数
      * @param in     拼凑的sql
      */
-    private static void pieceParamsForAnd(JSONArray params, StringBuilder in, String fieldType, String type, String isNumber, String tableType) {
-        if ("isTrue".equals(isNumber)) {
-            dealParamForIntegerAnd(params, in, type, tableType);
-        } else if (StringUtils.isEmpty(fieldType)) {
+    private static void pieceParamsForAnd(JSONArray params, StringBuilder in, String fieldType, String type,String isNumber,String tableType) {
+        if("isTrue".equals(isNumber)){
+            dealParamForIntegerAnd(params, in,  type, tableType);
+        }else if (StringUtils.isEmpty(fieldType)){
             dealParamForStringAnd(params, in, type, tableType);
-        } else {
-            switch (fieldType) {
+        }else {
+            switch (fieldType){
                 case "int":
-                    dealParamForIntegerAnd(params, in, type, tableType);
+                    dealParamForIntegerAnd(params, in,  type, tableType);
                     break;
                 case "double":
-                    dealParamForIntegerAnd(params, in, type, tableType);
+                    dealParamForIntegerAnd(params, in,  type, tableType);
                     break;
                 default:
-                    dealParamForStringAnd(params, in, type, tableType);
+                    dealParamForStringAnd(params, in,  type, tableType);
                     break;
             }
         }
@@ -1115,32 +1084,33 @@ public class SQLUtil {
      * @param params 参数
      * @param in     拼凑的sql
      */
-    private static void pieceParamsForNoAnd(JSONArray params, StringBuilder in, String fieldType, String type, String isNumber) {
-        if ("isTrue".equals(isNumber)) {
-            dealParamForIntegerNoAnd(params, in, type);
-        } else if (StringUtils.isEmpty(fieldType)) {
+    private static void pieceParamsForNoAnd(JSONArray params, StringBuilder in, String fieldType, String type,String isNumber) {
+        if("isTrue".equals(isNumber)){
+            dealParamForIntegerNoAnd(params, in,  type);
+        }else if (StringUtils.isEmpty(fieldType)){
             dealParamForStringNoAnd(params, in, type);
-        } else {
-            switch (fieldType) {
+        }else {
+            switch (fieldType){
                 case "int":
-                    dealParamForIntegerNoAnd(params, in, type);
+                    dealParamForIntegerNoAnd(params, in,  type);
                     break;
                 case "double":
-                    dealParamForIntegerNoAnd(params, in, type);
+                    dealParamForIntegerNoAnd(params, in,  type);
                     break;
                 default:
-                    dealParamForStringNoAnd(params, in, type);
+                    dealParamForStringNoAnd(params, in,  type);
                     break;
             }
         }
     }
 
 
+
+
     /**
      * 处理参数为字符数据
-     *
      * @param params 参数
-     * @param in     结果
+     * @param in 结果
      */
     private static void dealParamForString(JSONArray params, StringBuilder in) {
         for (int i = 0; i < params.size(); i++) {
@@ -1160,12 +1130,11 @@ public class SQLUtil {
 
     /**
      * 处理参数为字符数据 用于and拼接 用户属性
-     *
      * @param params 参数
      * @param params 类型
      * @param andstr 结果
      */
-    private static void dealParamForStringAnd(JSONArray params, StringBuilder andstr, String type, String tableType) {
+    private static void dealParamForStringAnd(JSONArray params, StringBuilder andstr, String type,String tableType) {
         for (int i = 0; i < params.size(); i++) {
             String param = params.getString(i);
             // 处理一对多的关系，如苹果手机
@@ -1182,11 +1151,10 @@ public class SQLUtil {
 
     /**
      * 处理参数为整型数据   用于and拼接用户属性
-     *
      * @param params 参数
      * @param andstr 结果
      */
-    private static void dealParamForIntegerAnd(JSONArray params, StringBuilder andstr, String type, String tableType) {
+    private static void dealParamForIntegerAnd(JSONArray params, StringBuilder andstr, String type,String tableType) {
         for (int i = 0; i < params.size(); i++) {
             String param = params.getString(i);
             andstr.append(tableType).append(type).append(" = ").append(param).append(" or ");
@@ -1196,9 +1164,8 @@ public class SQLUtil {
 
     /**
      * 处理参数为整型数据
-     *
      * @param params 参数
-     * @param in     结果
+     * @param in 结果
      */
     private static void dealParamForInteger(JSONArray params, StringBuilder in) {
         for (int i = 0; i < params.size(); i++) {
@@ -1216,7 +1183,7 @@ public class SQLUtil {
      */
     public static void pieceActionGroupBy(StringBuilder sqlBuilder, JSONArray fields, String unit) {
 
-        if (StringUtils.isNotBlank(unit)) {
+        if(StringUtils.isNotBlank(unit)){
             sqlBuilder.append(" group by ");
             for (int i = 0; i < fields.size(); i++) {
                 if ("all".equals(fields.getString(i))) {
@@ -1225,7 +1192,7 @@ public class SQLUtil {
                 sqlBuilder.append(fields.getString(i).substring(6)).append(",");
             }
             sqlBuilder.append(unit);
-        } else {
+        }else{
             sqlBuilder.append(" group by ");
             for (int i = 0; i < fields.size(); i++) {
                 if ("all".equals(fields.getString(i))) {
@@ -1307,8 +1274,8 @@ public class SQLUtil {
                 String fieldType = condition.getString("fieldType");
                 String function = condition.getString(FUNCTION);
                 JSONArray params = condition.getJSONArray(PARAMS);
-                String tableType = "";
-                judgeSymbol(sqlBuilder, type, function, params, fieldType, tableType);
+                String tableType ="";
+                judgeSymbol(sqlBuilder, type, function, params, fieldType,tableType);
                 sqlBuilder.append(AND);
             }
             sqlBuilder.delete(sqlBuilder.lastIndexOf("and"), sqlBuilder.length());
@@ -1320,8 +1287,8 @@ public class SQLUtil {
                 String fieldType = condition.getString("fieldType");
                 String function = condition.getString(FUNCTION);
                 JSONArray params = condition.getJSONArray(PARAMS);
-                String tableType = "";
-                judgeSymbol(sqlBuilder, type, function, params, fieldType, tableType);
+                String tableType ="";
+                judgeSymbol(sqlBuilder, type, function, params, fieldType,tableType);
                 if (sqlBuilder.toString().trim().endsWith("and")) {
                     sqlBuilder.delete(sqlBuilder.lastIndexOf("and"), sqlBuilder.length());
                 }
@@ -1333,7 +1300,6 @@ public class SQLUtil {
 
     /**
      * 处理参数为字符数据 用于and拼接
-     *
      * @param params 参数
      * @param params 类型
      * @param andstr 结果
@@ -1355,7 +1321,6 @@ public class SQLUtil {
 
     /**
      * 处理参数为整型数据   用于and拼接
-     *
      * @param params 参数
      * @param andstr 结果
      */
@@ -1365,14 +1330,13 @@ public class SQLUtil {
             andstr.append(type).append(" <> ").append(param).append(" and ");
         }
     }
-
     /**
      * 拼凑为真
      *
      * @param sqlBuilder sql
      * @param type       元数据类型
      */
-    private static void pieceIsTrueWhereForUserGroup(StringBuilder sqlBuilder, String type, String productId) {
+    private static void pieceIsTrueWhereForUserGroup(StringBuilder sqlBuilder, String type,String productId) {
         sqlBuilder.append("((").append(productId).append("_").append(type).append(" is not null ) AND (").append(productId).append("_").append(type).append(" = true ").append("))").append(" and ");
     }
 
@@ -1382,7 +1346,7 @@ public class SQLUtil {
      * @param sqlBuilder sql
      * @param type       元数据类型
      */
-    private static void pieceIsFalseWhereForUserGroup(StringBuilder sqlBuilder, String type, String productId) {
+    private static void pieceIsFalseWhereForUserGroup(StringBuilder sqlBuilder, String type,String productId) {
         sqlBuilder.append("((").append(productId).append("_").append(type).append(" is not null ) AND (").append(productId).append("_").append(type).append(" = false ").append("))").append(" and ");
     }
 
@@ -1395,14 +1359,14 @@ public class SQLUtil {
      * @param function   符号
      * @param params     参数
      */
-    private static void judgeSymbolForUserGroup(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType, String productId) {
+    private static void judgeSymbolForUserGroup(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType,String productId) {
         switch (function) {
 
             case "isTrue":
-                pieceIsTrueWhereForUserGroup(sqlBuilder, type, productId);
+                pieceIsTrueWhereForUserGroup(sqlBuilder, type,productId);
                 break;
             case "isFalse":
-                pieceIsFalseWhereForUserGroup(sqlBuilder, type, productId);
+                pieceIsFalseWhereForUserGroup(sqlBuilder, type,productId);
                 break;
             default:
                 break;
@@ -1416,7 +1380,7 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceEqualWhereOr(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType, String tableType) {
+    private static void pieceEqualWhereOr(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType,String tableType) {
         StringBuilder in = new StringBuilder();
         in.append("(");
         pieceParams(params, in, fieldType);
@@ -1433,7 +1397,7 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceNotEqualWhereOr(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType, String tableType) {
+    private static void pieceNotEqualWhereOr(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType,String tableType) {
         StringBuilder in = new StringBuilder();
         in.append("(");
         pieceParams(params, in, fieldType);
@@ -1449,7 +1413,7 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceContainWhereOr(StringBuilder sqlBuilder, String type, JSONArray params, String tableType) {
+    private static void pieceContainWhereOr(StringBuilder sqlBuilder, String type, JSONArray params,String tableType) {
         final String param = params.getString(0);
 
         // 针对类似苹果手机一对多关系的处理
@@ -1474,7 +1438,7 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceNotContainWhereOr(StringBuilder sqlBuilder, String type, JSONArray params, String tableType) {
+    private static void pieceNotContainWhereOr(StringBuilder sqlBuilder, String type, JSONArray params,String tableType) {
         final String param = params.getString(0);
 
         // 针对类似苹果手机一对多关系的处理
@@ -1493,6 +1457,10 @@ public class SQLUtil {
     }
 
 
+
+
+
+
     /**
      * 拼凑等于 用and连接用户属性
      *
@@ -1500,9 +1468,9 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceEqualWhereForAndOr(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType, String isNumber, String tableType) {
+    private static void pieceEqualWhereForAndOr(StringBuilder sqlBuilder, String type, JSONArray params, String fieldType,String isNumber,String tableType) {
         StringBuilder andstr = new StringBuilder();
-        pieceParamsForAnd(params, andstr, fieldType, type, isNumber, tableType);
+        pieceParamsForAnd(params, andstr, fieldType, type, isNumber,tableType);
         if (andstr.toString().endsWith("or ")) {
             andstr.delete(andstr.lastIndexOf("or "), andstr.length());
         }
@@ -1517,10 +1485,9 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceMoreWhereOr(StringBuilder sqlBuilder, String type, JSONArray params, String tableType) {
-        sqlBuilder.append("((").append(tableType).append(type).append(" is not null ) AND (").append(tableType).append(type).append(">").append(Long.valueOf(params.getString(0))).append("))");
+    private static void pieceMoreWhereOr(StringBuilder sqlBuilder, String type, JSONArray params,String tableType) {
+        sqlBuilder.append("((").append(tableType).append(type).append(" is not null ) AND (").append(tableType).append(type).append(">").append(Long.valueOf( params.getString(0))).append("))");
     }
-
     /**
      * 拼凑小于
      *
@@ -1528,8 +1495,8 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceLessWhereOr(StringBuilder sqlBuilder, String type, JSONArray params, String tableType) {
-        sqlBuilder.append("((").append(tableType).append(type).append(" is not null ) AND (").append(tableType).append(type).append("<").append(Long.valueOf(params.getString(0))).append("))");
+    private static void pieceLessWhereOr(StringBuilder sqlBuilder, String type, JSONArray params,String tableType) {
+        sqlBuilder.append("((").append(tableType).append(type).append(" is not null ) AND (").append(tableType).append(type).append("<").append(Long.valueOf( params.getString(0))).append("))");
     }
 
     /**
@@ -1539,9 +1506,9 @@ public class SQLUtil {
      * @param type       元数据类型
      * @param params     参数
      */
-    private static void pieceRegionWhereOr(StringBuilder sqlBuilder, String type, JSONArray params, String tableType) {
-        sqlBuilder.append("((").append(tableType).append(type).append(" is not null ) AND ( ").append(tableType).append(type).append(">=").append(Long.valueOf(params.getString(0))).append(") AND");
-        sqlBuilder.append("(").append(tableType).append(type).append("<=").append(Long.valueOf(params.getString(1))).append("))");
+    private static void pieceRegionWhereOr(StringBuilder sqlBuilder, String type, JSONArray params,String tableType) {
+        sqlBuilder.append("((").append(tableType).append(type).append(" is not null ) AND ( ").append(tableType).append(type).append(">=").append(Long.valueOf( params.getString(0))).append(") AND");
+        sqlBuilder.append("(").append(tableType).append(type).append("<=").append(Long.valueOf( params.getString(1))).append("))");
     }
 
 
@@ -1551,7 +1518,7 @@ public class SQLUtil {
      * @param sqlBuilder sql
      * @param type       元数据类型
      */
-    private static void pieceIsTrueWhereOr(StringBuilder sqlBuilder, String type, String tableType) {
+    private static void pieceIsTrueWhereOr(StringBuilder sqlBuilder, String type,String tableType) {
         sqlBuilder.append("((").append(tableType).append(type).append(" is not null ) AND (").append(tableType).append(type).append(" = true ").append("))").append(" and ");
     }
 
@@ -1561,7 +1528,7 @@ public class SQLUtil {
      * @param sqlBuilder sql
      * @param type       元数据类型
      */
-    private static void pieceIsFalseWhereOr(StringBuilder sqlBuilder, String type, String tableType) {
+    private static void pieceIsFalseWhereOr(StringBuilder sqlBuilder, String type,String tableType) {
         sqlBuilder.append("((").append(tableType).append(type).append(" is not null ) AND (").append(tableType).append(type).append(" = false ").append("))").append(" and ");
     }
 
@@ -1571,7 +1538,7 @@ public class SQLUtil {
      * @param sqlBuilder sql
      * @param type       元数据类型
      */
-    private static void pieceIsTrueUserGroupOr(StringBuilder sqlBuilder, String type, String tableType, String productId) {
+    private static void pieceIsTrueUserGroupOr(StringBuilder sqlBuilder, String type,String tableType,String productId) {
         sqlBuilder.append("((").append(tableType).append(productId).append("_").append(type).append(" is not null ) AND (").append(tableType).append(productId).append("_").append(type).append(" = true ").append("))").append(" and ");
     }
 
@@ -1581,7 +1548,7 @@ public class SQLUtil {
      * @param sqlBuilder sql
      * @param type       元数据类型
      */
-    private static void pieceIsFalseUserGroupOr(StringBuilder sqlBuilder, String type, String tableType, String productId) {
+    private static void pieceIsFalseUserGroupOr(StringBuilder sqlBuilder, String type,String tableType,String productId) {
         sqlBuilder.append("((").append(tableType).append(productId).append("_").append(type).append(" is not null ) AND (").append(tableType).append(productId).append("_").append(type).append(" = false ").append("))").append(" and ");
     }
 
@@ -1594,34 +1561,34 @@ public class SQLUtil {
      * @param function   符号
      * @param params     参数
      */
-    private static void judgeUserSymbolForOr(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType, String isNumber, String isRegion, String tableType) {
+    private static void judgeUserSymbolForOr(StringBuilder sqlBuilder, String type, String function, JSONArray params, String fieldType,String isNumber ,String isRegion,String tableType) {
         switch (function) {
             case "equal":
-                pieceEqualWhereForAndOr(sqlBuilder, type, params, fieldType, isNumber, tableType);
+                pieceEqualWhereForAndOr(sqlBuilder, type, params, fieldType,isNumber,tableType);
                 break;
             case "notEqual":
-                pieceNotEqualWhereForOr(sqlBuilder, type, params, fieldType, isNumber, tableType);
+                pieceNotEqualWhereForOr(sqlBuilder, type, params, fieldType, isNumber,tableType);
                 break;
             case "contain":
-                pieceContainWhereOr(sqlBuilder, type, params, tableType);
+                pieceContainWhereOr(sqlBuilder, type, params,tableType);
                 break;
             case "notContain":
-                pieceNotContainWhereOr(sqlBuilder, type, params, tableType);
+                pieceNotContainWhereOr(sqlBuilder, type, params,tableType);
                 break;
             case "isTrue":
-                pieceIsTrueWhereOr(sqlBuilder, type, tableType);
+                pieceIsTrueWhereOr(sqlBuilder, type,tableType);
                 break;
             case "isFalse":
-                pieceIsFalseWhereOr(sqlBuilder, type, tableType);
+                pieceIsFalseWhereOr(sqlBuilder, type,tableType);
                 break;
             case "more":
-                pieceMoreWhereOr(sqlBuilder, type, params, tableType);
+                pieceMoreWhereOr(sqlBuilder, type, params,tableType);
                 break;
             case "less":
-                pieceLessWhereOr(sqlBuilder, type, params, tableType);
+                pieceLessWhereOr(sqlBuilder, type, params,tableType);
                 break;
             case "region":
-                pieceRegionWhereOr(sqlBuilder, type, params, tableType);
+                pieceRegionWhereOr(sqlBuilder, type, params,tableType);
                 break;
             default:
                 break;
@@ -1632,20 +1599,20 @@ public class SQLUtil {
     /**
      * 判断分组中是否含有事件属性和用户属性
      *
-     * @param fields       分组
+     * @param fields 分组
      * @param isFieldEvent 是否是事件属性
-     * @param isFieldUser  是否是用户属性
+     * @param isFieldUser 是否是用户属性
      */
-    public static void handleFieldType(JSONArray fields, boolean isFieldEvent, boolean isFieldUser) {
+    public static void handleFieldType(JSONArray fields, boolean isFieldEvent,boolean isFieldUser) {
         for (int j = 0; j < fields.size(); j++) {
             if ("all".equals(fields.getString(j))) {
                 continue;
             }
-            if (fields.getString(j).startsWith(Constants.EVENT_START)) {//事件属性
+            if(fields.getString(j).startsWith(Constants.EVENT_START)){//事件属性
                 isFieldEvent = true;
-            } else if (fields.getString(j).startsWith(Constants.USER_START)) {//用户属性
+            }else if(fields.getString(j).startsWith(Constants.USER_START)){//用户属性
                 isFieldUser = true;
-            } else if (fields.getString(j).startsWith(Constants.USERGROUP_START)) {//用户属性
+            }else if(fields.getString(j).startsWith(Constants.USERGROUP_START)){//用户属性
                 isFieldUser = true;
             }
         }
@@ -1658,18 +1625,278 @@ public class SQLUtil {
      * @param outIsEvent 是否是事件属性
      * @param outItsUser 是否是用户属性
      */
-    public static void handleWhereType(JSONArray conditions, boolean outIsEvent, boolean outItsUser) {
+    public static void handleWhereType(JSONArray conditions, boolean outIsEvent,boolean outItsUser) {
         for (int i = 0; i < conditions.size(); i++) {
             JSONObject condition = conditions.getJSONObject(i);
             String type = condition.getString(Constants.TYPE);
-            if (type.startsWith(Constants.EVENT_START)) {//事件属性
+            if(type.startsWith(Constants.EVENT_START)){//事件属性
                 outIsEvent = true;
-            } else if (type.startsWith(Constants.USER_START)) {//用户属性
+            }else if(type.startsWith(Constants.USER_START)){//用户属性
                 outItsUser = true;
-            } else if (type.startsWith(Constants.USERGROUP_START)) {//用户分群
+            }else if(type.startsWith(Constants.USERGROUP_START)){//用户分群
                 outItsUser = true;
             }
         }
     }
+
+
+    public static Tuple2<String, String> getIndicatorType(String eventType) {
+        String indicatorType = "";
+        String event = "";
+        switch (eventType) {
+            case "acc":
+                indicatorType = "COUNT(1) AS ct";
+                event = "1";
+                break;
+            case "userid":
+                indicatorType = "COUNT(DISTINCT deviceid)  AS ct";
+                event = "deviceid";
+                break;
+            case "loginUser":
+                indicatorType = "COUNT(DISTINCT userid)  AS ct";
+                event = "userid";
+                break;
+            default:
+                break;
+        }
+        return new Tuple2<>(indicatorType, event);
+    }
+
+    /**
+     * 根据 每一组的 查询条件 和 条件关系(adn/or) 拼接 每一组 action 表和user表的where 条件
+     *
+     * @param conditions 查询条件集合
+     * @param relation   条件间的逻辑关系 ：and / or
+     * @return 五元组：(
+     * action的where条件，user的where条件，用户分群id的set集合，查询条件中action属性列名set集合，用户属性名及其类型的map)
+     */
+    public static Tuple5<
+            StringJoiner, StringJoiner,
+            Set<String>, Set<String>,
+            Map<String, String>
+            > queryConditionOp(JSONArray conditions, String relation, String productId) {
+
+        StringJoiner actionWhere = new StringJoiner(String.format(" %s ", relation)); // action where 条件
+        StringJoiner userWhere = new StringJoiner(String.format(" %s ", relation));
+        Map<String, String> userProps = new HashMap<>();
+        Set<String> groupId = new HashSet<>();
+        Set<String> actionFields = new HashSet<>();
+
+        conditions.forEach(v -> {
+            JSONObject condition = JSONObject.parseObject(String.valueOf(v));
+            String type = condition.getString("type");  //event.country, user.age, userGroup.benyueqianzaitouziyonghu
+            String function = condition.getString("function");
+            JSONArray params = condition.getJSONArray("params");
+            String isNumber = condition.getString("isNumber");
+            String[] split = type.split("\\.", 2);
+            String column = split[1];
+            String con;
+            switch (split[0]) {
+                case "event": {
+                    actionFields.add(column);
+                    switch (function) {
+                        case "equal": { // string  and  Number
+                            StringJoiner joiner = new StringJoiner(", ", "(", ")");
+                            if ("isTrue".equals(isNumber)) {
+                                params.forEach(x -> joiner.add(String.format("'%s'", x)));
+                            } else {
+                                params.forEach(x -> joiner.add(String.format("'%s'", x)));
+                            }
+
+                            con = String.format("(%s IN  %s)", column, joiner.toString());
+                            actionWhere.add(con);
+                            break;
+                        }
+                        case "notEqual": {  // string  and  Number
+                            StringJoiner joiner = new StringJoiner(", ", "(", ")");
+                            params.forEach(x -> joiner.add(String.format("'%s'", x)));
+                            con = String.format("(%s NOT IN  %s)", column, joiner.toString());
+                            actionWhere.add(con);// IN  v.s NOT IN
+                            break;
+                        }
+                        case "contain": { //string
+                            String param = params.getString(0);
+                            actionWhere.add(String.format("((%s IS NOT NULL ) AND ( %s LIKE  '%s') )", column, column, param));// LIKE  v.s    LIKE
+                            break;
+                        }
+                        case "isTrue":
+                            actionWhere.add(String.format("(%s  IS NOT NULL AND %s = true)", column, column));
+                            break;
+                        case "isFalse":
+                            actionWhere.add(String.format("(%s  IS NOT NULL AND %s = false)", column, column));
+                            break;
+                        case "notContain": { //string
+                            String param = params.getString(0);
+                            actionWhere.add(String.format("((%s IS NOT NULL ) AND (%s NOT LIKE  '%s') )", column, column, param));// LIKE  v.s NOT LIKE
+                            break;
+                        }
+                        case "more": {  // Number >
+                            String param = params.getString(0);
+                            con = String.format("(%s  >  %s)", column, param);
+                            actionWhere.add(con);
+                            break;
+                        }
+                        case "less": { // Number <
+                            String param = params.getString(0);
+                            con = String.format("(%s  <  %s)", column, param);
+                            actionWhere.add(con);
+                            break;
+                        }
+                        case "region": {  // Number  between ：  >= and <=
+                            String param1 = condition.getString("param1");
+                            String param2 = condition.getString("param2");
+                            con = String.format("(%s  >=  %s AND  %s  <=  %s)", column, param1, column, param2);
+                            actionWhere.add(con);
+                            break;
+                        }
+                    }
+
+
+                    break;
+                }
+                case "user": {
+                    String propIdInHBase = productId+"_"+column;
+                    switch (function) {
+                        // String:
+                        case "equal": { // string  and  Number
+                            StringJoiner joiner = new StringJoiner(" or ", "(", ")");
+                            if ("isTrue".equals(isNumber)) {
+                                params.forEach(x -> joiner.add(String.format("  %s = %s", propIdInHBase, x)));
+                                userProps.put(propIdInHBase, "int");
+                            } else {
+                                params.forEach(x -> joiner.add(String.format("  %s = '%s'", propIdInHBase, x)));
+                                userProps.put(propIdInHBase, "string");
+                            }
+                            con = String.format("( %s IS NOT NULL  AND  %s )", propIdInHBase, joiner.toString());
+                            userWhere.add(con);
+                            break;
+                        }
+                        case "notEqual": {  // string  and  Number
+                            StringJoiner joiner = new StringJoiner(" AND ", "(", ")");  // and v.s and  or
+                            if ("isTrue".equals(isNumber)) {
+                                params.forEach(x -> joiner.add(String.format("  %s <> %s", propIdInHBase, x)));
+                                userProps.put(propIdInHBase, "int");
+                            } else {
+                                params.forEach(x -> joiner.add(String.format("  %s <> '%s'", propIdInHBase, x)));
+                                userProps.put(propIdInHBase, "string");
+                            }
+                            userWhere.add(String.format("((%s IS NOT NULL ) AND  %s )", propIdInHBase, joiner.toString()));
+                            break;
+                        }
+                        case "contain": { //string like
+                            String param = params.getString(0);
+                            con = String.format("((%s IS NOT NULL ) AND ( %s LIKE  '%s') )", propIdInHBase, propIdInHBase, param);
+                            userWhere.add(con);// LIKE  v.s    LIKE
+                            userProps.put(propIdInHBase, "string");
+                            break;
+                        }
+                        case "notContain": { //string
+                            String param = params.getString(0);
+                            con = String.format("((%s IS NOT NULL ) AND (%s NOT LIKE  '%s') )", propIdInHBase, propIdInHBase, param);
+                            userWhere.add(con);//NOT LIKE    v.s NOT LIKE
+                            userProps.put(propIdInHBase, "string");
+                            break;
+                        }
+                        case "isTrue":
+                            userWhere.add(String.format("(%s  IS NOT NULL AND %s = true)", propIdInHBase, propIdInHBase));
+                            userProps.put(propIdInHBase, "boolean");
+                            break;
+                        case "isFalse":
+                            userWhere.add(String.format("(%s  IS NOT NULL AND %s = false)", propIdInHBase, propIdInHBase));
+                            userProps.put(propIdInHBase, "boolean");
+                            break;
+                        case "more": {  // Number >
+                            String param = params.getString(0);
+                            con = String.format("(%s  >  %s)", propIdInHBase, param);
+                            userProps.put(propIdInHBase, "int");
+                            userWhere.add(con);
+                            break;
+                        }
+                        case "less": { // Number <
+                            String param = params.getString(0);
+                            con = String.format("(%s  <  %s)", propIdInHBase, param);
+                            userProps.put(propIdInHBase, "int");
+                            userWhere.add(con);
+                            break;
+                        }
+                        case "region": {  // Number  between ：  >= and <=
+                            String param1 = condition.getString("param1");
+                            String param2 = condition.getString("param2");
+                            con = String.format("(%s  >=  %s AND  %s  <=  %s)", propIdInHBase, param1, propIdInHBase, param2);
+                            userProps.put(propIdInHBase, "int");
+                            userWhere.add(con);
+                            break;
+                        }
+
+
+                    }
+                    break;
+                }
+                case "userGroup": {
+                    String param = "false";
+                    if ("isTrue".equals(function)) {
+                        param = "true";
+                    }
+                    String groupIdInHBase = productId+"_"+column;
+                    userWhere.add(String.format("((%s IS NOT NULL ) AND (%s = %s) )", groupIdInHBase, groupIdInHBase, param));
+                    groupId.add(groupIdInHBase);
+                    break;
+                }
+            }
+
+
+        });
+        return new Tuple5<>(userWhere, actionWhere, groupId, actionFields, userProps);
+
+    }
+    /**
+     * 根据分组字段获取 usersTable 和 parquetTmpTable 的 group by 和 select 字段
+     * todo 获取usersTable 的 schema
+     *
+     * @param by_field
+     * @return
+     */
+    public static Tuple6<StringJoiner, StringJoiner, HashSet, HashSet,
+            HashMap<String, String>,
+            HashSet<String>
+            > byFieldOp(JSONArray by_field, String productId,Map<String, String> userPropertiesMap) {
+
+        StringJoiner outGroupByUser = new StringJoiner(", "); // user group by 字段
+        StringJoiner outGroupByAction = new StringJoiner(", "); //  action group by 字段
+
+        HashSet outSelectFieldUser = new HashSet(); //  user select  字段
+        HashSet outSelectFieldAction = new HashSet(); // action select  字段
+
+        Map<String, String> userProps = new HashMap<>();
+        HashSet<String> groupId = new HashSet<>();
+
+        by_field.stream().filter(x->!"all".equalsIgnoreCase(x.toString())).forEach(field -> {
+            String[] split = field.toString().split("\\.", 2);
+            String type = split[0];
+            String column = split[1];
+            if ("event".equals(type)) {
+                //parquetTmpTable 表
+                outGroupByAction.add(column);//  group by 字段拼接
+                outSelectFieldAction.add(column); // select 字段拼接
+
+            } else if ("user".equals(type)) {
+                String propIdInHBase = productId+"_"+column;
+                //usersTable  表的用户属性
+                outGroupByUser.add(propIdInHBase);// group by 字段拼接
+                userProps.put(propIdInHBase, userPropertiesMap.get(column));
+                outSelectFieldUser.add(propIdInHBase);// select 字段拼接
+
+            } else if ("userGroup".equals(type)) {
+                //usersTable  表的用户分群属性处理
+                String groupIdInHBase = productId+"_"+column;
+                outGroupByUser.add(groupIdInHBase);// group by 字段拼接
+                groupId.add(groupIdInHBase);
+                outSelectFieldUser.add(groupIdInHBase);// select 字段拼接
+            }
+
+        });
+        return new Tuple6(outGroupByUser, outGroupByAction, outSelectFieldUser, outSelectFieldAction, userProps, groupId);
+    }
+
 
 }

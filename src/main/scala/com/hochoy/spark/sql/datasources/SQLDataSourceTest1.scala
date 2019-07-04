@@ -23,6 +23,8 @@ object SQLDataSourceTest1 {
   def main(args: Array[String]) {
 
     println(s"warehouse_dir :   $warehouse_dir")
+
+    clearAndCache
     //  Generic Load/Save Functions
     loadAndSave
 
@@ -195,6 +197,45 @@ object SQLDataSourceTest1 {
 
 
   }
+
+
+
+
+
+
+  def clearAndCache = {
+
+    //Loading Data Programmatically
+    /**
+      * http://spark.apache.org/docs/latest/sql-data-sources-parquet.html#loading-data-programmatically
+      *
+      */
+
+    val peopleDF = spark.read.json(s"${USER_SPARK_PATH}${FILE_PATH}people.json")
+    peopleDF.createOrReplaceTempView("people")
+    spark.sql("cache table people")
+    spark.sql("cache table p select * from people")
+    spark.sql("select * from people").show(100)
+    spark.sql("select * from p").show(100)
+    spark.sql("show tables").show(100)
+    spark.sql("clear cache")
+    spark.sql("show tables").show(100)
+    spark.sql("select * from people").show(100)
+    spark.sql("select * from p").show(100)
+
+
+
+    //
+
+  }
+
+
+
+
+
+
+
+
 /*
 
   def sparkOnhbase():Unit={

@@ -8,6 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 import scala.Tuple2;
 import scala.Tuple5;
 import scala.Tuple6;
+import scala.Tuple7;
 
 import java.util.*;
 
@@ -1856,10 +1857,11 @@ public class SQLUtil {
      * @param by_field
      * @return
      */
-    public static Tuple6<StringJoiner, StringJoiner, HashSet, HashSet,
+    public static Tuple7<StringJoiner, StringJoiner, HashSet, HashSet,
             HashMap<String, String>,
             HashSet<String>
-            > byFieldOp(JSONArray by_field, String productId,Map<String, String> userPropertiesMap) {
+            , StringJoiner
+            > byFieldOp(JSONArray by_field, String productId, Map<String, String> userPropertiesMap) {
 
         StringJoiner outGroupByUser = new StringJoiner(", "); // user group by 字段
         StringJoiner outGroupByAction = new StringJoiner(", "); //  action group by 字段
@@ -1869,6 +1871,7 @@ public class SQLUtil {
 
         Map<String, String> userProps = new HashMap<>();
         HashSet<String> groupId = new HashSet<>();
+        StringJoiner allSelect = new StringJoiner(", ");
 
         by_field.stream().filter(x->!"all".equalsIgnoreCase(x.toString())).forEach(field -> {
             String[] split = field.toString().split("\\.", 2);
@@ -1878,24 +1881,29 @@ public class SQLUtil {
                 //parquetTmpTable 表
                 outGroupByAction.add(column);//  group by 字段拼接
                 outSelectFieldAction.add(column); // select 字段拼接
+                allSelect.add(column);
+            } else {
+                String columnInHBase = productId+"_"+column;
+                allSelect.add(columnInHBase);
+                if ("user".equals(type)) {
 
-            } else if ("user".equals(type)) {
-                String propIdInHBase = productId+"_"+column;
-                //usersTable  表的用户属性
-                outGroupByUser.add(propIdInHBase);// group by 字段拼接
-                userProps.put(propIdInHBase, userPropertiesMap.get(column));
-                outSelectFieldUser.add(propIdInHBase);// select 字段拼接
+                    //usersTable  表的用户属性
+                    outGroupByUser.add(columnInHBase);// group by 字段拼接
+                    userProps.put(columnInHBase, userPropertiesMap.get(column));
+                    outSelectFieldUser.add(columnInHBase);// select 字段拼接
 
-            } else if ("userGroup".equals(type)) {
-                //usersTable  表的用户分群属性处理
-                String groupIdInHBase = productId+"_"+column;
-                outGroupByUser.add(groupIdInHBase);// group by 字段拼接
-                groupId.add(groupIdInHBase);
-                outSelectFieldUser.add(groupIdInHBase);// select 字段拼接
+                } else if ("userGroup".equals(type)) {
+                    //usersTable  表的用户分群属性处理
+
+                    outGroupByUser.add(columnInHBase);// group by 字段拼接
+                    groupId.add(columnInHBase);
+                    outSelectFieldUser.add(columnInHBase);// select 字段拼接
+                }
+
             }
 
         });
-        return new Tuple6(outGroupByUser, outGroupByAction, outSelectFieldUser, outSelectFieldAction, userProps, groupId);
+        return new Tuple7(outGroupByUser, outGroupByAction, outSelectFieldUser, outSelectFieldAction, userProps, groupId, allSelect);
     }
 
 

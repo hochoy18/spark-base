@@ -22,12 +22,11 @@ import org.slf4j.LoggerFactory;
 //import org.springframework.beans.factory.annotation.Value;
 //import org.springframework.stereotype.Service;
 //import org.springframework.transaction.annotation.Transactional;
-import scala.Tuple2;
-import scala.Tuple3;
-import scala.Tuple5;
-import scala.Tuple6;
+import scala.*;
 
 import java.io.IOException;
+import java.lang.Boolean;
+import java.lang.Long;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -116,11 +115,11 @@ public class CustomActionServiceImpl  {
         /**
          * 结合 {@link filter}、{@link selectAndGroupBy}  拼接 单指标 SQL
          */
-        Tuple3<String,String,Object> sqlOps = generateMultipleIndicatorsSQL(actions, (Tuple6)queryOrSaveOp._1, (Tuple5) queryOrSaveOp._2, map,true);
+        Tuple3<String,String,Object> sqlOps = generateMultipleIndicatorsSQL(actions, (Tuple7)queryOrSaveOp._1, (Tuple5) queryOrSaveOp._2, map,true);
 
         JSONObject responseResult = querySparkSql(new StringBuilder(sqlOps._1()), maxLine,sqlOps._2());
 
-        if (!responseResult.containsKey("result") ||responseResult.isEmpty() ||responseResult == null ||
+        if (null == responseResult || !responseResult.containsKey("result") ||responseResult.isEmpty() ||responseResult == null ||
                 (responseResult.containsKey("status") && responseResult.getString("status").equalsIgnoreCase("error"))) {
             return new JSONObject();
         }
@@ -133,14 +132,14 @@ public class CustomActionServiceImpl  {
         return result;
     }
 
-    private Tuple2<Tuple6,Tuple5>  queryOrSaveOp(JSONObject jsonObject){
+    private Tuple2<Tuple7,Tuple5>  queryOrSaveOp(JSONObject jsonObject){
         String productId = jsonObject.getString(Constants.PRODUCTID);
 
         JSONObject filters = jsonObject.getJSONObject(Constants.FILTER);//外部筛选条件
         JSONArray fields = jsonObject.getJSONArray(Constants.BY_FIELDS);
 
         JSONArray conditions = filters.getJSONArray(Constants.CONDITIONS);
-        String relation = filters.getString("relation"); // 主查询条件 逻辑关系 and / or
+        String relation = conditions.size() < 2 ? Constants.AND : filters.getString("relation"); // 主查询条件 逻辑关系 and / or
 
 
         // 根据分组字段 by_fields 拼接 需要 【select 的字段和 group by 字段 】
@@ -149,7 +148,7 @@ public class CustomActionServiceImpl  {
          *  return (outGroupByUser, outGroupByAction, outSelectFieldUser, outSelectFieldAction)
          */
         Map<String, String> userPropertiesMap = getUserPropertiesAndTypes(productId);
-        Tuple6 selectAndGroupBy = SQLUtil.byFieldOp(fields,productId,userPropertiesMap);
+        Tuple7 selectAndGroupBy = SQLUtil.byFieldOp(fields,productId,userPropertiesMap);
 
         /**
          * 外部查询 where 条件
@@ -375,12 +374,12 @@ public class CustomActionServiceImpl  {
      * @param isQuery 是否是查询，true :查询 false 保存
      */
     private Tuple3<String,String,Object> generateMultipleIndicatorsSQL(JSONArray actions,
-                                                                       Tuple6 byFields,
+
+                                                                       Tuple7 byFields,
                                                                        Tuple5 outFilters,
                                                                        Map map, boolean isQuery) {
         String parquetSQL = "SELECT  %s  FROM parquetTmpTable WHERE %s  GROUP BY %s";
-        String joinSQL = "(SELECT %s  FROM parquetTmpTable WHERE %s )  ta JOIN ( SELECT %s FROM usersTable WHERE   %s  ) tu " +
-                "ON concat_ws('_', '%s', ta.global_user_id) = tu.pk where %s ";
+        String joinSQL = "(SELECT %s  FROM parquetTmpTable WHERE %s )  ta JOIN ( SELECT %s FROM usersTable WHERE   %s  ) tu  ON concat_ws('_', '%s', ta.global_user_id) = tu.pk where %s ";
         String partialAggSQLFormat = "select %s from %s group by %s"; // (groupBy + action + indicatorType) , joinSQL ,groupBy
         String joinSqlNoWhere = "(SELECT %s  FROM parquetTmpTable WHERE %s )  ta JOIN ( SELECT %s FROM usersTable WHERE %s ) tu ON concat_ws('_', '%s', ta.global_user_id) = tu.pk ";
 
@@ -396,7 +395,7 @@ public class CustomActionServiceImpl  {
         final HashSet outSelectFieldAction = (HashSet) byFields._4();//out 根据分组字段 by_fields 筛出来的 acton 查询字段
         HashMap<String, String> groupByUserProp2Type = (HashMap<String, String>) byFields._5();//根据分组字段筛出来的 用户属性和属性数据类型
         HashSet<String> userGroupIds = (HashSet<String>) byFields._6(); // 根据分组字段筛出来的 用户分群ID集合
-
+        StringJoiner allSelectJoiner = (StringJoiner)byFields._7();
         //filter: ( new Tuple5<>(userWhere, actionWhere, groupId,actionFields, userProps);
         // _1:user 的where条件，
         // _2:action 的where条件，
@@ -450,8 +449,8 @@ public class CustomActionServiceImpl  {
             String eventCol = SQLUtil.getIndicatorType(eventType)._2;
             commWhere1.add(commWhere).add(String.format("(category = '%s')", category)).add(String.format("( action = '%s' )",eventOriginal));
             JSONObject childFilterParam = action.getJSONObject(Constants.CHILDFILTERPARAM);
-            String relate = childFilterParam.getString("relation");
             JSONArray conditions = childFilterParam.getJSONArray("conditions");
+            String relate = conditions.size() >= 2 ? (childFilterParam.getString("relation")):(Constants.AND);
             /**
              //filter: ( new Tuple5<>(userWhere, actionWhere, groupId,actionFields, userProps);
              // _1:user 的where条件，
@@ -504,7 +503,7 @@ public class CustomActionServiceImpl  {
 
             if (outGroupByUser.toString().isEmpty() && inUserWhere.toString().isEmpty() && outUserWhere.toString().isEmpty()) {
                 //分组、内部条件、外部条件中只有事件属性，只查 parquet 表
-                StringJoiner actionWhere = getAllActionWhere(commWhere1, outActionWhere, inActionWhere);
+                StringJoiner actionWhere = getWhereOfUserOrAction(commWhere1, outActionWhere, inActionWhere);
                 String singleSQL;
                 singleSQL = String.format(parquetSQL, joinSelect, actionWhere.toString(), partialAggGroupBy);
                 sqlList.add(singleSQL);
@@ -534,7 +533,7 @@ public class CustomActionServiceImpl  {
 
                         actionSelectSetOr.addAll(actionFieldsOut);
                         actionSelectSetOr.addAll(actionFieldsIn);
-                        String actionSelectOr = String.join(", ", actionSelectSetOr).join(", ", String.format("'%s' AS INDICATORTYPE",eventType));
+                        String actionSelectOr = String.join(", ",String.join(", ", actionSelectSetOr),String.join(", ", String.format("'%s' AS INDICATORTYPE",eventType)));
                         userSelectSetOr.addAll(userProp2TypeOut.keySet());
                         userSelectSetOr.addAll(groupIdIn);
                         userSelectSetOr.addAll(userProp2TypeIn.keySet());
@@ -542,9 +541,13 @@ public class CustomActionServiceImpl  {
                         String userSelectOr = String.join(", ", userSelectSetOr);
 
 
-                        String outWhere = new StringJoiner(Constants.OR, "(", ")").add(outActionWhere.toString()).add(outUserWhere.toString()).toString();
-                        String inWhere = new StringJoiner(Constants.OR, "(", ")").add(inActionWhere.toString()).add(inUserWhere.toString()).toString();
-                        String joinWhere = new StringJoiner(Constants.AND).add(outWhere).add(inWhere).toString();
+                        String outWhere = new StringJoiner(Constants.OR, "(", ")")
+                                .add(String.format("( %s )",outActionWhere.toString()))
+                                .add(String.format("( %s )",outUserWhere.toString())).toString();
+                        String inWhere = new StringJoiner(Constants.OR, "(", ")")
+                                .add(String.format("( %s )",inActionWhere.toString()))
+                                .add(String.format("( %s )",inUserWhere.toString())).toString();
+                        String joinWhere = new StringJoiner(Constants.AND," (",") ").add(outWhere).add(inWhere).toString();
 
                         userWhere1 = userCommWhere;
                         actionWhere1 = commWhere1.toString();
@@ -559,7 +562,7 @@ public class CustomActionServiceImpl  {
                         //   usersTable 的select列中需要包含 or 条件中包含的列（ in)
 
                         actionSelectSetOr.addAll(actionFieldsIn);
-                        String actionSelectOr = String.join(", ", actionSelectSetOr).join(",", String.format("'%s' AS INDICATORTYPE",eventType));
+                        String actionSelectOr = String.join(", ",String.join(", ", actionSelectSetOr),String.join(",", String.format("'%s' AS INDICATORTYPE",eventType)));
                         userSelectSetOr.addAll(userProp2TypeIn.keySet());
                         userSelectSetOr.addAll(groupIdIn);
                         userSelectSetOr.addAll(groupIdOut);
@@ -567,11 +570,13 @@ public class CustomActionServiceImpl  {
                         String joinWhere = String.join(Constants.OR, inActionWhere.toString(), inUserWhere.toString());
 
                         if (!outActionWhere.toString().isEmpty()) {
-                            actionWhere1 = actionWhere.join(relate, outActionWhere.toString());
+                            actionWhere1 = (new StringJoiner(Constants.AND,"(",")").add(actionWhere).add(outActionWhere.toString())).toString();//String.join(relate);
                         }
 
                         if (!outUserWhere.toString().isEmpty()) {
-                            userWhere1 = userWhere.join(Constants.AND, outUserWhere.toString());
+                            userWhere1 = (new StringJoiner(Constants.AND,"(",")")
+                                    .add(String.format("( %s )",userWhere))
+                                    .add(String.format("( %s )", outUserWhere.toString()))).toString();
                         }
 //                        String joinWhere
                         //actionSelect ,actionWhere , userSelect , userWhere  productId,joinWhere, joinGroupBy(action ... )
@@ -590,17 +595,19 @@ public class CustomActionServiceImpl  {
                         //   usersTable 的select列中需要包含 or 条件中包含的列（ out 把 out 条件中的 users列加到parquet表的 select 字段中))
 
                         actionSelectSetOr.addAll(actionFieldsOut);
-                        String actionSelectOr = String.join(", ", actionSelectSetOr).join(",", String.format("'%s' AS INDICATORTYPE",eventType));
+                        String actionSelectOr = String.join(String.join(", ", actionSelectSetOr),String.join(",", String.format("'%s' AS INDICATORTYPE",eventType)));
                         userSelectSetOr.addAll(userProp2TypeOut.keySet());
                         userSelectSetOr.addAll(groupIdOut);
                         String userSelectOr = String.join(", ", userSelectSetOr);
 
                         String joinWhere = String.join(Constants.OR, outActionWhere.toString(), outUserWhere.toString());
                         if (!inActionWhere.toString().isEmpty()) {
-                            actionWhere1 = actionWhere.join(relate, inActionWhere.toString());
+                            actionWhere1 = new StringJoiner(Constants.AND,"(",")")
+                                    .add(String.format("( %s )",actionWhere))
+                                    .add(String.format("( %s )",inActionWhere.toString())).toString();
                         }
                         if (!inUserWhere.toString().isEmpty()) {
-                            userWhere1 = userWhere.join(relate, inUserWhere.toString());
+                            userWhere1 = (new StringJoiner(Constants.AND,"(",")").add(userWhere).add(inUserWhere.toString())).toString() ;
                         }
                         String joinSQL1 = String.format(joinSQL, actionSelectOr, actionWhere1, userSelectOr, userWhere1, productId, joinWhere);
                         String partialAggSQL = String.format(partialAggSQLFormat, joinSelect, joinSQL1, partialAggGroupBy);
@@ -615,17 +622,17 @@ public class CustomActionServiceImpl  {
                     // actionWhere: outActionWhere and inActionWhere ->
                     // userWhere ：outUserWhere and inUserWhere -->
                     //
-                    StringJoiner actionWhere = getAllActionWhere(commWhere1, outActionWhere, inActionWhere);
+                    StringJoiner actionWhere = getWhereOfUserOrAction(commWhere1, outActionWhere, inActionWhere);
 
 
                     String actionSelect = String.join(",",String.join(", ", actionSelectSet),String.format("'%s' AS INDICATORTYPE",eventType));
-                    StringJoiner userWhere = new StringJoiner(Constants.AND);
+                    StringJoiner userWhere = new StringJoiner(Constants.AND,"(",")");
                     userWhere.add(userCommWhere);
                     if (!outUserWhere.toString().isEmpty()) {
-                        userWhere.add(outUserWhere.toString());
+                        userWhere.add(String.format("( %s )",outUserWhere.toString()));
                     }
                     if (!inUserWhere.toString().isEmpty()) {
-                        userWhere.add(inUserWhere.toString());
+                        userWhere.add(String.format("( %s )", inUserWhere.toString()));
                     }
                     actionWhere.toString();
                     String joinSQL1 = String.format(joinSqlNoWhere, actionSelect, actionWhere.toString(), userSelect, userWhere.toString(), productId);
@@ -660,8 +667,8 @@ public class CustomActionServiceImpl  {
         if( isQuery ){
             String groupingSet = String.format("GROUPING SETS(( %s ),(%s) ) ORDER BY %s", String.join(",",partialAggGroupBy,"INDICATORTYPE","an"), grouping,partialAggGroupBy); // groupby + action
             group = String.join(" ", allGroupBy, groupingSet);
-            if (!groupByJoiner.toString().isEmpty()){
-                allSelect = String.join(", ", groupByJoiner.toString(), "action","INDICATORTYPE","an", "day", "SUM(ct)");
+            if (!allSelectJoiner.toString().isEmpty()){
+                allSelect = String.join(", ", allSelectJoiner.toString(), "action","INDICATORTYPE","an", "day", "SUM(ct)");
             }else{
                 allSelect = String.join(", ", "action","INDICATORTYPE","an", "day", "SUM(ct)");
             }
@@ -669,8 +676,8 @@ public class CustomActionServiceImpl  {
         }else {
             group = String.join(" ", allGroupBy);
 
-            if (!groupByJoiner.toString().isEmpty()){
-                allSelect = String.join(", ","action","INDICATORTYPE", groupByJoiner.toString(), "an",  "SUM(ct) as num");
+            if (!allSelectJoiner.toString().isEmpty()){
+                allSelect = String.join(", ","action","INDICATORTYPE", allSelectJoiner.toString(), "an",  "SUM(ct) as num");
             }else{
                 allSelect = String.join(", ", "action","INDICATORTYPE","'all'","an", "SUM(ct) as num");
             }
@@ -713,7 +720,6 @@ public class CustomActionServiceImpl  {
 
 
 
-
     //todo 用户属性及其类型
     private Map<String, String> getUserPropertiesAndTypes(String productId) {
         Map<String, String> map = new HashMap<>();
@@ -724,20 +730,19 @@ public class CustomActionServiceImpl  {
     }
 
 
-    private StringJoiner getAllActionWhere(StringJoiner commWhere1, StringJoiner outActionWhere, StringJoiner inActionWhere) {
+    private StringJoiner getWhereOfUserOrAction(StringJoiner commWhere1, StringJoiner outWhere, StringJoiner inWhere) {
 
-        StringJoiner actionWhere = new StringJoiner(Constants.AND);
+        StringJoiner actionWhere = new StringJoiner(Constants.AND," (",") ");
         actionWhere.add(commWhere1.toString());
-        if (!outActionWhere.toString().isEmpty()) {
-            actionWhere.add(outActionWhere.toString());
+        if (!outWhere.toString().isEmpty()) {
+            actionWhere.add(String.format("( %s )",outWhere.toString()));
         }
-        if (!inActionWhere.toString().isEmpty()) {
-            actionWhere.add(inActionWhere.toString());
+        if (!inWhere.toString().isEmpty()) {
+            actionWhere.add(String.format("( %s )",inWhere.toString()));
         }
         return actionWhere;
 
     }
-
 
 
 
@@ -777,7 +782,7 @@ public class CustomActionServiceImpl  {
         /**
          * 结合 {@link filter}、{@link selectAndGroupBy}  拼接 单指标 SQL
          */
-        Tuple3<String,String,Object> sqlOps = generateMultipleIndicatorsSQL(actions, (Tuple6)queryOrSaveOp._1, (Tuple5) queryOrSaveOp._2, map,false);
+        Tuple3<String,String,Object> sqlOps = generateMultipleIndicatorsSQL(actions, (Tuple7)queryOrSaveOp._1, (Tuple5) queryOrSaveOp._2, map,false);
 
         String taskSQL = sqlOps._1();
         String prop = sqlOps._2();
@@ -906,19 +911,9 @@ public class CustomActionServiceImpl  {
     public static void main(String[] args) throws Exception {
         CustomActionServiceImpl impl = new CustomActionServiceImpl();
 
+        String inputStr = "";
+        JSONObject jo1 = JSONObject.parseObject(inputStr);
 
-        String ooo = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"event.country\",\"event.region\"],\"to_date\":\"20190613\",\"productId\":\"11148\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"axzh_sz\",\"childFilterParam\":{\"conditions\":[]}},{\"eventType\":\"loginUser\",\"eventOriginal\":\"cf_aefzt_ccxq\",\"childFilterParam\":{\"conditions\":[]}}],\"data\":{\"rollup_result\":{\"series\":[\"20190611\",\"20190612\",\"20190613\"],\"total_rows\":26,\"by_fields\":[\"event.country\",\"event.region\"],\"num_rows\":26,\"rows\":[{\"values\":[[\"5\",\"0\"]],\"by_values\":[\"中国\",\"山东\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"6\",\"0\"]],\"by_values\":[\"中国\",\"福建\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"中国\",\"河北\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"6\",\"0\"]],\"by_values\":[\"中国\",\"河南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"4\",\"0\"]],\"by_values\":[\"中国\",\"江西\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"3\",\"0\"]],\"by_values\":[\"中国\",\"湖北\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"4\",\"0\"]],\"by_values\":[\"中国\",\"湖南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"2\",\"0\"]],\"by_values\":[\"中国\",\"辽宁\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"63\",\"0\"]],\"by_values\":[\"中国\",\"广东\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"21\",\"2\"]],\"by_values\":[\"中国\",\"北京\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"越南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"35\",\"0\"]],\"by_values\":[\"中国\",\"上海\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"7\",\"0\"]],\"by_values\":[\"中国\",\"甘肃\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"中国\",\"黑龙江\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"3\",\"0\"]],\"by_values\":[\"中国\",\"四川\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"17\",\"0\"]],\"by_values\":[\"中国\",\"浙江\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"中国\",\"广西\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"5\",\"0\"]],\"by_values\":[\"中国\",\"云南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"马来西亚\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"中国\",\"陕西\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"35\",\"0\"]],\"by_values\":[\"中国\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"中国\",\"贵州\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"]],\"by_values\":[\"澳大利亚\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"3\",\"0\"]],\"by_values\":[\"中国\",\"内蒙古\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1058\",\"12\"]],\"by_values\":[\"中国\",\"江苏\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"9\",\"0\"]],\"by_values\":[\"中国\",\"安徽\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]}]},\"detail_result\":{\"series\":[\"20190611\",\"20190612\",\"20190613\"],\"total_rows\":26,\"by_fields\":[\"event.country\",\"event.region\"],\"num_rows\":26,\"rows\":[{\"values\":[[\"2\",\"0\"],[\"1\",\"0\"],[\"2\",\"0\"]],\"by_values\":[\"中国\",\"山东\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"],[\"3\",\"0\"],[\"2\",\"0\"]],\"by_values\":[\"中国\",\"福建\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"],[\"0\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"河北\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"4\",\"0\"],[\"2\",\"0\"]],\"by_values\":[\"中国\",\"河南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"2\",\"0\"],[\"2\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"江西\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"],[\"0\",\"0\"],[\"2\",\"0\"]],\"by_values\":[\"中国\",\"湖北\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"2\",\"0\"],[\"2\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"湖南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"2\",\"0\"],[\"0\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"辽宁\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"27\",\"0\"],[\"14\",\"0\"],[\"22\",\"0\"]],\"by_values\":[\"中国\",\"广东\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"8\",\"2\"],[\"2\",\"0\"],[\"11\",\"0\"]],\"by_values\":[\"中国\",\"北京\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"1\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"越南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"11\",\"0\"],[\"10\",\"0\"],[\"14\",\"0\"]],\"by_values\":[\"中国\",\"上海\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"5\",\"0\"],[\"2\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"甘肃\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"0\",\"0\"],[\"1\",\"0\"]],\"by_values\":[\"中国\",\"黑龙江\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"3\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"四川\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"5\",\"0\"],[\"7\",\"0\"],[\"5\",\"0\"]],\"by_values\":[\"中国\",\"浙江\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"0\",\"0\"],[\"1\",\"0\"]],\"by_values\":[\"中国\",\"广西\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"4\",\"0\"],[\"0\",\"0\"],[\"1\",\"0\"]],\"by_values\":[\"中国\",\"云南\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"1\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"马来西亚\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"1\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"中国\",\"陕西\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"14\",\"0\"],[\"10\",\"0\"],[\"11\",\"0\"]],\"by_values\":[\"中国\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"0\",\"0\"],[\"1\",\"0\"]],\"by_values\":[\"中国\",\"贵州\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"1\",\"0\"],[\"0\",\"0\"],[\"0\",\"0\"]],\"by_values\":[\"澳大利亚\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"0\",\"0\"],[\"2\",\"0\"],[\"1\",\"0\"]],\"by_values\":[\"中国\",\"内蒙古\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"358\",\"4\"],[\"357\",\"7\"],[\"343\",\"1\"]],\"by_values\":[\"中国\",\"江苏\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]},{\"values\":[[\"6\",\"0\"],[\"1\",\"0\"],[\"2\",\"0\"]],\"by_values\":[\"中国\",\"安徽\"],\"event_indicator\":[\"axzh_sz\\u0001acc\\u0001A\",\"cf_aefzt_ccxq\\u0001loginUser\\u0001B\"]}]}},\"report_name\":\"hhoo\",\"description\":\"\"}";
-        JSONObject ooo1 = JSONObject.parseObject(ooo);
-        impl.saveQueryTask(ooo1);
-
-        String oo1 = "{\"rollup_result\":{\"series\":[\"20190622\",\"20190623\",\"20190624\",\"20190625\",\"20190626\",\"20190627\",\"20190628\"],\"total_rows\":1,\"by_fields\":[\"all\"],\"num_rows\":1,\"rows\":[{\"values\":[[\"43\",\"43\",\"43\"]],\"by_values\":[\"all\"],\"event_indicator\":[\"$appClick\\u0001acc\\u0001A\",\"$appClick\\u0001userid\\u0001B\",\"$appClick\\u0001loginUser\\u0001C\"]}]},\"detail_result\":{\"series\":[\"20190622\",\"20190623\",\"20190624\",\"20190625\",\"20190626\",\"20190627\",\"20190628\"],\"total_rows\":1,\"by_fields\":[\"all\"],\"num_rows\":1,\"rows\":[{\"values\":[[\"0\",\"0\",\"0\"],[\"0\",\"0\",\"0\"],[\"0\",\"0\",\"0\"],[\"0\",\"0\",\"0\"],[\"21\",\"21\",\"21\"],[\"21\",\"21\",\"21\"],[\"1\",\"1\",\"1\"]],\"by_values\":[\"all\"],\"event_indicator\":[\"$appClick\\u0001acc\\u0001A\",\"$appClick\\u0001userid\\u0001B\",\"$appClick\\u0001loginUser\\u0001C\"]}]}}";
-        JSONObject oo = JSONObject.parseObject(oo1);
-        impl.saveDataToHbase(1000,"action_1000",oo);
-
-
-        String jo1s = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190622\",\"by_fields\":[\"event.country\"],\"to_date\":\"20190628\",\"productId\":\"11128\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"userGroup.sixfirst\",\"function\":\"isTrue\",\"params\":[],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\"}],\"relation\":\"and\"}},{\"eventType\":\"userid\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"user.network\",\"function\":\"equal\",\"params\":[\"wifi001\",\"wifi002\",\"wifi003\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\"}],\"relation\":\"and\"}},{\"eventType\":\"loginUser\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"user.latitude\",\"function\":\"equal\",\"params\":[\"22004.3938\",\"22005.3938\",\"22006.3938\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\"}],\"relation\":\"and\"}}]}";
-        String jo2s = "{\"jobId\":\"4dead637-b9ef-4853-b02f-92b7b8b90cd4\",\"result\":[\"中国\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u000113\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u0001null\\u00017\",\"中国\\u0001$appClick\\u0001acc\\u0001A\\u000120190626\\u00016\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u000120190626\\u00013\",\"中国\\u0001$appClick\\u0001acc\\u0001A\\u000120190627\\u00016\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u000120190627\\u00013\",\"中国\\u0001$appClick\\u0001acc\\u0001A\\u000120190628\\u00011\",\"中国\\u0001$appClick\\u0001userid\\u0001B\\u000120190628\\u00011\"]}";
-        JSONObject jo1 = JSONObject.parseObject(jo1s);
         impl.getQueryResult(jo1);
 
     }

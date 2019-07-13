@@ -56,6 +56,13 @@
     </pluginRepositories>
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/com.chuusai/shapeless -->
+        <dependency>
+            <groupId>com.chuusai</groupId>
+            <artifactId>shapeless_2.11</artifactId>
+            <version>2.3.3</version>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-spark</artifactId>

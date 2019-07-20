@@ -12,20 +12,45 @@ public class SortForJava {
 
     public static void main(String[] args) {
         int[] arr = {2, 3, 1, 5, 2, 8, 3, 91, 2, 4, 3};
-        bubbleSort(arr);
+//        bubbleSort(arr);
+//        int i = quickSortPart1(arr);
+//        System.out.println(i);
+    }   
+
+
+    static int quickSortPart1(int [] arr,int left ,int right){
+        int begin = left;
+        int end = right;
+        int key = right;
+        while (begin<end){
+            while (begin < end && arr[begin] <= arr[key]){
+                ++ begin;
+            }
+            while (begin<end && arr[end] >= arr[key]){
+                -- end;
+            }
+            int tmp = arr[begin];
+            arr[begin] = arr[end];
+            arr[end] = tmp;
+        }
+        int tmp = arr[begin];
+        arr[begin] = arr[end];
+        arr[end] = tmp;
+        return begin;
 
     }
 
-
-    static int[] qSort(int [] arr){
-        int K = arr[0];
-        int left = 0;
-        int right = arr.length;
-
-
-
-        return arr;
+    static int [] quickSort1(int arr[],int left,int right){
+//        if (left>=right){
+//            return ;
+//        }
+//        if((right - left +1 )< 10)
+//
+        return null;
     }
+
+
+
 
     static int[] bubbleSort(int[] arr) {
         int len = arr.length;

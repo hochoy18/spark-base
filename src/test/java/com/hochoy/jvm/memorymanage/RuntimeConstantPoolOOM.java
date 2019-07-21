@@ -21,14 +21,15 @@ public class RuntimeConstantPoolOOM {
     }
     static void constantPoolOOMTest2(){
         String str1 = new StringBuilder("Str").append("ing").toString();
-        System.out.println(str1+" compare : "+str1.intern() == str1);
+        System.out.println(str1+" compare : "+(str1.intern() == str1));
 
-        try {
-            Thread.sleep(1000 * 20);
-        }catch (Exception e ){
-            e.printStackTrace();
-        }
+//        try {
+//            Thread.sleep(1000 * 20);
+//        }catch (Exception e ){
+//            e.printStackTrace();
+//        }
         String str2 = new StringBuilder("ja").append("va").toString();
-        System.out.println(str2 + " compare:  "+str2.intern() == str2);
+        System.out.println("hahahha ");
+        System.out.println(str2 + " compare:  "+(str2.intern() == str2));
     }
 }

@@ -171,15 +171,11 @@ object Utils {
 
 
 
-  import shapeless._
-  import syntax.typeable._
 
   def toMapOrNull(s: Any): Map[String, String] = try {
-    val y = s.cast[Map[String, String]]
-    y match {
-      case Some(x) ⇒ x
-      case None ⇒ null
-    }
+    val y = s.asInstanceOf[Map[String, String]]
+    if(y.isEmpty) null
+    else     y
   }
 
 

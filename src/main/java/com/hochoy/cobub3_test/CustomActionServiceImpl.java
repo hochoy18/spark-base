@@ -90,7 +90,7 @@ public class CustomActionServiceImpl  {
     //@Override
     public JSONObject getQueryResult(JSONObject jsonObject) throws IOException {
         JSONObject filters = jsonObject.getJSONObject(Constants.FILTER);//外部筛选条件
-        String relation = filters.getString("relation"); // 主查询条件 逻辑关系 and / or
+        String relation = filters.getString(Constants.RELATION); // 主查询条件 逻辑关系 and / or
         String unit = jsonObject.getString(Constants.UNIT);
         String from = jsonObject.getString(Constants.FROM_DATE);
         String to = jsonObject.getString(Constants.TO_DATE);
@@ -107,7 +107,7 @@ public class CustomActionServiceImpl  {
 
 
         Map map = new HashMap();
-        map.put("relation", relation);
+        map.put(Constants.RELATION, relation);
         map.put("commWhere", commWhere);
         map.put("productId", productId);
 
@@ -117,7 +117,7 @@ public class CustomActionServiceImpl  {
          */
         Tuple3<String,String,Object> sqlOps = generateMultipleIndicatorsSQL(actions, (Tuple7)queryOrSaveOp._1, (Tuple5) queryOrSaveOp._2, map,true);
 
-        JSONObject responseResult = querySparkSql(new StringBuilder(sqlOps._1()), maxLine,sqlOps._2());
+        JSONObject responseResult = querySparkSql(new StringBuilder(sqlOps._1()), maxLine,sqlOps._2(),null,null,"tmp_actionreport_job_");
 
         if (null == responseResult || !responseResult.containsKey("result") ||responseResult.isEmpty() ||responseResult == null ||
                 (responseResult.containsKey("status") && responseResult.getString("status").equalsIgnoreCase("error"))) {
@@ -125,7 +125,7 @@ public class CustomActionServiceImpl  {
         }
         logger.debug("responseResult : {}"+responseResult);
 
-        Tuple3<JSONArray, JSONArray, JSONArray> commReturn = commReturnOp(jsonObject);
+        Tuple3<Map<String,Map<String,String>>, JSONArray, JSONArray> commReturn = commReturnOp(jsonObject);
 
         JSONObject result = resultOp(responseResult, commReturn,(LinkedList)sqlOps._3());
 
@@ -139,7 +139,7 @@ public class CustomActionServiceImpl  {
         JSONArray fields = jsonObject.getJSONArray(Constants.BY_FIELDS);
 
         JSONArray conditions = filters.getJSONArray(Constants.CONDITIONS);
-        String relation = conditions.size() < 2 ? Constants.AND : filters.getString("relation"); // 主查询条件 逻辑关系 and / or
+        String relation = conditions.size() < 2 ? Constants.AND : filters.getString(Constants.RELATION); // 主查询条件 逻辑关系 and / or
 
 
         // 根据分组字段 by_fields 拼接 需要 【select 的字段和 group by 字段 】
@@ -164,15 +164,32 @@ public class CustomActionServiceImpl  {
 
 
 
-    private Tuple3<JSONArray,JSONArray,JSONArray> commReturnOp(JSONObject jsonObject ) {
-        JSONArray idxs = new JSONArray();
+    private Tuple3<Map<String,Map<String,String>>,JSONArray,JSONArray> commReturnOp(JSONObject jsonObject ) {
 
-        JSONArray action = jsonObject.getJSONArray("action");
-        action.forEach(x->{
-            JSONObject jo = JSONObject.parseObject(x.toString());
-            String eventOriginal = jo.getString("eventOriginal");
-            String eventType = jo.getString("eventType");
-            idxs.add(eventOriginal + separator+ eventType);
+        String productId = jsonObject.getString("productId");
+        Map<String,Map<String,String>>  id2Alias = new HashMap<>();
+        Map<String ,String> gmap = new HashMap<>();
+        gmap.put("true","真");
+        gmap.put("false","假");
+        id2Alias.put("userGroup",gmap );
+        jsonObject.getJSONArray("by_fields").stream().filter(x->!"all".equalsIgnoreCase(x.toString())).forEach(x->{
+            String by = x.toString();
+            String[] split = by.split("\\.", 2);
+            String type = split[0];
+            Map<String ,String> map = new HashMap<>();
+            if ("event".equals(type)) {
+                List<Metadata> list =  new ArrayList<>();//metadataMapper.getMetadataValueName(productId,split[1]);     //    select t.original, t.display from METAdata t where t.productid = 11188  and t.metadata_type = 'version';
+                list.stream().filter(
+                        v-> v.getOriginal() != null && !"".equals(v.getOriginal()))
+                        .forEach(
+                        v -> map.put(v.getOriginal(),(null == v.getDisplay() || "".equals(v.getDisplay()))? v.getOriginal(): v.getDisplay()));
+                id2Alias.put(by,map);
+            }else if ("user".equals(type)) {
+                List<UserMetadata> list = new ArrayList<>();//userMtadataMapper.getMetadataValueName(productId,split[1]);  //    SELECT T.ORIGINAL, T.META_TYPE ,T.DISPLAY  FROM COBUB_USER_METADATA  T  WHERE T.PRODUCTID = 11188 AND T.ENABLED =1 AND T.META_TYPE = 'duration'
+                list.stream().filter(v->v.getOriginal()!=null && !"".equals(v.getOriginal())).forEach(
+                        v -> map.put(v.getOriginal(),(null == v.getDisplay() || "".equals(v.getDisplay()))? v.getOriginal(): v.getDisplay()));
+                id2Alias.put(by,map);
+            }
         });
 
 
@@ -187,16 +204,15 @@ public class CustomActionServiceImpl  {
         jsonObject.getJSONArray("by_fields").forEach(x->{
             by_fields.add(x.toString());
         });
-        return new Tuple3<>(idxs,series,by_fields);
+        return new Tuple3<>(id2Alias,series,by_fields);
     }
 
 
+    private JSONObject resultOp(JSONObject jo, Tuple3<Map<String,Map<String,String>>,JSONArray,JSONArray> commReturn,LinkedList idxs) {
 
-    private JSONObject resultOp(JSONObject jo, Tuple3<JSONArray,JSONArray,JSONArray> commReturn,LinkedList idxs) {
-
+        Map<String,Map<String,String>> map = commReturn._1();
 
         JSONArray series = commReturn._2();
-
         JSONArray by_fields = commReturn._3();
 
 
@@ -217,20 +233,23 @@ public class CustomActionServiceImpl  {
             String indicator = split[len-4];
             String action = split[len-5];
 
-            if ("null".equals(date)){
+            if (Constants.NULL.equals(date)){
                 date = "cnt";
             }
-            Set bySet = new LinkedHashSet();
+            List bySet = new LinkedList();
             for (int i = 0; i < len - 5; i++) {
-                if(!"null".equals(split[i])){
-                    bySet.add(split[i]);
+                if(!Constants.NULL.equals(split[i])){
+                   String by0 = split[i];
+                    String byF = by_fields.getString(i);
+                    String byres = getByres(map, by0, byF);
+                    bySet.add(byres);
                 }else {
-                    bySet.add("unknown");
+                    bySet.add(Constants.UNKNOWN);
                 }
             }
             String by;
-            if(bySet.isEmpty() ||  (by_fields.size()==1 && "all".equalsIgnoreCase(by_fields.getString(0)))){
-                by = "all";
+            if(bySet.isEmpty() ||  (by_fields.size()==1 && Constants.ALL.equalsIgnoreCase(by_fields.getString(0)))){
+                by = Constants.ALL;
             }else{
                 by = String.join(separator,bySet);
             }
@@ -324,12 +343,7 @@ public class CustomActionServiceImpl  {
             rollupRowChild.put("by_values",byValues);
             rollupRowChild.put("event_indicator",indicator);
             rollupRows.add(rollupRowChild);
-
-
-
         });
-
-
         JSONObject baseJo = new JSONObject();
         baseJo.put("by_fields",by_fields);
         baseJo.put("series",series);
@@ -358,6 +372,15 @@ public class CustomActionServiceImpl  {
 
     }
 
+    private String getByres(Map<String, Map<String, String>> map, String by0, String byF) {
+        String res ;
+        if(byF.startsWith("userGroup")){
+            res = map.get("userGroup").get(by0);
+        }else  {
+            res = map.get(byF).get(by0);
+        }
+        return  null == res ? "unknown": res ;
+    }
 
 
     /**
@@ -437,7 +460,7 @@ public class CustomActionServiceImpl  {
             groupAndGroupByEachSelect = String.join(",", partialAggGroupBy) ;
         }
 
-        String relation = (String) map.get("relation");//主查询条件 and / or
+        String relation = (String) map.get(Constants.RELATION);//主查询条件 and / or
         final String commWhere = ((StringJoiner) map.get("commWhere")).toString();
         Boolean outOr = Constants.OR.equalsIgnoreCase(relation) && (!outActionWhere.toString().isEmpty()) && (!outUserWhere.toString().isEmpty());
         final String productId = (String) map.get("productId");
@@ -460,7 +483,7 @@ public class CustomActionServiceImpl  {
             commWhere1.add(commWhere).add(String.format("(category = '%s')", category)).add(String.format("( action = '%s' )",eventOriginal));
             JSONObject childFilterParam = action.getJSONObject(Constants.CHILDFILTERPARAM);
             JSONArray conditions = childFilterParam.getJSONArray("conditions");
-            String relate = conditions.size() >= 2 ? (childFilterParam.getString("relation")):(Constants.AND);
+            String relate = conditions.size() >= 2 ? (childFilterParam.getString(Constants.RELATION)):(Constants.AND);
             /**
              //filter: ( new Tuple5<>(userWhere, actionWhere, groupId,actionFields, userProps);
              // _1:user 的where条件，
@@ -601,7 +624,6 @@ public class CustomActionServiceImpl  {
 //                        String joinWhere
                         //actionSelect ,actionWhere , userSelect , userWhere  productId,joinWhere, joinGroupBy(action ... )
                         String joinSQL1 = String.format(joinSQL, actionSelectOr, actionWhere1, userSelectOr, userWhere1, productId, joinWhere);
-//                        String partialAggSQLFormat = "select %s from %s group by %s";
 
                         String partialAggSQL = String.format(partialAggSQLFormat, joinSelect, joinSQL1, groupAndGroupByEachSelect);
                         sqlList.add(partialAggSQL);
@@ -928,18 +950,20 @@ public class CustomActionServiceImpl  {
 
     }
 
+
+
+
     static CustomActionServiceImpl impl = new CustomActionServiceImpl();
     public static void main(String[] args) throws Exception {
-        saveTest();
+        querytest();
     }
 
     public static void querytest() throws Exception {
 
         String inputStr;
 //        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190703\",\"by_fields\":[\"event.country\"],\"to_date\":\"20190709\",\"productId\":\"11128\",\"action\":[{\"eventType\":\"loginUser\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
-        inputStr = "{\"filter\":{\"conditions\":[{\"type\":\"user.isupdate\",\"function\":\"isTrue\",\"isNumber\":\"isFalse\",\"isRegion\":\"isFalse\",\"params\":[],\"inputForInt\":\"\",\"divForInt\":\"\",\"input\":\"\"},{\"type\":\"event.version\",\"function\":\"equal\",\"isNumber\":\"isFalse\",\"isRegion\":\"isFalse\",\"params\":[\"ad.ver.v.004\"],\"inputForInt\":\"\",\"divForInt\":\"\",\"input\":\"\"}],\"relation\":\"or\"},\"unit\":\"day\",\"from_date\":\"20190705\",\"by_fields\":[\"event.country\"],\"to_date\":\"20190711\",\"productId\":\"11188\",\"action\":[{\"eventType\":\"loginUser\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
 
-        inputStr = "{\"filter\":{\"conditions\":[{\"type\":\"user.networkH\",\"function\":\"equal\",\"isNumber\":\"isFalse\",\"isRegion\":\"isFalse\",\"params\":[\"WIFI1\",\"WIFI10\",\"WIFI11\",\"WIFI12\"],\"inputForInt\":\"\",\"divForInt\":\"\",\"input\":\"\"},{\"type\":\"event.channelid\",\"function\":\"equal\",\"isNumber\":\"isFalse\",\"isRegion\":\"isFalse\",\"params\":[\"001\",\"002\"],\"inputForInt\":\"\",\"divForInt\":\"\",\"input\":\"\"}],\"relation\":\"or\"},\"unit\":\"day\",\"from_date\":\"20190611\",\"by_fields\":[\"event.country\"],\"to_date\":\"20190613\",\"productId\":\"11148\",\"action\":[{\"eventType\":\"userid\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"event.network\",\"function\":\"equal\",\"params\":[\"2G\",\"3G\",\"WIFI\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"and\"}}]}\n";
+        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190623\",\"by_fields\":[\"event.country\",\"event.city\",\"userGroup.loginq\",\"userGroup.logina\",\"user.grouptwonetwork\"],\"to_date\":\"20190722\",\"productId\":\"11188\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
         JSONObject jo1 = JSONObject.parseObject(inputStr);
 
         impl.getQueryResult(jo1);
@@ -960,8 +984,8 @@ public class CustomActionServiceImpl  {
     }
 
 
-    private JSONObject querySparkSql(StringBuilder sb, String s,String ss){
-        String jo2s = "{\"jobId\":\"1d2f4a98-5515-40d2-98ed-c6ebfa696e39\",\"result\":[\"中国\\u0001112005\\u0001南京\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u0001null\\u00011\",\"中国\\u0001112003\\u0001南通\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190707\\u00011\",\"中国\\u0001112001\\u0001南通\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190703\\u00011\",\"中国\\u0001112004\\u0001南京\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190708\\u00011\",\"中国\\u0001null\\u0001南通\\u0001false\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190707\\u00013\",\"中国\\u0001112005\\u0001南京\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190708\\u00011\",\"中国\\u0001112002\\u0001南通\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u0001null\\u00011\",\"中国\\u0001112002\\u0001南通\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u0001null\\u00011\",\"中国\\u0001112003\\u0001南通\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u0001null\\u00011\",\"中国\\u0001112004\\u0001南京\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190703\\u00011\",\"中国\\u0001112004\\u0001南京\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u0001null\\u00011\",\"中国\\u0001112004\\u0001南京\\u0001true\\u0001$appClick\\u0001acc\\u0001A\\u000120190707\\u00011\",\"中国\\u0001null\\u0001南京\\u0001false\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190704\\u000115\",\"中国\\u0001112003\\u0001南通\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u0001null\\u00011\",\"中国\\u0001null\\u0001南通\\u0001false\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u00015\",\"中国\\u0001112004\\u0001南京\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190708\\u00011\",\"中国\\u0001112004\\u0001南京\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190707\\u00011\",\"中国\\u0001null\\u0001南京\\u0001false\\u0001$appClick\\u0001loginUser\\u0001C\\u0001null\\u000127\",\"中国\\u0001112006\\u0001南京\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190703\\u00011\",\"中国\\u0001112005\\u0001南京\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u0001null\\u00011\",\"中国\\u0001null\\u0001南通\\u0001false\\u0001$appClick\\u0001acc\\u0001A\\u000120190708\\u00011\",\"中国\\u0001112006\\u0001南京\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190707\\u00011\",\"中国\\u0001null\\u0001南通\\u0001false\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u00011\",\"中国\\u0001null\\u0001南通\\u0001false\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190708\\u00013\",\"中国\\u0001112003\\u0001南通\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190707\\u00011\",\"中国\\u0001112004\\u0001南京\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190707\\u00011\",\"中国\\u0001112004\\u0001南京\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u0001null\\u00011\",\"中国\\u0001112001\\u0001南通\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190707\\u00011\",\"中国\\u0001112004\\u0001南京\\u0001true\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u00011\",\"中国\\u0001112006\\u0001南京\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u0001null\\u00011\",\"中国\\u0001null\\u0001南京\\u0001false\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190703\\u000112\",\"中国\\u0001112002\\u0001南通\\u0001true\\u0001$appClick\\u0001acc\\u0001A\\u000120190708\\u00011\",\"中国\\u0001112002\\u0001南通\\u0001true\\u0001$appClick\\u0001acc\\u0001A\\u000120190707\\u00011\",\"中国\\u0001112001\\u0001南通\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u0001null\\u00011\",\"中国\\u0001112006\\u0001南京\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190708\\u00011\",\"中国\\u0001112002\\u0001南通\\u0001true\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u00013\",\"中国\\u0001112005\\u0001南京\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190708\\u00011\",\"中国\\u0001null\\u0001南京\\u0001false\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190708\\u000112\",\"中国\\u0001112003\\u0001南通\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190703\\u00011\",\"中国\\u0001112006\\u0001南京\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190707\\u00011\",\"中国\\u0001null\\u0001南通\\u0001false\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190703\\u00013\",\"中国\\u0001null\\u0001南通\\u0001false\\u0001$appClick\\u0001loginUser\\u0001C\\u0001null\\u00019\",\"中国\\u0001112006\\u0001南京\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u0001null\\u00011\",\"中国\\u0001null\\u0001南通\\u0001false\\u0001$appClick\\u0001acc\\u0001A\\u000120190707\\u00011\",\"中国\\u0001null\\u0001南京\\u0001false\\u0001$appClick\\u0001acc\\u0001A\\u000120190707\\u00013\",\"中国\\u0001112002\\u0001南通\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190708\\u00011\",\"中国\\u0001112003\\u0001南通\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190708\\u00011\",\"中国\\u0001112004\\u0001南京\\u0001true\\u0001$appClick\\u0001acc\\u0001A\\u000120190708\\u00011\",\"中国\\u0001112001\\u0001南通\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190708\\u00011\",\"中国\\u0001112004\\u0001南京\\u0001true\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u00013\",\"中国\\u0001112005\\u0001南京\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190707\\u00011\",\"中国\\u0001112001\\u0001南通\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190707\\u00011\",\"中国\\u0001112002\\u0001南通\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190703\\u00011\",\"中国\\u0001112001\\u0001南通\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u0001null\\u00011\",\"中国\\u0001112003\\u0001南通\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190703\\u00011\",\"中国\\u0001null\\u0001南京\\u0001false\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190707\\u000112\",\"中国\\u0001112002\\u0001南通\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190707\\u00011\",\"中国\\u0001null\\u0001南京\\u0001false\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u00013\",\"中国\\u0001112006\\u0001南京\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190708\\u00011\",\"中国\\u0001112003\\u0001南通\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190708\\u00011\",\"中国\\u0001112005\\u0001南京\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190703\\u00011\",\"中国\\u0001112005\\u0001南京\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190703\\u00011\",\"中国\\u0001null\\u0001南通\\u0001false\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190704\\u00016\",\"中国\\u0001112001\\u0001南通\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190703\\u00011\",\"中国\\u0001112002\\u0001南通\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190707\\u00011\",\"中国\\u0001null\\u0001南通\\u0001false\\u0001$appClick\\u0001acc\\u0001A\\u000120190704\\u00012\",\"中国\\u0001112002\\u0001南通\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190703\\u00011\",\"中国\\u0001112002\\u0001南通\\u0001true\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u00011\",\"中国\\u0001112001\\u0001南通\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190708\\u00011\",\"中国\\u0001112005\\u0001南京\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190707\\u00011\",\"中国\\u0001112004\\u0001南京\\u0001true\\u0001$appClick\\u0001userid\\u0001B\\u000120190703\\u00011\",\"中国\\u0001null\\u0001南京\\u0001false\\u0001$appClick\\u0001acc\\u0001A\\u000120190704\\u00014\",\"中国\\u0001112006\\u0001南京\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190703\\u00011\",\"中国\\u0001112002\\u0001南通\\u0001true\\u0001$appClick\\u0001loginUser\\u0001C\\u000120190708\\u00011\",\"中国\\u0001null\\u0001南京\\u0001false\\u0001$appClick\\u0001acc\\u0001A\\u000120190708\\u00013\",\"中国\\u0001null\\u0001南京\\u0001false\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u000113\"]}";
+    public JSONObject querySparkSql(StringBuilder sqlBuilder, String maxLine,String params,JobHistoryDao jobHistoryDao,JobServer jobServer,String jobName) throws IOException {
+        String jo2s = "{\"result\":[\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190712\\u00012\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u0001120\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190712\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190712\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190709\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190711\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190709\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190705\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190704\\u00014\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190711\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190711\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190710\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190709\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190705\\u00014\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190705\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190704\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u000116\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u000132\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190710\\u00018\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190704\\u000115\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190710\\u000130\"],\"jobId\":\"tmp_actionreport_job_89d8bbca-51b5-43f5-bcfe-0cd128b177ab\"}";
         JSONObject jo2 = JSONObject.parseObject(jo2s);
         return jo2;
     }

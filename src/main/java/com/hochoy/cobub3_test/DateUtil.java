@@ -6,14 +6,14 @@ import org.slf4j.LoggerFactory;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.HashSet;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
 
 public class DateUtil {
 
-    private DateUtil(){}
+    private DateUtil() {
+    }
 
     public static final String YYYY_MM_DD = "yyyyMMdd";
     private static final Logger logger = LoggerFactory.getLogger(DateUtil.class);
@@ -70,18 +70,35 @@ public class DateUtil {
      */
     public static String getLastDayOfWeek(String dateDay) {
         SimpleDateFormat sdf = new SimpleDateFormat(YYYY_MM_DD);
-        Date date = new Date();
+        Date date;
+        String firstDay = null;
         try {
             date = sdf.parse(dateDay);
+            firstDay = getLastDayOfWeek(date, "yyyyMMdd");
         } catch (ParseException e) {
             logger.error(PARSE_EXCEPTION, e);
         }
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(date);
-        cal.set(Calendar.DAY_OF_WEEK, 1);
-        cal.add(Calendar.DAY_OF_WEEK, 6);
-        return dateFormat(cal.getTime());
+//        Calendar cal = Calendar.getInstance();
+//        cal.setFirstDayOfWeek(Calendar.MONDAY);
+//        cal.setTime(date);
+//        cal.set(Calendar.DAY_OF_WEEK, 1);
+//        cal.add(Calendar.DAY_OF_WEEK, 6);
+        return firstDay;//dateFormat(cal.getTime());
     }
+
+    public static String getLastDayOfWeek(Date date, String pattern) {
+        SimpleDateFormat df = new SimpleDateFormat(pattern);
+        Calendar c = Calendar.getInstance();
+        c.setTime(date);
+        // 如果是周日直接返回
+        if (c.get(Calendar.DAY_OF_WEEK) == 1) {
+            return df.format(date);
+        }
+        System.out.println(c.get(Calendar.DAY_OF_WEEK));
+        c.add(Calendar.DATE, 7 - c.get(Calendar.DAY_OF_WEEK) + 1);
+        return df.format(c.getTime());
+    }
+
 
     /**
      * 获取周日到dateDay之间的所有日期(包含周日和dateDay)
@@ -237,4 +254,207 @@ public class DateUtil {
 
         return dateList;
     }
+
+    /**
+     * @param date
+     * @param pattern
+     * @return 返回 date 日期所在月份的 一号 日期
+     */
+    public static String getFirstDayOfMonth(String date, String pattern) {
+        SimpleDateFormat format = new SimpleDateFormat(pattern);
+        String firstDay = null;
+        try {
+            Date date1 = format.parse(date);
+            firstDay = getFirstDayOfMonth(date1, pattern);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return firstDay;
+    }
+
+    public static String getFirstDayOfMonth(Date date, String pattern) {
+        SimpleDateFormat df = new SimpleDateFormat(pattern);
+        Calendar calendar = Calendar.getInstance();
+
+        calendar.setTime(date);
+        Date theDate = calendar.getTime();
+
+        // 第一天
+        GregorianCalendar gcLast = (GregorianCalendar) Calendar.getInstance();
+        gcLast.setTime(theDate);
+        gcLast.set(Calendar.DAY_OF_MONTH, 1);
+        String day_first = df.format(gcLast.getTime());
+        return day_first;
+    }
+
+    /**
+     * @param currentDate
+     * @param pattern
+     * @return 返回 date 日期所在周的 < 周一 > 的 日期
+     */
+    public static String getFirstDayOfCurrentWeek(String currentDate, String pattern) {
+        String returnDate = null;
+        SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+        try {
+            Date date = sdf.parse(currentDate);
+            Calendar c = Calendar.getInstance();
+            c.setTime(date);
+            int weekIndex = c.get(Calendar.DAY_OF_WEEK);
+            c.add(Calendar.DAY_OF_YEAR, -weekIndex + 2);
+            date = c.getTime();
+            returnDate = sdf.format(date);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return returnDate;
+    }
+
+
+    /**
+     * 输入的是String，格式诸如20120102，实现减num天的功能，返回的格式为String，诸如20120101
+     *
+     * @param date
+     * @param num
+     * @return
+     * @throws ParseException
+     */
+    public static String stringDateDecrease(String date, int num) {
+        String year = date.substring(0, 4);
+        String month = date.substring(4, 6);
+        String day = date.substring(6);
+        String date1 = year + "-" + month + "-" + day;
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date startDate = new Date();
+        try {
+            startDate = sdf.parse(date1);
+        } catch (ParseException e) {
+
+        }
+        Calendar cd = Calendar.getInstance();
+        cd.setTime(startDate);
+        cd.add(Calendar.DATE, num);
+        String dateStr = sdf.format(cd.getTime());
+        String year1 = dateStr.substring(0, 4);
+        String month1 = dateStr.substring(5, 7);
+        String day1 = dateStr.substring(8);
+        return year1 + month1 + day1;
+    }
+
+//    /**
+//     * @param cur       输入日期
+//     * @param period    周期：周，月，年，天，小时，分。。。
+//     * @param peroidNum 增加/减少的周期数 ，支持正/负
+//     * @return
+//     */
+//    public Date dateAddAssignPeriod(Date cur, int period, int peroidNum) {
+//        Calendar c = Calendar.getInstance();
+//        c.setTime(cur);
+//        switch (period) {
+//            case Calendar.MONTH:
+//                c.add(Calendar.MONTH, peroidNum);
+//                break;
+//            case Calendar.DAY:
+//                c.add(Calendar.Day, peroidNum);
+//                break;
+//            case Calendar.WEEK_OF_YEAR:
+//                c.add(Calendar.WEEK_OF_MONTH, peroidNum);
+//                break;
+//        }
+//        c.add(Calendar.MINUTE, 1);
+//
+//        Date date = c.getTime();
+//        return date;
+//    }
+
+
+    public static String dateAddMonth(String date, int addNum) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        String resDay = null;
+        try {
+            Date now = sdf.parse(date);
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(now);
+            calendar.add(Calendar.MONTH, addNum);
+            resDay = sdf.format(calendar.getTime());
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return resDay;
+    }
+
+    /**
+     * beginTime 在 endTime 之前，返回true， 否则返回false
+     *
+     * @param beginTime
+     * @param endTime
+     * @param pattern
+     * @return when beginTime <  endTime  return true, else return false
+     */
+    public static int towDateCompare(String beginTime, String endTime, String pattern) {
+        SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+        try {
+            Date bt = sdf.parse(beginTime);
+            Date et = sdf.parse(endTime);
+            return bt.compareTo(et);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return -999;
+    }
+
+    public static int towDateCompare(String beginTime, String endTime) {
+        return towDateCompare(beginTime, endTime, "yyyyMMdd");
+    }
+
+    /**
+     * otherDate 跟今天日期对比，在今天之前则返回true，否则返回false
+     *
+     * @param otherDate
+     * @param pattern
+     * @return when otherDate < today return true else false
+     */
+    public static int dateCompare2Now(String otherDate, String pattern) {
+        SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+        return towDateCompare(otherDate, sdf.format(new Date()), pattern);
+    }
+
+    /**
+     * @param otherDate
+     * @return otherDate 跟今天日期对比，
+     * otherDate < now  -1,
+     * otherDate == now 0 ,
+     * otherDate > now 1
+     */
+    public static int dateCompare2Now(String otherDate) {
+        return dateCompare2Now(otherDate, "yyyyMMdd");
+    }
+
+
+    public static void main(String[] args) {
+
+        System.out.println(dateAddMonth("20190725", 4));
+        System.out.println(dateAddMonth("20190731", 7));
+        System.out.println(dateAddMonth("20190725", -4));
+        int flag;
+        flag = towDateCompare("20190712", "20190725");
+        System.out.println(flag);
+        flag = towDateCompare("20190725", "20190725");
+        System.out.println(flag);
+        flag = towDateCompare("20190731", "20190725");
+        System.out.println(flag);
+        System.out.println("-------------------------");
+        flag = dateCompare2Now("20190712");
+        System.out.println(flag);
+        flag = dateCompare2Now("20190725");
+        System.out.println(flag);
+        flag = dateCompare2Now("20190731");
+        System.out.println(flag);
+
+        //otherDate 跟今天日期对比，在今天之前则返回true，否则返回false
+//        if (DateUtil.dateCompare2Now("20190731")) {
+//
+//        }
+
+    }
+
 }

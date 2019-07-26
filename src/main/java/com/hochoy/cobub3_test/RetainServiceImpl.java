@@ -73,7 +73,7 @@ public class RetainServiceImpl {
         JSONObject userFilter = jsonObject.getJSONObject("user_filter");
 
         String fromDay = getStartDay(unit, from);
-        String firstCommWhere = String.format(" productid = '%s' AND day >= '%s' AND  day <= '%s' ", productId, fromDay, getFirstEventEndDay(unit, from));
+        String firstCommWhere = String.format(" productid = '%s' AND day >= '%s' AND  day <= '%s' ", productId, fromDay, getFirstEventEndDay(unit, to));
         String secondCommWhere = String.format(" productid = '%s' AND day >= '%s' AND  day <= '%s' ", productId, fromDay, getSecondEventEndDay(isExtend, duration, unit, to)); // todo week/month from 取值
         String by_field = jsonObject.containsKey("by_field") ? jsonObject.getString("by_field") : null;
         // first.event.country / second.event.city / user.sex / userGroup.group1
@@ -169,14 +169,14 @@ public class RetainServiceImpl {
         return fromDay;
     }
 
-    private String getFirstEventEndDay(String unit, String from) {
+    private String getFirstEventEndDay(String unit, String to) {
         String fromDay;
         if ("week".equalsIgnoreCase(unit)) {
-            fromDay = getLastDayOfWeek(from);
+            fromDay = getLastDayOfWeek(to);
         } else if ("month".equalsIgnoreCase(unit)) {
-            fromDay = getLastDayOfMonth(from);
+            fromDay = getLastDayOfMonth(to);
         } else {
-            fromDay = from;
+            fromDay = to;
         }
         return fromDay;
     }

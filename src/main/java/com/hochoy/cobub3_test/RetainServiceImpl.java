@@ -71,10 +71,11 @@ public class RetainServiceImpl {
         JSONObject firstEvent = jsonObject.getJSONObject("first_event");
         JSONObject secondEvent = jsonObject.getJSONObject("second_event");
         JSONObject userFilter = jsonObject.getJSONObject("user_filter");
+        Boolean isQuery = jsonObject.containsKey("isQuery") ? jsonObject.getBoolean("isQuery") : true; // todo  how to get and set
 
-        String fromDay = getStartDay(unit, from);
-        String firstCommWhere = String.format(" productid = '%s' AND day >= '%s' AND  day <= '%s' ", productId, fromDay, getFirstEventEndDay(unit, to));
-        String secondCommWhere = String.format(" productid = '%s' AND day >= '%s' AND  day <= '%s' ", productId, fromDay, getSecondEventEndDay(isExtend, duration, unit, to)); // todo week/month from 取值
+        String fromDay = isQuery ? getStartDay(unit, from) : "?";
+        String firstCommWhere = String.format(" productid = '%s' AND day >= %s AND  day <= %s ", productId, fromDay, isQuery ? getFirstEventEndDay(unit, to): "?");
+        String secondCommWhere = String.format(" productid = '%s' AND day >= %s AND  day <= %s ", productId, fromDay, isQuery ? getSecondEventEndDay(isExtend, duration, unit, to): "?"); // todo week/month from 取值
         String by_field = jsonObject.containsKey("by_field") ? jsonObject.getString("by_field") : null;
         // first.event.country / second.event.city / user.sex / userGroup.group1
         String firstActionSQL = genActionSQL(firstCommWhere, firstEvent,by_field);

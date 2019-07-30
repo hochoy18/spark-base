@@ -7,56 +7,95 @@ import scala.Tuple3;
 import scala.Tuple5;
 
 import java.io.IOException;
+import java.lang.ref.SoftReference;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.hochoy.cobub3_test.DateUtil.*;
+import java.util.Vector;
+import java.util.ArrayList;
 
 
 public class RetainServiceImpl {
-
     String parquetTmpTable = "parquetTmpTable";
     String usersTable = "usersTable";
     private String hbaseNameSpace = "cobub3";
+//    private String "first.eventay = "first.event.day";
 
     public JSONObject getUserDayRetain(JSONObject jsonObject) throws IOException {
 
         String fromDay = getStartDay(jsonObject.getString("unit"), jsonObject.getString("from_date"));
-        if (dateCompare2Now(fromDay) > 0)
+        if (DateUtil.dateCompare2Now(fromDay) > 0)
             return new JSONObject();
 
 
         Tuple2<String, String> retentionSQL = genSQL(jsonObject);
-        System.out.println(retentionSQL._1 + "\n" + retentionSQL._2);
+        System.out.println("\n\nall SQL ....... :   {}  "+retentionSQL._1 + "\ntaskSQL ....... :   {}  " + retentionSQL._2);
 
 
-        JSONObject responseResult = querySparkSql();
+        JSONObject responseResult = querySparkSql(new StringBuilder(retentionSQL._1), "10000", retentionSQL._2, null, null, null);
 
-
-        JSONObject res = queryResultOp(responseResult);
+        // first.event.day   first.event.model   second.event.country   user.sex   userGroup.group1
+        String byVal = jsonObject.containsKey("by_field") ? jsonObject.getString("by_field") : "first.event.day";
+        JSONObject res = queryResultOp(responseResult, byVal);
 
 
         return res;
     }
 
+    private JSONObject queryResultOp(JSONObject responseResult, String byVal) {
+        if (responseResult.isEmpty() ||
+                !responseResult.containsKey("result") ||
+                (responseResult.containsKey("result") && responseResult.getJSONArray("result").isEmpty())) {
+            return new JSONObject();
+        }
+
+        // country(china) byDay,
+        //2019801,<0/1/2/total,<people/percent,num>
+        Map<String, Map<String, Map<String, Set<String>>>> res = new HashMap<>();
+
+        JSONArray result = responseResult.getJSONArray("result");
+        result.forEach(v -> {
+            String[] split = v.toString().split(Constants.SEPARATOR_U0001);
+            String byValue = split[0];// 20190729
+            String byDay = ("null".equalsIgnoreCase(split[1])) ? "total" : split[1];
+            String globalids = split[2].replaceAll(" " ,"");
+            Map<String, Map<String, Set<String>>> m = res.getOrDefault(byValue, new HashMap<>());
+
+            Set<String> userSet = new HashSet(Arrays.asList(globalids.substring(13, globalids.length() - 1).split(",")));
+
+            Map<String, Set<String>> map = m.getOrDefault(byValue, new HashMap<String, Set<String>>());
+//            map
+
+
+        });
+        if ("first.event.day".equalsIgnoreCase(byVal)) {
+            // sort by first_day
+        } else {
+            // sort by zero day's users num
+        }
+
+
+        return responseResult;
+    }
 
     private Tuple2<String, String> genSQL(JSONObject jsonObject) {
         Tuple3<String, String, String> sql = genRetentionSql(jsonObject);
 
-        String unit = "";
+        String unit = jsonObject.getString("unit"); // week / day / month
+
         String joinerSQL = genByDayJoinSQL(sql._1(), sql._2(), unit);
 
         String allSQLFormat = "SELECT %s FROM (%s) tc GROUP BY %s ";
 
-        String selectFields = "from_unixtime(unix_timestamp(tc.first_day, 'yyyy-MM-dd'), 'yyyy-MM-dd') , tc.by_day, collect_set(tc.global_user_id) AS usersets";
+        String selectFields = "from_unixtime(unix_timestamp(tc.first_day, 'yyyy-MM-dd'), 'yyyy-MM-dd') , tc.by_day, collect_set(tc.global_user_id) AS usersets";// todo first_day to groupByField
 
+        // todo first_day to groupByField
         String groupBy = "from_unixtime(unix_timestamp(tc.first_day, 'yyyy-MM-dd'), 'yyyy-MM-dd'), tc.by_day  GROUPING SETS((from_unixtime(unix_timestamp(tc.first_day, 'yyyy-MM-dd'), 'yyyy-MM-dd') ,tc.by_day), (from_unixtime(unix_timestamp(tc.first_day, 'yyyy-MM-dd'), 'yyyy-MM-dd') ))";
+
 
         String allSQL = String.format(allSQLFormat, selectFields, joinerSQL, groupBy);
 
         return new Tuple2(allSQL, sql._3());
     }
-
 
     private Tuple3<String, String, String> genRetentionSql(JSONObject jsonObject) {
 
@@ -74,12 +113,12 @@ public class RetainServiceImpl {
         Boolean isQuery = jsonObject.containsKey("isQuery") ? jsonObject.getBoolean("isQuery") : true; // todo  how to get and set
 
         String fromDay = isQuery ? getStartDay(unit, from) : "?";
-        String firstCommWhere = String.format(" productid = '%s' AND day >= %s AND  day <= %s ", productId, fromDay, isQuery ? getFirstEventEndDay(unit, to): "?");
-        String secondCommWhere = String.format(" productid = '%s' AND day >= %s AND  day <= %s ", productId, fromDay, isQuery ? getSecondEventEndDay(isExtend, duration, unit, to): "?"); // todo week/month from 取值
+        String firstCommWhere = String.format(" productid = '%s' AND day >= %s AND  day <= %s ", productId, fromDay, isQuery ? getFirstEventEndDay(unit, to) : "?");
+        String secondCommWhere = String.format(" productid = '%s' AND day >= %s AND  day <= %s ", productId, fromDay, isQuery ? getSecondEventEndDay(isExtend, duration, unit, to) : "?"); // todo week/month from 取值
         String by_field = jsonObject.containsKey("by_field") ? jsonObject.getString("by_field") : null;
         // first.event.country / second.event.city / user.sex / userGroup.group1
-        String firstActionSQL = genActionSQL(firstCommWhere, firstEvent,by_field);
-        String secondActionSQL = genActionSQL(secondCommWhere, secondEvent,by_field);
+        String firstActionSQL = genActionSQL(firstCommWhere, firstEvent, by_field);
+        String secondActionSQL = genActionSQL(secondCommWhere, secondEvent, by_field);
 
         /**
          * 判断是否 需要查 用户属性/用户分群，
@@ -127,12 +166,12 @@ public class RetainServiceImpl {
         if (!isExtend) {
             switch (unit) {
                 case "week":
-                    end = getLastDayOfWeek(to);
-                    endDay = dateCompare2Now(end) > 0 ? end : getLastDayOfWeek(dateFormat(new Date()));
+                    end = DateUtil.getLastDayOfWeek(to);
+                    endDay = DateUtil.dateCompare2Now(end) > 0 ? end : DateUtil.getLastDayOfWeek(DateUtil.dateFormat(new Date()));
                     break;
                 case "month":
-                    end = getLastDayOfMonth(to);
-                    endDay = dateCompare2Now(end) > 0 ? end : getLastDayOfMonth(dateFormat(new Date()));
+                    end = DateUtil.getLastDayOfMonth(to);
+                    endDay = DateUtil.dateCompare2Now(end) > 0 ? end : DateUtil.getLastDayOfMonth(DateUtil.dateFormat(new Date()));
                     break;
                 default:
                     endDay = to;
@@ -141,17 +180,17 @@ public class RetainServiceImpl {
         } else
             switch (unit) {
                 case "day":
-                    end = stringDateDecrease(to, duration);
+                    end = DateUtil.stringDateDecrease(to, duration);
                     //dateCompare2Now:otherDate 跟今天日期对比，在今天之前则返回true，否则返回false
-                    endDay = dateCompare2Now(end) > 0 ? end : dateFormat(new Date());
+                    endDay = DateUtil.dateCompare2Now(end) > 0 ? end : DateUtil.dateFormat(new Date());
                     break;
                 case "week":
-                    end = getLastDayOfWeek(stringDateDecrease(to, 7 * duration)); // 加 duration * 7天后日期的周日
-                    endDay = dateCompare2Now(end) > 0 ? end : getLastDayOfWeek(dateFormat(new Date()));
+                    end = DateUtil.getLastDayOfWeek(DateUtil.stringDateDecrease(to, 7 * duration)); // 加 duration * 7天后日期的周日
+                    endDay = DateUtil.dateCompare2Now(end) > 0 ? end : DateUtil.getLastDayOfWeek(DateUtil.dateFormat(new Date()));
                     break;
                 case "month":
-                    end = getLastDayOfMonth(dateAddMonth(to, duration));
-                    endDay = dateCompare2Now(end) > 0 ? end : getLastDayOfMonth(dateFormat(new Date()));
+                    end = DateUtil.getLastDayOfMonth(DateUtil.dateAddMonth(to, duration));
+                    endDay = DateUtil.dateCompare2Now(end) > 0 ? end : DateUtil.getLastDayOfMonth(DateUtil.dateFormat(new Date()));
                     break;
             }
         return endDay;
@@ -161,9 +200,9 @@ public class RetainServiceImpl {
     private String getStartDay(String unit, String from) {
         String fromDay;
         if ("week".equalsIgnoreCase(unit)) {
-            fromDay = getFirstDayOfCurrentWeek(from, "yyyyMMdd");
+            fromDay = DateUtil.getFirstDayOfCurrentWeek(from, "yyyyMMdd");
         } else if ("month".equalsIgnoreCase(unit)) {
-            fromDay = getFirstDayOfMonth(from, "yyyyMMdd");
+            fromDay = DateUtil.getFirstDayOfMonth(from, "yyyyMMdd");
         } else {
             fromDay = from;
         }
@@ -173,9 +212,9 @@ public class RetainServiceImpl {
     private String getFirstEventEndDay(String unit, String to) {
         String fromDay;
         if ("week".equalsIgnoreCase(unit)) {
-            fromDay = getLastDayOfWeek(to);
+            fromDay = DateUtil.getLastDayOfWeek(to);
         } else if ("month".equalsIgnoreCase(unit)) {
-            fromDay = getLastDayOfMonth(to);
+            fromDay = DateUtil.getLastDayOfMonth(to);
         } else {
             fromDay = to;
         }
@@ -222,7 +261,7 @@ public class RetainServiceImpl {
      * @param eventCon
      * @return
      */
-    private String genActionSQL(String actionCommWhere, JSONObject eventCon,String by_field) {
+    private String genActionSQL(String actionCommWhere, JSONObject eventCon, String by_field) {
         String eventName = eventCon.getString("event_name");
         JSONObject filter = eventCon.getJSONObject("filter");
         JSONArray conditions = filter.getJSONArray("conditions");
@@ -235,7 +274,9 @@ public class RetainServiceImpl {
             actionWhere = String.format("( %s ) AND (%s)", commWhere, SQLUtil.queryConditionOp(conditions, relation, "productId")._2().toString());// todo productId
         }
         // TODO : 非初始行为日期分组情况中，以初始行为事件属性/ 后续行为事件属性分组情况，select 字段需要增加分组字段
-        String selectField = "global_user_id, servertime";// null == by_field ?  "global_user_id, servertime" :"";
+        String selectField = (null == by_field || "first.event.day".equalsIgnoreCase(by_field) || by_field.startsWith("user") ) ?
+                "global_user_id, servertime" :
+                String.join(",","global_user_id","servertime",by_field.substring(by_field.lastIndexOf(".") + 1));
 
         String sqlFormat = "select %s from %s where %s ";
         String actionSQL = String.format(sqlFormat, selectField, parquetTmpTable, actionWhere);
@@ -264,19 +305,14 @@ public class RetainServiceImpl {
         Map<String, String> userProps = new HashMap<>();
         if (conditions.size() > 0) {
             // userWhere, actionWhere, groupId, actionFields, userProps
-            Tuple5 userConTuple = SQLUtil.queryConditionOp(conditions, relation, productId);// todo productId
-
+            Tuple5 userConTuple = SQLUtil.queryConditionOp(conditions, relation, productId);
             groupIds = (Set<String>) userConTuple._3();
             userProps = (Map<String, String>) userConTuple._5();
-
-
-            userWhere = String.format("( %s ) AND ( %s )", commWhere, userConTuple._1());// todo productId
+            userWhere = String.format("( %s ) AND ( %s )", commWhere, userConTuple._1());
         }
-
-
         String selectField = "pk";//(null != byField && byField.startsWith("user")) ? "pk," + String.join("_", productId, byField.split("\\.", 2)[1]) : "pk";// TODO : 非初始行为日期分组情况中，以用户属性作为分组条件时，select 字段需要增加分组字段
         if (null != byField && byField.startsWith("user")) {
-            String userFiled = String.join("_", productId, byField.split("\\.", 2)[1]);
+            String userFiled = String.join("_", productId, byField.substring(byField.lastIndexOf(".") + 1));
             selectField = String.join(",", "pk" + userFiled);
             if (byField.startsWith("userGroup.")) {
                 groupIds.add(userFiled);
@@ -284,11 +320,28 @@ public class RetainServiceImpl {
                 userProps.put(userFiled, userPropertiesMap.get(byField.split("\\.", 2)[1]));
             }
         }
-
         String sqlFormat = "select %s from %s where %s";
-
         String SQL = String.format(sqlFormat, selectField, usersTable, userWhere);
         return new Tuple3(SQL, groupIds, userProps);
+    }
+
+
+
+    //todo 用户属性及其类型
+    private Map<String, String> getUserPropertiesAndTypes(String productId) {
+        Map<String, String> map = new HashMap<>();
+        UserMetaType userMetaType2 = new UserMetaType();
+        userMetaType2.setProductId(Long.parseLong(productId));
+//        userMetaTypeMapper.getAllActiveMetaTypeListForFilter(userMetaType2).forEach(domain->map.put(domain.getType(),domain.getDatatype()) );
+        return map;
+    }
+
+
+
+    public JSONObject querySparkSql(StringBuilder sqlBuilder, String maxLine, String params, JobHistoryDao jobHistoryDao, JobServer jobServer, String jobName) throws IOException {
+        String jo2s = "{\"jobId\":\"6b9245c0-1f39-485a-8489-75a1e21742be\",\"result\":[\"2019-06-13\\u0001null\\u0001WrappedArray(677840, 755925, 744561)\",\"2019-06-15\\u0001null\\u0001WrappedArray(12035)\",\"2019-06-10\\u0001null\\u0001WrappedArray(54054, 76520, 36187)\",\"2019-06-12\\u0001null\\u0001WrappedArray(558652, 24494, 505066, 565563, 340700)\",\"2019-06-11\\u0001null\\u0001WrappedArray(19490)\",\"2019-06-15\\u0001null\\u0001WrappedArray(12035)\",\"2019-06-10\\u0001null\\u0001WrappedArray(54054, 76520, 36187)\",\"2019-06-11\\u0001null\\u0001WrappedArray(19490)\",\"2019-06-17\\u0001null\\u0001WrappedArray(1116533, 237451, 273788)\",\"2019-06-12\\u0001null\\u0001WrappedArray(558652, 24494, 505066, 565563, 340700)\",\"2019-06-17\\u0001null\\u0001WrappedArray(1116533, 237451, 273788)\",\"2019-06-13\\u00010\\u0001WrappedArray(497108, 745416)\",\"2019-06-13\\u0001null\\u0001WrappedArray(677840, 497108, 745416, 755925, 744561)\"]}";
+        JSONObject jo2 = JSONObject.parseObject(jo2s);
+        return jo2;
     }
 
 
@@ -303,7 +356,7 @@ public class RetainServiceImpl {
         input = "{\"measures\":[],\"productId\":\"11148\",\"rangeText\":\"过去119天 - 过去140天\",\"from_date\":\"20190611\",\"to_date\":\"20190617\",\"extend_over_end_date\":true,\"duration\":8,\"unit\":\"week\",\"chartsType\":\"raw\",\"first_event\":{\"event_name\":\"cf_aefzt\",\"filter\":{\"conditions\":[{\"type\":\"event.platform\",\"function\":\"equal\",\"params\":[\"Android\",\"iOS\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"event.model\",\"function\":\"equal\",\"params\":[\"iPhone10,3#_#iPhone10,6\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"or\"},\"relevance_field\":\"\"},\"second_event\":{\"event_name\":\"cf_aefzt\",\"filter\":{\"conditions\":[{\"type\":\"event.is_new_device\",\"function\":\"isTrue\",\"params\":[],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"event.network\",\"function\":\"equal\",\"params\":[\"3G\",\"4G\",\"WIFI\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"and\"},\"relevance_field\":\"\"},\"user_filter\":{\"conditions\":[{\"type\":\"user.networkH\",\"function\":\"equal\",\"isNumber\":\"isFalse\",\"isRegion\":\"isFalse\",\"params\":[\"WIFI4\",\"WIFI5\"],\"inputForInt\":\"\",\"divForInt\":\"\",\"input\":\"\"},{\"type\":\"userGroup.groupFirstH\",\"function\":\"isTrue\",\"isNumber\":\"isFalse\",\"isRegion\":\"isFalse\",\"params\":[],\"inputForInt\":\"\",\"divForInt\":\"\",\"input\":\"\"}],\"relation\":\"or\"},\"is_wastage\":false,\"duration_true_name\":\"8\",\"show_zero_day\":\"\",\"request_id\":\"1563864936887:550544\",\"use_cache\":true}";
 
         // 无用户属性过滤
-        input = "{\"measures\":[],\"productId\":\"11148\",\"rangeText\":\"过去119天 - 过去140天\",\"from_date\":\"20190611\",\"to_date\":\"20190617\",\"extend_over_end_date\":true,\"duration\":8,\"unit\":\"week\",\"chartsType\":\"raw\",\"first_event\":{\"event_name\":\"$launch\",\"filter\":{\"conditions\":[{\"type\":\"event.platform\",\"function\":\"equal\",\"params\":[\"Android\",\"iOS\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"event.model\",\"function\":\"equal\",\"params\":[\"iPhone10,3#_#iPhone10,6\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"or\"},\"relevance_field\":\"\"},\"second_event\":{\"event_name\":\"cf_aefzt\",\"filter\":{\"conditions\":[{\"type\":\"event.is_new_device\",\"function\":\"isTrue\",\"params\":[],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"event.network\",\"function\":\"equal\",\"params\":[\"3G\",\"4G\",\"WIFI\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"and\"},\"relevance_field\":\"\"},\"user_filter\":{},\"is_wastage\":false,\"duration_true_name\":\"8\",\"show_zero_day\":\"\",\"request_id\":\"1563864936887:550544\",\"use_cache\":true}";
+        input = "{\"measures\":[],\"productId\":\"11148\",\"rangeText\":\"过去119天 - 过去140天\",\"from_date\":\"20190611\",\"to_date\":\"20190617\",\"extend_over_end_date\":true,\"duration\":8,\"unit\":\"week\",\"chartsType\":\"raw\",\"first_event\":{\"event_name\":\"cf_aefzt\",\"filter\":{\"conditions\":[{\"type\":\"event.platform\",\"function\":\"equal\",\"params\":[\"Android\",\"iOS\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"event.model\",\"function\":\"equal\",\"params\":[\"iPhone10,3#_#iPhone10,6\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"or\"},\"relevance_field\":\"\"},\"second_event\":{\"event_name\":\"cf_aefzt\",\"filter\":{\"conditions\":[{\"type\":\"event.is_new_device\",\"function\":\"isTrue\",\"params\":[],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"event.network\",\"function\":\"equal\",\"params\":[\"3G\",\"4G\",\"WIFI\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"and\"},\"relevance_field\":\"\"},\"user_filter\":{},\"is_wastage\":false,\"duration_true_name\":\"8\",\"show_zero_day\":\"\",\"request_id\":\"1563864936887:550544\",\"use_cache\":true}";
         JSONObject jo = JSONObject.parseObject(input);
         retainService.getUserDayRetain(jo);
 
@@ -313,44 +366,24 @@ public class RetainServiceImpl {
     static void dateTest() {
         String date = "20190712";
 
-        String firstDayOfMonth = getFirstDayOfMonth(date, "yyyyMMdd");
+        String firstDayOfMonth = DateUtil.getFirstDayOfMonth(date, "yyyyMMdd");
         System.out.println("getFirstDayOfMonth        20190701  --  " + firstDayOfMonth);
-        String lastDayOfMonth = getLastDayOfMonth(date);
+        String lastDayOfMonth = DateUtil.getLastDayOfMonth(date);
         System.out.println("getLastDayOfMonth         20190731  --  " + lastDayOfMonth);
 
 
         System.out.println("-----------------------------");
-        String firstDayOfCurrentWeek = getFirstDayOfCurrentWeek(date, "yyyyMMdd");
+        String firstDayOfCurrentWeek = DateUtil.getFirstDayOfCurrentWeek(date, "yyyyMMdd");
         System.out.println("getFirstDayOfCurrentWeek  20190708  --  " + firstDayOfCurrentWeek);
 
-        String lastDayOfWeek = getLastDayOfWeek(date);
+        String lastDayOfWeek = DateUtil.getLastDayOfWeek(date);
         System.out.println("getLastDayOfWeek          20190714  --  " + lastDayOfWeek);
 
-        String dateDecrease = stringDateDecrease(date, 30);
+        String dateDecrease = DateUtil.stringDateDecrease(date, 30);
         System.out.println("dateDecrease.......     " + dateDecrease);
 
     }
 
-
-    //todo 用户属性及其类型
-    private Map<String, String> getUserPropertiesAndTypes(String productId) {
-        Map<String, String> map = new HashMap<>();
-        UserMetaType userMetaType2 = new UserMetaType();
-        userMetaType2.setProductId(Long.parseLong(productId));
-//        userMetaTypeMapper.getAllActiveMetaTypeListForFilter(userMetaType2).forEach(domain->map.put(domain.getType(),domain.getDatatype()) );
-        return map;
-    }
-
-    private JSONObject queryResultOp(JSONObject responseResult) {
-        return responseResult;
-    }
-
-
-    public JSONObject querySparkSql() {
-        String jo2s = "{\"result\":[\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190712\\u00012\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u0001120\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190712\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190712\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190709\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190711\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190709\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190705\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190704\\u00014\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190711\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190711\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190710\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190709\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190705\\u00014\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190705\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190704\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u000116\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u000132\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190710\\u00018\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190704\\u000115\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190710\\u000130\"],\"jobId\":\"tmp_actionreport_job_89d8bbca-51b5-43f5-bcfe-0cd128b177ab\"}";
-        JSONObject jo2 = JSONObject.parseObject(jo2s);
-        return jo2;
-    }
 
 
 }

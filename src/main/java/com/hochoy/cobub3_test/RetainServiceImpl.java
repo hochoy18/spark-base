@@ -31,7 +31,7 @@ public class RetainServiceImpl {
         System.out.println("\n\nall SQL ....... :   {}  "+retentionSQL._1 + "\ntaskSQL ....... :   {}  " + retentionSQL._2);
 
 
-        JSONObject responseResult = querySparkSql(new StringBuilder(retentionSQL._1), "10000", retentionSQL._2, null, null, null);
+        JSONObject responseResult = SchemaUtil.querySparkSql(new StringBuilder(retentionSQL._1), "10000", retentionSQL._2, null, null, null,null);
 
         // first.event.day   first.event.model   second.event.country   user.sex   userGroup.group1
         String byVal = jsonObject.containsKey("by_field") ? jsonObject.getString("by_field") : "first.event.day";
@@ -338,11 +338,7 @@ public class RetainServiceImpl {
 
 
 
-    public JSONObject querySparkSql(StringBuilder sqlBuilder, String maxLine, String params, JobHistoryDao jobHistoryDao, JobServer jobServer, String jobName) throws IOException {
-        String jo2s = "{\"jobId\":\"6b9245c0-1f39-485a-8489-75a1e21742be\",\"result\":[\"2019-06-13\\u0001null\\u0001WrappedArray(677840, 755925, 744561)\",\"2019-06-15\\u0001null\\u0001WrappedArray(12035)\",\"2019-06-10\\u0001null\\u0001WrappedArray(54054, 76520, 36187)\",\"2019-06-12\\u0001null\\u0001WrappedArray(558652, 24494, 505066, 565563, 340700)\",\"2019-06-11\\u0001null\\u0001WrappedArray(19490)\",\"2019-06-15\\u0001null\\u0001WrappedArray(12035)\",\"2019-06-10\\u0001null\\u0001WrappedArray(54054, 76520, 36187)\",\"2019-06-11\\u0001null\\u0001WrappedArray(19490)\",\"2019-06-17\\u0001null\\u0001WrappedArray(1116533, 237451, 273788)\",\"2019-06-12\\u0001null\\u0001WrappedArray(558652, 24494, 505066, 565563, 340700)\",\"2019-06-17\\u0001null\\u0001WrappedArray(1116533, 237451, 273788)\",\"2019-06-13\\u00010\\u0001WrappedArray(497108, 745416)\",\"2019-06-13\\u0001null\\u0001WrappedArray(677840, 497108, 745416, 755925, 744561)\"]}";
-        JSONObject jo2 = JSONObject.parseObject(jo2s);
-        return jo2;
-    }
+
 
 
     public static void main(String[] args) throws IOException {

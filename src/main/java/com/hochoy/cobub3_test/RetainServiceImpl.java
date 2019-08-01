@@ -7,11 +7,8 @@ import scala.Tuple3;
 import scala.Tuple5;
 
 import java.io.IOException;
-import java.lang.ref.SoftReference;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Vector;
-import java.util.ArrayList;
 
 
 public class RetainServiceImpl {
@@ -19,7 +16,7 @@ public class RetainServiceImpl {
     String usersTable = "usersTable";
     private String hbaseNameSpace = "cobub3";
 //    private String "first.eventay = "first.event.day";
-
+    ReferenceCacheUtils<String,Set<String>> referenceCacheUtils;
     public JSONObject getUserDayRetain(JSONObject jsonObject) throws IOException {
 
         String fromDay = getStartDay(jsonObject.getString("unit"), jsonObject.getString("from_date"));
@@ -37,6 +34,10 @@ public class RetainServiceImpl {
         String byVal = jsonObject.containsKey("by_field") ? jsonObject.getString("by_field") : "first.event.day";
         JSONObject res = queryResultOp(responseResult, byVal);
 
+
+        referenceCacheUtils = new ReferenceCacheUtils();
+        Set<String> set = new HashSet<>();
+        referenceCacheUtils.put("id",set);
 
         return res;
     }

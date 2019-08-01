@@ -37,18 +37,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class CustomActionServiceImpl  {
 
     private static final Logger logger = LoggerFactory.getLogger(CustomActionServiceImpl.class);
-    public static final String AND = " and ";
-    public static final String OR = " or ";
-    public static final String EQUAL = " = ";
-    public static final String BOOLEANTYPE = "BooleanType";
-    public static final String EQUAL_TRUE = " = true ";
-    public static final String EQUAL_FALSE = " = false ";
-    public static final String LEFT_BRACKET = "(";
-    public static final String UNDER_LINE = "_";
-    public static final String SINGLE_QUOTE = "'";
-    public static final String EQUAL_SINGLE_QUOTE = " = '";
-    public static final String DB_PARQUET = " e1.";//表parquetTmpTable别名
-    public static final String DB_USER = " e2.";//表usersTable别名
     String separator = "@@@@@@@";
 //    @Autowired
 //    private JobServer jobServer;
@@ -95,13 +83,13 @@ public class CustomActionServiceImpl  {
         String from = jsonObject.getString(Constants.FROM_DATE);
         String to = jsonObject.getString(Constants.TO_DATE);
         String productId = jsonObject.getString(Constants.PRODUCTID);
-        if (!"day".equalsIgnoreCase(unit)){
+        if (!"day".equalsIgnoreCase(unit) && !"hour".equalsIgnoreCase(unit)){
             return new JSONObject();
         }
 
         StringJoiner commWhere = new StringJoiner(" AND ");
 //
-        String dateCon = String.format("( productid = '%s' AND day >= '%s' AND  day <= '%s' )", productId, from, to);
+        String dateCon = String.format("( productid = '%s' AND day >= '%s' AND  day <= '%s' )", productId, from, to);// todo
         commWhere.add(dateCon);
         JSONArray actions = jsonObject.getJSONArray(Constants.ACTION);//多指标
 
@@ -110,6 +98,7 @@ public class CustomActionServiceImpl  {
         map.put(Constants.RELATION, relation);
         map.put("commWhere", commWhere);
         map.put("productId", productId);
+        map.put("unit", unit);
 
         Tuple2 queryOrSaveOp = queryOrSaveOp(jsonObject);
         /**
@@ -166,31 +155,7 @@ public class CustomActionServiceImpl  {
 
     private Tuple3<Map<String,Map<String,String>>,JSONArray,JSONArray> commReturnOp(JSONObject jsonObject ) {
 
-        String productId = jsonObject.getString("productId");
-        Map<String,Map<String,String>>  id2Alias = new HashMap<>();
-        Map<String ,String> gmap = new HashMap<>();
-        gmap.put("true","真");
-        gmap.put("false","假");
-        id2Alias.put("userGroup",gmap );
-        jsonObject.getJSONArray("by_fields").stream().filter(x->!"all".equalsIgnoreCase(x.toString())).forEach(x->{
-            String by = x.toString();
-            String[] split = by.split("\\.", 2);
-            String type = split[0];
-            Map<String ,String> map = new HashMap<>();
-            if ("event".equals(type)) {
-                List<Metadata> list =  new ArrayList<>();//metadataMapper.getMetadataValueName(productId,split[1]);     //    select t.original, t.display from METAdata t where t.productid = 11188  and t.metadata_type = 'version';
-                list.stream().filter(
-                        v-> v.getOriginal() != null && !"".equals(v.getOriginal()))
-                        .forEach(
-                        v -> map.put(v.getOriginal(),(null == v.getDisplay() || "".equals(v.getDisplay()))? v.getOriginal(): v.getDisplay()));
-                id2Alias.put(by,map);
-            }else if ("user".equals(type)) {
-                List<UserMetadata> list = new ArrayList<>();//userMtadataMapper.getMetadataValueName(productId,split[1]);  //    SELECT T.ORIGINAL, T.META_TYPE ,T.DISPLAY  FROM COBUB_USER_METADATA  T  WHERE T.PRODUCTID = 11188 AND T.ENABLED =1 AND T.META_TYPE = 'duration'
-                list.stream().filter(v->v.getOriginal()!=null && !"".equals(v.getOriginal())).forEach(
-                        v -> map.put(v.getOriginal(),(null == v.getDisplay() || "".equals(v.getDisplay()))? v.getOriginal(): v.getDisplay()));
-                id2Alias.put(by,map);
-            }
-        });
+        Map<String, Map<String, String>> id2Alias = getId2Alias(jsonObject);
 
 
         JSONArray series = new JSONArray();
@@ -206,6 +171,7 @@ public class CustomActionServiceImpl  {
         });
         return new Tuple3<>(id2Alias,series,by_fields);
     }
+
 
 
     private JSONObject resultOp(JSONObject jo, Tuple3<Map<String,Map<String,String>>,JSONArray,JSONArray> commReturn,LinkedList idxs) {
@@ -270,7 +236,7 @@ public class CustomActionServiceImpl  {
                     idxNum.put(idx,num);
                     dateIdxNum.put(date, idxNum);
                 }else {
-                    idx_Num.put(idx,num);
+                    idx_Num.put(idx,String.valueOf( Long.parseLong(num) +  Long.parseLong( idx_Num.containsKey(idx)? idx_Num.get(idx) : "0") ));
                     dateIdxNum.put(date,idx_Num);
                 }
             }
@@ -372,15 +338,6 @@ public class CustomActionServiceImpl  {
 
     }
 
-    private String getByres(Map<String, Map<String, String>> map, String by0, String byF) {
-        String res ;
-        if(byF.startsWith("userGroup")){
-            res = map.get("userGroup").get(by0);
-        }else  {
-            res = map.get(byF).get(by0);
-        }
-        return  null == res ? "unknown": res ;
-    }
 
 
     /**
@@ -448,13 +405,14 @@ public class CustomActionServiceImpl  {
             partialAggGroupBy = String.join(", ", "action" );
         }
 
-        String groupAndGroupingBy = " %s GROUPING SETS(( %s, day ),( %s ) )";
+        String groupAndGroupingBy = " %s GROUPING SETS(( %s, day ),( %s ) )";// todo
+
 
         String groupAndGroupByEachSelect;
         if(isQuery) {
             groupAndGroupByEachSelect = String.format(
                     groupAndGroupingBy,
-                    String.join(",", partialAggGroupBy, "day"),
+                    String.join(",", partialAggGroupBy, "day"),//todo day
                     partialAggGroupBy, partialAggGroupBy);
         }else {
             groupAndGroupByEachSelect = String.join(",", partialAggGroupBy) ;
@@ -536,7 +494,7 @@ public class CustomActionServiceImpl  {
             }
             String joinSelect ;
             if(isQuery){
-                joinSelect = String.join(",",joinSelect0, "day");
+                joinSelect = String.join(",",joinSelect0, "day");// todo
                 actionSelectSet.add("day");
             }else{
                 joinSelect = joinSelect0;
@@ -548,9 +506,10 @@ public class CustomActionServiceImpl  {
                 //分组、内部条件、外部条件中只有事件属性，只查 parquet 表
                 StringJoiner actionWhere = getWhereOfUserOrAction(commWhere1, outActionWhere, inActionWhere);
                 String singleSQL;
-                singleSQL = String.format(parquetSQL, joinSelect, actionWhere.toString(), groupAndGroupByEachSelect);
+                singleSQL = String.format(parquetSQL, joinSelect, actionWhere.toString(), groupAndGroupByEachSelect);//todo joinSelect groupAndGroupByEachSelect
                 sqlList.add(singleSQL);
             } else {
+                //todo joinSelect groupAndGroupByEachSelect
                 if (inOr || outOr) {
                     // 在or 条件下，且查询条件同时含有action 和 user属性，则过滤条件不能下推到最底层的
                     // usersTable 和 parquetTmpTable 中过滤，需要放在 usersTable join parquetTmpTable
@@ -761,6 +720,7 @@ public class CustomActionServiceImpl  {
 
 
 
+
     //todo 用户属性及其类型
     private Map<String, String> getUserPropertiesAndTypes(String productId) {
         Map<String, String> map = new HashMap<>();
@@ -805,7 +765,6 @@ public class CustomActionServiceImpl  {
             relation = Constants.AND;
         }
         StringJoiner commWhere = new StringJoiner(" AND ");
-//
         String dateCon = String.format("( productid = '%s' )", productId);
         commWhere.add(dateCon);
         JSONArray actions = jsonObject.getJSONArray(Constants.ACTION);//多指标
@@ -815,10 +774,10 @@ public class CustomActionServiceImpl  {
 
 
         Map map = new HashMap();
-        map.put("relation", relation);
+        map.put(Constants.RELATION, relation);
         map.put("commWhere", commWhere);
+        map.put("unit", unit);
         map.put("productId", productId);
-
         Tuple2 queryOrSaveOp = queryOrSaveOp(jsonObject);
         /**
          * 结合 {@link filter}、{@link selectAndGroupBy}  拼接 单指标 SQL
@@ -830,10 +789,7 @@ public class CustomActionServiceImpl  {
         String groupid = (String)sqlOps._3();
 
 
-        System.out.println("taskSQL   "+taskSQL);
-        System.out.println("prop   "+prop);
-        System.out.println("groupid   "+groupid);
-        System.exit(-1);
+
         // 保存事件任务
         ActionReport actionReport = new ActionReport();
         actionReport.setReportName(reportName);
@@ -909,6 +865,7 @@ public class CustomActionServiceImpl  {
                 JSONArray eachDatas = joValues.getJSONArray(d);
                 String day = (String)series.get(d);
                 for (int x = 0; x < eachDatas.size(); x++) {
+                    count++;
                     String actionIndicator =  eventIndicator.getString(x);
                     String eachData = eachDatas.getString(x);
                     // row
@@ -922,7 +879,6 @@ public class CustomActionServiceImpl  {
                     Put put = new Put(Bytes.toBytes(rowKey));
                     put.addColumn(Bytes.toBytes("f"), Bytes.toBytes(qualifier), Bytes.toBytes(eachData));
                     puts.add(put);
-                    count ++;
                     if (count % PUT_NUM_PER_BATCH == 0) {
                         try {
 //                            table.put(puts);
@@ -964,6 +920,9 @@ public class CustomActionServiceImpl  {
 //        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190703\",\"by_fields\":[\"event.country\"],\"to_date\":\"20190709\",\"productId\":\"11128\",\"action\":[{\"eventType\":\"loginUser\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
 
         inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190623\",\"by_fields\":[\"event.country\",\"event.city\",\"userGroup.loginq\",\"userGroup.logina\",\"user.grouptwonetwork\"],\"to_date\":\"20190722\",\"productId\":\"11188\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
+
+        // by hour
+        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"hour\",\"from_date\":\"20190623\",\"from_hour\":\"04\",\"by_fields\":[\"event.country\",\"event.city\",\"userGroup.loginq\",\"userGroup.logina\",\"user.grouptwonetwork\"],\"to_date\":\"20190722\",\"to_hour\":\"14\",\"productId\":\"11188\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
         JSONObject jo1 = JSONObject.parseObject(inputStr);
 
         impl.getQueryResult(jo1);
@@ -988,6 +947,53 @@ public class CustomActionServiceImpl  {
         String jo2s = "{\"result\":[\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190712\\u00012\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u0001120\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190712\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190712\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190709\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190711\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190709\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190705\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190704\\u00014\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190711\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190711\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190710\\u00014\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u000115\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190709\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190703\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190705\\u00014\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190705\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u000120190704\\u00012\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001wifi002\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u000116\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u0001null\\u000132\",\"中国\\u0001南通\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190710\\u00018\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190704\\u000115\",\"中国\\u0001南京\\u0001true\\u0001true\\u0001null\\u0001$appClick\\u0001acc\\u0001A\\u000120190710\\u000130\"],\"jobId\":\"tmp_actionreport_job_89d8bbca-51b5-43f5-bcfe-0cd128b177ab\"}";
         JSONObject jo2 = JSONObject.parseObject(jo2s);
         return jo2;
+    }
+
+    /**
+     *
+     * @param map
+     * @param by0 activity1 ,true/真，false/假， male/男，。。。
+     * @param byF event.pageTitle,userGroup.group1, user.sex ....
+     * @return
+     */
+    private String getByres(Map<String, Map<String, String>> map, String by0, String byF) {
+        String res ;
+        if(byF.startsWith("userGroup")){
+            res = map.get("userGroup").get(by0);
+        }else  {
+            res = map.get(byF).get(by0);
+        }
+        return  null == res ? "unknown": res ;
+    }
+
+    private Map<String, Map<String, String>> getId2Alias(JSONObject jsonObject) {
+        String productId = jsonObject.getString("productId");
+        Map<String,Map<String,String>>  id2Alias = new HashMap<>();
+        Map<String ,String> gmap = new HashMap<>();
+        gmap.put("true","真");
+        gmap.put("false","假");
+        id2Alias.put("userGroup",gmap );
+        jsonObject.getJSONArray("by_fields").stream().filter(x->!"all".equalsIgnoreCase(x.toString())).forEach(x->{
+            String by = x.toString();
+            String[] split = by.split("\\.", 2);
+            String type = split[0];
+            Map<String ,String> map = new HashMap<>();
+            if ("event".equals(type)) {
+                List<Metadata> list =   new ArrayList<>();//metadataMapper.getMetadataValueName(productId,split[1]);     //    select t.original, t.display from METAdata t where t.productid = 11188  and t.metadata_type = 'version';
+                list.stream().filter(
+                        v-> v.getOriginal() != null && !"".equals(v.getOriginal()))
+                        .forEach(
+                                v -> map.put(v.getOriginal(),(null == v.getDisplay() || "".equals(v.getDisplay()))? v.getOriginal(): v.getDisplay()));
+                id2Alias.put(by,map);
+            }else if ("user".equals(type)) {
+                List<UserMetadata> list =
+                        new ArrayList<>();//userMtadataMapper.getMetadataValueName(productId,split[1]);  //    SELECT T.ORIGINAL, T.META_TYPE ,T.DISPLAY  FROM COBUB_USER_METADATA  T  WHERE T.PRODUCTID = 11188 AND T.ENABLED =1 AND T.META_TYPE = 'duration'
+                list.stream().filter(v->v.getOriginal()!=null && !"".equals(v.getOriginal())).forEach(
+                        v -> map.put(v.getOriginal(),(null == v.getDisplay() || "".equals(v.getDisplay()))? v.getOriginal(): v.getDisplay()));
+                id2Alias.put(by,map);
+            }
+        });
+        return id2Alias;
     }
 
 

@@ -36,12 +36,12 @@ public class DateUtil {
     }
 
 
-    public static int getGapDays(String s1, String s2) {
+    public static Long getGapDays(String s1, String s2) {
         Date d1 = str2Date(s1);
         Date d2 = str2Date(s2);
-        int days = -1;
+        Long days = -1L;
         if (d1 != null && d2 != null) {
-            days = (int) (d1.getTime() - d2.getTime()) / (1000 * 3600 * 24);
+            days = (Long) (d1.getTime() - d2.getTime()) / (1000 * 3600 * 24);
         }
         return days;
     }
@@ -431,24 +431,11 @@ public class DateUtil {
 
 
     public static void main(String[] args) {
-
-        System.out.println(dateAddMonth("20190725", 4));
-        System.out.println(dateAddMonth("20190731", 7));
-        System.out.println(dateAddMonth("20190725", -4));
-        int flag;
-        flag = towDateCompare("20190712", "20190725");
-        System.out.println(flag);
-        flag = towDateCompare("20190725", "20190725");
-        System.out.println(flag);
-        flag = towDateCompare("20190731", "20190725");
-        System.out.println(flag);
-        System.out.println("-------------------------");
-        flag = dateCompare2Now("20190712");
-        System.out.println(flag);
-        flag = dateCompare2Now("20190725");
-        System.out.println(flag);
-        flag = dateCompare2Now("20190731");
-        System.out.println(flag);
+        System.out.println(getGapDays("20190801","20190802"));
+        System.out.println(getGapDays("20190801","20190805"));
+        System.out.println(getGapDays("20190805","20190802"));
+        System.out.println(getGapDays("20190801","20190801"));
+        System.out.println(getGapDays("20190722","20190623"));
 
         //otherDate 跟今天日期对比，在今天之前则返回true，否则返回false
 //        if (DateUtil.dateCompare2Now("20190731")) {

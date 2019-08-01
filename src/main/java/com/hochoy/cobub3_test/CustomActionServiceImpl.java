@@ -89,7 +89,22 @@ public class CustomActionServiceImpl  {
 
         StringJoiner commWhere = new StringJoiner(" AND ");
 //
-        String dateCon = String.format("( productid = '%s' AND day >= '%s' AND  day <= '%s' )", productId, from, to);// todo
+        String dateCon = String.format("( productid = '%s' AND day >= '%s' AND  day <= '%s' )", productId, from, to);
+        if("hour".equalsIgnoreCase(unit)){
+            String from_hour = jsonObject.getString("from_hour");
+            String to_hour = jsonObject.getString("to_hour");
+            Long gapDays = DateUtil.getGapDays(to, from);
+            if(gapDays >=2){
+                dateCon = String.format("( productid = '%s' AND ((day >= '%s' AND  day <= '%s') OR ((day='%s' AND hour >=%s and hour<=23) OR (day='%s' AND hour >=0 and hour<= %s ))))", productId, DateUtil.stringDateDecrease(from, 1), DateUtil.stringDateDecrease(to, -1), from, from_hour, to, to_hour);
+            }else if (gapDays == 1){
+                dateCon = String.format("( productid = '%s' AND ((day='%s' AND hour >=%s and hour<=23) OR (day='%s' AND hour >=0 and hour<= %s )))", productId, from,from_hour, to,to_hour);
+            }else {
+                dateCon = String.format("( productid = '%s' AND (day=%s AND hour >=%s and hour<= %s))", productId, from,from_hour, to_hour);
+            }
+
+            System.out.println(dateCon);
+
+        }
         commWhere.add(dateCon);
         JSONArray actions = jsonObject.getJSONArray(Constants.ACTION);//多指标
 
@@ -116,7 +131,7 @@ public class CustomActionServiceImpl  {
 
         Tuple3<Map<String,Map<String,String>>, JSONArray, JSONArray> commReturn = commReturnOp(jsonObject);
 
-        JSONObject result = resultOp(responseResult, commReturn,(LinkedList)sqlOps._3());
+        JSONObject result = null;//resultOp(responseResult, commReturn,(LinkedList)sqlOps._3());
 
         return result;
     }
@@ -361,7 +376,7 @@ public class CustomActionServiceImpl  {
         String joinSQL = "(SELECT %s  FROM parquetTmpTable WHERE %s )  ta JOIN ( SELECT %s FROM usersTable WHERE   %s  ) tu  ON concat_ws('_', '%s', ta.global_user_id) = tu.pk where %s ";
         String partialAggSQLFormat = "select %s from %s group by %s"; // (groupBy + action + indicatorType) , joinSQL ,groupBy
         String joinSqlNoWhere = "(SELECT %s  FROM parquetTmpTable WHERE %s )  ta JOIN ( SELECT %s FROM usersTable WHERE %s ) tu ON concat_ws('_', '%s', ta.global_user_id) = tu.pk ";
-
+        String hourDayConcat = "CONCAT ( SUBSTRING(day, 0, 4) ,'-' ,SUBSTRING(day, 5, 2) ,'-' ,SUBSTRING(day, 7, 2) ,' ' ,hour ,':00:00')";
 
         HashSet<String> groupId = new HashSet();
         JSONObject props = new JSONObject();
@@ -408,14 +423,14 @@ public class CustomActionServiceImpl  {
         String groupAndGroupingBy = " %s GROUPING SETS(( %s, day ),( %s ) )";// todo
 
 
-        String groupAndGroupByEachSelect;
+        String commonGroupBy;
         if(isQuery) {
-            groupAndGroupByEachSelect = String.format(
+            commonGroupBy = String.format(
                     groupAndGroupingBy,
                     String.join(",", partialAggGroupBy, "day"),//todo day
                     partialAggGroupBy, partialAggGroupBy);
         }else {
-            groupAndGroupByEachSelect = String.join(",", partialAggGroupBy) ;
+            commonGroupBy = String.join(",", partialAggGroupBy) ;
         }
 
         String relation = (String) map.get(Constants.RELATION);//主查询条件 and / or
@@ -494,22 +509,35 @@ public class CustomActionServiceImpl  {
             }
             String joinSelect ;
             if(isQuery){
-                joinSelect = String.join(",",joinSelect0, "day");// todo
-                actionSelectSet.add("day");
+                joinSelect = String.join(",",joinSelect0, "day");
+//                actionSelectSet.add("day");
             }else{
                 joinSelect = joinSelect0;
             }
 
 
-
+            String singleGroupBy = commonGroupBy;
             if (outGroupByUser.toString().isEmpty() && inUserWhere.toString().isEmpty() && outUserWhere.toString().isEmpty()) {
                 //分组、内部条件、外部条件中只有事件属性，只查 parquet 表
                 StringJoiner actionWhere = getWhereOfUserOrAction(commWhere1, outActionWhere, inActionWhere);
                 String singleSQL;
-                singleSQL = String.format(parquetSQL, joinSelect, actionWhere.toString(), groupAndGroupByEachSelect);//todo joinSelect groupAndGroupByEachSelect
+                if(isQuery && !"hour".equalsIgnoreCase((String) map.get("unit"))){
+//                    joinSelect = String.join(",",joinSelect0, "day");
+                    actionSelectSet.add("day");
+                }else if(isQuery && "hour".equalsIgnoreCase((String) map.get("unit"))){
+                    joinSelect =  String.join(",",joinSelect0, hourDayConcat +" AS day");
+                    singleGroupBy = commonGroupBy.replaceAll("day",hourDayConcat);
+                    actionSelectSet.add("day");
+                }
+
+                singleSQL = String.format(parquetSQL, joinSelect, actionWhere.toString(), singleGroupBy);//todo joinSelect commonGroupBy
                 sqlList.add(singleSQL);
             } else {
-                //todo joinSelect groupAndGroupByEachSelect
+                if(isQuery && !"hour".equalsIgnoreCase((String) map.get("unit"))){
+                    actionSelectSet.add("day");
+                }else if(isQuery && "hour".equalsIgnoreCase((String) map.get("unit"))){
+                    actionSelectSet.add(hourDayConcat + "AS day");
+                }
                 if (inOr || outOr) {
                     // 在or 条件下，且查询条件同时含有action 和 user属性，则过滤条件不能下推到最底层的
                     // usersTable 和 parquetTmpTable 中过滤，需要放在 usersTable join parquetTmpTable
@@ -554,7 +582,7 @@ public class CustomActionServiceImpl  {
                         userWhere1 = userCommWhere;
                         actionWhere1 = commWhere1.toString();
                         String joinSQL1 = String.format(joinSQL, actionSelectOr, actionWhere1, userSelectOr, userWhere1, productId, joinWhere);
-                        String partialAggSQL = String.format(partialAggSQLFormat, joinSelect, joinSQL1, groupAndGroupByEachSelect);
+                        String partialAggSQL = String.format(partialAggSQLFormat, joinSelect, joinSQL1, commonGroupBy);
                         sqlList.add(partialAggSQL);
                     } else if (inOr && (!outOr)) {
                         // inWhere 条件   放到  usersTable join parquetTmpTable 后,
@@ -584,7 +612,7 @@ public class CustomActionServiceImpl  {
                         //actionSelect ,actionWhere , userSelect , userWhere  productId,joinWhere, joinGroupBy(action ... )
                         String joinSQL1 = String.format(joinSQL, actionSelectOr, actionWhere1, userSelectOr, userWhere1, productId, joinWhere);
 
-                        String partialAggSQL = String.format(partialAggSQLFormat, joinSelect, joinSQL1, groupAndGroupByEachSelect);
+                        String partialAggSQL = String.format(partialAggSQLFormat, joinSelect, joinSQL1, commonGroupBy);
                         sqlList.add(partialAggSQL);
 //
                     } else if (!inOr && outOr) {
@@ -611,7 +639,7 @@ public class CustomActionServiceImpl  {
                             userWhere1 = (new StringJoiner(Constants.AND,"(",")").add(userWhere).add(inUserWhere.toString())).toString() ;
                         }
                         String joinSQL1 = String.format(joinSQL, actionSelectOr, actionWhere1, userSelectOr, userWhere1, productId, joinWhere);
-                        String partialAggSQL = String.format(partialAggSQLFormat, joinSelect, joinSQL1, groupAndGroupByEachSelect);
+                        String partialAggSQL = String.format(partialAggSQLFormat, joinSelect, joinSQL1, commonGroupBy);
                         sqlList.add(partialAggSQL);
 
                     }
@@ -637,7 +665,7 @@ public class CustomActionServiceImpl  {
                     }
                     actionWhere.toString();
                     String joinSQL1 = String.format(joinSqlNoWhere, actionSelect, actionWhere.toString(), userSelect, userWhere.toString(), productId);
-                    String partialAggSQL = String.format(partialAggSQLFormat, joinSelect, joinSQL1, groupAndGroupByEachSelect);
+                    String partialAggSQL = String.format(partialAggSQLFormat, joinSelect, joinSQL1, commonGroupBy);
                     sqlList.add(partialAggSQL);
 
                 }
@@ -918,13 +946,41 @@ public class CustomActionServiceImpl  {
 
         String inputStr;
 //        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190703\",\"by_fields\":[\"event.country\"],\"to_date\":\"20190709\",\"productId\":\"11128\",\"action\":[{\"eventType\":\"loginUser\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
+        JSONObject jo1;
+
+
+        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190703\",\"by_fields\":[\"event.country\",\"event.region\"],\"to_date\":\"20190801\",\"productId\":\"11208\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"event.version\",\"function\":\"equal\",\"params\":[\"ad.ver.v.003\",\"ad.ver.v.004\",\"ad.ver.v.005\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"event.osversion\",\"function\":\"equal\",\"params\":[\"os.v.003\",\"os.v.004\",\"os.v.005\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"and\"}},{\"eventType\":\"loginUser\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"event.network\",\"function\":\"equal\",\"params\":[\"wifi001\",\"wifi004\",\"wifi005\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"user.grouptwoisupdate\",\"function\":\"isTrue\",\"params\":[],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"and\"}}]}";
+        jo1 = JSONObject.parseObject(inputStr);
+        impl.getQueryResult(jo1);
+
+        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"hour\",\"from_date\":\"20190703\",\"by_fields\":[\"event.country\",\"event.region\"],\"to_date\":\"20190801\",\"from_hour\":\"13\",\"to_hour\":\"22\",\"productId\":\"11208\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"event.version\",\"function\":\"equal\",\"params\":[\"ad.ver.v.003\",\"ad.ver.v.004\",\"ad.ver.v.005\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"event.osversion\",\"function\":\"equal\",\"params\":[\"os.v.003\",\"os.v.004\",\"os.v.005\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"and\"}},{\"eventType\":\"loginUser\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"event.network\",\"function\":\"equal\",\"params\":[\"wifi001\",\"wifi004\",\"wifi005\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"user.grouptwoisupdate\",\"function\":\"isTrue\",\"params\":[],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"and\"}}]}";
+        jo1 = JSONObject.parseObject(inputStr);
+        impl.getQueryResult(jo1);
+
+        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190703\",\"by_fields\":[\"event.country\",\"userGroup.groupsix\"],\"to_date\":\"20190801\",\"productId\":\"11208\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"event.pagetitle\",\"function\":\"equal\",\"params\":[\"sy004\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"event.platform\",\"function\":\"equal\",\"params\":[\"sys_android006\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"and\"}},{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"user.grouptwonetwork\",\"function\":\"equal\",\"params\":[\"wifi002\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"userGroup.groupsix\",\"function\":\"isTrue\",\"params\":[],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"and\"}}]}";
+        jo1 = JSONObject.parseObject(inputStr);
+        impl.getQueryResult(jo1);
+
+        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"hour\",\"from_date\":\"20190703\",\"by_fields\":[\"event.country\",\"userGroup.groupsix\"],\"to_date\":\"20190801\",\"from_hour\":\"13\",\"to_hour\":\"22\",\"productId\":\"11208\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"event.pagetitle\",\"function\":\"equal\",\"params\":[\"sy004\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"event.platform\",\"function\":\"equal\",\"params\":[\"sys_android006\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"and\"}},{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[{\"type\":\"user.grouptwonetwork\",\"function\":\"equal\",\"params\":[\"wifi002\"],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"},{\"type\":\"userGroup.groupsix\",\"function\":\"isTrue\",\"params\":[],\"input\":\"\",\"isRegion\":\"isFalse\",\"isNumber\":\"isFalse\",\"inputForInt\":\"\"}],\"relation\":\"and\"}}]}";
+        jo1 = JSONObject.parseObject(inputStr);
+        impl.getQueryResult(jo1);
 
         inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"day\",\"from_date\":\"20190623\",\"by_fields\":[\"event.country\",\"event.city\",\"userGroup.loginq\",\"userGroup.logina\",\"user.grouptwonetwork\"],\"to_date\":\"20190722\",\"productId\":\"11188\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
 
         // by hour
-        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"hour\",\"from_date\":\"20190623\",\"from_hour\":\"04\",\"by_fields\":[\"event.country\",\"event.city\",\"userGroup.loginq\",\"userGroup.logina\",\"user.grouptwonetwork\"],\"to_date\":\"20190722\",\"to_hour\":\"14\",\"productId\":\"11188\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
-        JSONObject jo1 = JSONObject.parseObject(inputStr);
+        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"hour\",\"from_date\":\"20190610\",\"from_hour\":\"04\",\"by_fields\":[\"event.country\",\"event.city\",\"userGroup.loginq\",\"userGroup.logina\",\"user.grouptwonetwork\"],\"to_date\":\"20190610\",\"to_hour\":\"14\",\"productId\":\"11188\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
+          jo1 = JSONObject.parseObject(inputStr);
+        impl.getQueryResult(jo1);
 
+        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"hour\",\"from_date\":\"20190610\",\"from_hour\":\"04\",\"by_fields\":[\"event.country\",\"event.city\",\"userGroup.loginq\",\"userGroup.logina\",\"user.grouptwonetwork\"],\"to_date\":\"20190611\",\"to_hour\":\"14\",\"productId\":\"11188\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
+        jo1 = JSONObject.parseObject(inputStr);
+        impl.getQueryResult(jo1);
+
+        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"hour\",\"from_date\":\"20190610\",\"from_hour\":\"04\",\"by_fields\":[\"event.country\",\"event.city\",\"userGroup.loginq\",\"userGroup.logina\",\"user.grouptwonetwork\"],\"to_date\":\"20190612\",\"to_hour\":\"14\",\"productId\":\"11188\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
+        jo1 = JSONObject.parseObject(inputStr);
+        impl.getQueryResult(jo1);
+        inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"hour\",\"from_date\":\"20190610\",\"from_hour\":\"04\",\"by_fields\":[\"event.country\",\"event.city\",\"userGroup.loginq\",\"userGroup.logina\",\"user.grouptwonetwork\"],\"to_date\":\"20190613\",\"to_hour\":\"14\",\"productId\":\"11188\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
+        jo1 = JSONObject.parseObject(inputStr);
         impl.getQueryResult(jo1);
 
     }

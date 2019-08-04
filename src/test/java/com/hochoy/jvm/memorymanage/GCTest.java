@@ -36,7 +36,7 @@ class FinalizeEscapeGC{
         System.out.println("finalize() executed ....");
         FinalizeEscapeGC.SAVE_HOOK = this;
     }
-    static void test() throws Throwable{
+    public static void main(String[] args ) throws Throwable{
         SAVE_HOOK = new  FinalizeEscapeGC();
         SAVE_HOOK = null;
         System.gc();
@@ -47,7 +47,24 @@ class FinalizeEscapeGC{
         }else{
             System.out.println("no ,i am dead:(");
         }
+
+
+
         SAVE_HOOK = null;
         System.gc();
+        Thread.sleep(500);
+        if(SAVE_HOOK != null){
+            SAVE_HOOK.isAlive();
+        }else{
+            System.out.println("no ,i am dead:(");
+        }
+
     }
+}
+
+class ReferenceCountingGC{
+    Object instance = null;
+    static final int _1MB = 1024 * 1024;
+    byte[] bigSize = new byte[ 2 * _1MB];
+
 }

@@ -80,35 +80,14 @@ public class CustomActionServiceImpl  {
         JSONObject filters = jsonObject.getJSONObject(Constants.FILTER);//外部筛选条件
         String relation = filters.getString(Constants.RELATION); // 主查询条件 逻辑关系 and / or
         String unit = jsonObject.getString(Constants.UNIT);
-        String from = jsonObject.getString(Constants.FROM_DATE);
-        String to = jsonObject.getString(Constants.TO_DATE);
-        String productId = jsonObject.getString(Constants.PRODUCTID);
         if (!"day".equalsIgnoreCase(unit) && !"hour".equalsIgnoreCase(unit)){
             return new JSONObject();
         }
 
-        StringJoiner commWhere = new StringJoiner(" AND ");
-//
-        String dateCon = String.format("( productid = '%s' AND day >= '%s' AND  day <= '%s' )", productId, from, to);
-        if("hour".equalsIgnoreCase(unit)){
-            String from_hour = jsonObject.getString("from_hour");
-            String to_hour = jsonObject.getString("to_hour");
-            Long gapDays = DateUtil.getGapDays(to, from);
-            if(gapDays >=2){
-                dateCon = String.format("( productid = '%s' AND ((day >= '%s' AND  day <= '%s') OR ((day='%s' AND hour >=%s and hour<=23) OR (day='%s' AND hour >=0 and hour<= %s ))))", productId, DateUtil.stringDateDecrease(from, 1), DateUtil.stringDateDecrease(to, -1), from, from_hour, to, to_hour);
-            }else if (gapDays == 1){
-                dateCon = String.format("( productid = '%s' AND ((day='%s' AND hour >=%s and hour<=23) OR (day='%s' AND hour >=0 and hour<= %s )))", productId, from,from_hour, to,to_hour);
-            }else {
-                dateCon = String.format("( productid = '%s' AND (day=%s AND hour >=%s and hour<= %s))", productId, from,from_hour, to_hour);
-            }
-
-            System.out.println(dateCon);
-
-        }
-        commWhere.add(dateCon);
+        StringJoiner commWhere = getActionCommWhere(jsonObject);
         JSONArray actions = jsonObject.getJSONArray(Constants.ACTION);//多指标
 
-
+        String productId = jsonObject.getString(Constants.PRODUCTID);
         Map map = new HashMap();
         map.put(Constants.RELATION, relation);
         map.put("commWhere", commWhere);
@@ -131,7 +110,7 @@ public class CustomActionServiceImpl  {
 
         Tuple3<Map<String,Map<String,String>>, JSONArray, JSONArray> commReturn = commReturnOp(jsonObject);
 
-        JSONObject result = null;//resultOp(responseResult, commReturn,(LinkedList)sqlOps._3());
+        JSONObject result = resultOp(responseResult, commReturn,(LinkedList)sqlOps._3());
 
         return result;
     }
@@ -173,11 +152,7 @@ public class CustomActionServiceImpl  {
         Map<String, Map<String, String>> id2Alias = getId2Alias(jsonObject);
 
 
-        JSONArray series = new JSONArray();
-        String from = jsonObject.getString("from_date");
-        String to = jsonObject.getString("to_date");
-        List<String> dayOfRange = DateUtil.getDayOfRange(from, to);
-        dayOfRange.forEach(x-> series.add(x));
+        JSONArray series = getDateSeries(jsonObject);
 
         JSONArray by_fields = new JSONArray();
 
@@ -939,7 +914,9 @@ public class CustomActionServiceImpl  {
 
     static CustomActionServiceImpl impl = new CustomActionServiceImpl();
     public static void main(String[] args) throws Exception {
-        querytest();
+        LinkedList<String> hourSeries = impl.getHourSeries(Integer.valueOf("03"), 22);
+        System.out.println(hourSeries);
+//        querytest();
     }
 
     public static void querytest() throws Exception {
@@ -1052,5 +1029,65 @@ public class CustomActionServiceImpl  {
         return id2Alias;
     }
 
+    private LinkedList<String> getHourSeries(int from ,int to){
+        LinkedList<String> res = new LinkedList();
+        for (int i = from; i <=to; i++) {
+            res.add(String.format("%02d:00", i));
+        }
+        return res;
+    }
+
+    private JSONArray getDateSeries(JSONObject jsonObject) {
+        JSONArray series = new JSONArray();
+        String unit = jsonObject.getString("unit");
+        String from = jsonObject.getString("from_date");
+        String to = jsonObject.getString("to_date");
+        if("hour".equalsIgnoreCase(unit)){
+            String from_hour = jsonObject.getString("from_hour");
+            String to_hour = jsonObject.getString("to_hour");
+            Long gapDays = DateUtil.getGapDays(to, from);
+
+
+            if(gapDays >=2){
+                getHourSeries(Integer.valueOf(from_hour),23).forEach(h -> series.add(from +" " + h));
+                List<String> dayList = DateUtil.getDayOfRange(DateUtil.stringDateDecrease(from, 1), DateUtil.stringDateDecrease(to, -1));
+                dayList.forEach(d-> getHourSeries(0,23).forEach(h-> series.add(d+" " + h)));
+                getHourSeries(0,Integer.valueOf(from_hour)).forEach(h ->  series.add(to+" " + h));
+            }else if (gapDays == 1){
+                getHourSeries(Integer.valueOf(from_hour),23).forEach(h -> series.add(from +" " + h));
+                getHourSeries(0,Integer.valueOf(from_hour)).forEach(h ->  series.add(to+" " + h));
+
+            }else {
+                getHourSeries(Integer.valueOf(from_hour),Integer.valueOf(to_hour)).forEach(h ->  series.add(to+" " + h));
+            }
+            return series;
+        }else{
+            List<String> dayOfRange = DateUtil.getDayOfRange(from, to);
+            dayOfRange.forEach(x-> series.add(x));
+        }
+        return series;
+    }
+    private StringJoiner getActionCommWhere(JSONObject jsonObject) {
+        StringJoiner commWhere = new StringJoiner(" AND ");
+        String unit = jsonObject.getString(Constants.UNIT);
+        String from = jsonObject.getString(Constants.FROM_DATE);
+        String to = jsonObject.getString(Constants.TO_DATE);
+        String productId = jsonObject.getString(Constants.PRODUCTID);
+        String dateCon = String.format("( productid = '%s' AND day >= '%s' AND  day <= '%s' )", productId, from, to);
+        if("hour".equalsIgnoreCase(unit)){
+            String from_hour = jsonObject.getString("from_hour");
+            String to_hour = jsonObject.getString("to_hour");
+            Long gapDays = DateUtil.getGapDays(to, from);
+            if(gapDays >=2){
+                dateCon = String.format("( productid = '%s' AND ((day >= '%s' AND  day <= '%s') OR ((day='%s' AND hour >='%s' and hour<=23) OR (day='%s' AND hour >='00' and hour<= '%s' ))))", productId, DateUtil.stringDateDecrease(from, 1), DateUtil.stringDateDecrease(to, -1), from, from_hour, to, to_hour);
+            }else if (gapDays == 1){
+                dateCon = String.format("( productid = '%s' AND ((day='%s' AND hour >='%s' and hour<='23') OR (day='%s' AND hour >='00' and hour<= '%s' )))", productId, from, from_hour, to, to_hour);
+            }else {
+                dateCon = String.format("( productid = '%s' AND (day=%s AND hour >='%s' and hour<= '%s'))", productId, from,from_hour, to_hour);
+            }
+        }
+        commWhere.add(dateCon);
+        return commWhere;
+    }
 
 }

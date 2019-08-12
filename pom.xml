@@ -56,6 +56,12 @@
     </pluginRepositories>
 
     <dependencies>
+        <dependency>
+            <groupId>org.roaringbitmap</groupId>
+            <artifactId>RoaringBitmap</artifactId>
+            <version>0.6.28</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/com.chuusai/shapeless -->
         <dependency>
             <groupId>com.chuusai</groupId>

@@ -110,7 +110,7 @@ public class CustomActionServiceImpl  {
 
         Tuple3<Map<String,Map<String,String>>, JSONArray, JSONArray> commReturn = commReturnOp(jsonObject);
 
-        JSONObject result = resultOp(responseResult, commReturn,(LinkedList)sqlOps._3());
+        JSONObject result = null;//resultOp(responseResult, commReturn,(LinkedList)sqlOps._3());
 
         return result;
     }
@@ -704,10 +704,10 @@ public class CustomActionServiceImpl  {
         logger.debug("props: {}" , prop.toString() );
         logger.debug("groupIds: {}" , groupIds.toString() );
 
-        logger.debug("taskSql: {}", taskSql );
-        logger.debug("allSQL: {}", allSQL);
-        System.out.println("taskSql: {}"+ taskSql );;
-        System.out.println("allSQL: {} " + allSQL);
+//        logger.debug("taskSql: {}", taskSql );
+//        logger.debug("allSQL: {}", allSQL);
+//        System.out.println("taskSql: {}"+ taskSql );;
+//        System.out.println("allSQL: {} " + allSQL);
 
         if (isQuery){
             return new Tuple3<>(allSQL,taskSql,idxs);
@@ -839,7 +839,7 @@ public class CustomActionServiceImpl  {
      * @param data      数据
      * @throws IOException 异常
      */
-    private void saveDataToHbase( Integer reportId, String tableName, JSONObject data)  {
+    private void saveDataToHbase1( Integer reportId, String tableName, JSONObject data)  {
         String qualifier = "num";
         int PUT_NUM_PER_BATCH = 200;
 //        Table table = Connection2hbase.getTable(tableName);
@@ -913,11 +913,12 @@ public class CustomActionServiceImpl  {
 
 
     static CustomActionServiceImpl impl = new CustomActionServiceImpl();
-    public static void main(String[] args) throws Exception {
-        LinkedList<String> hourSeries = impl.getHourSeries(Integer.valueOf("03"), 22);
-        System.out.println(hourSeries);
+//    public static void main(String[] args) throws Exception {
+////        LinkedList<String> hourSeries = impl.getHourSeries(Integer.valueOf("03"), 22);
+////        System.out.println(hourSeries);
 //        querytest();
-    }
+//
+//    }
 
     public static void querytest() throws Exception {
 
@@ -948,7 +949,7 @@ public class CustomActionServiceImpl  {
         inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"hour\",\"from_date\":\"20190610\",\"from_hour\":\"04\",\"by_fields\":[\"event.country\",\"event.city\",\"userGroup.loginq\",\"userGroup.logina\",\"user.grouptwonetwork\"],\"to_date\":\"20190610\",\"to_hour\":\"14\",\"productId\":\"11188\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
           jo1 = JSONObject.parseObject(inputStr);
         impl.getQueryResult(jo1);
-
+        Thread.sleep(1000 * 100);
         inputStr = "{\"filter\":{\"conditions\":[],\"relation\":\"and\"},\"unit\":\"hour\",\"from_date\":\"20190610\",\"from_hour\":\"04\",\"by_fields\":[\"event.country\",\"event.city\",\"userGroup.loginq\",\"userGroup.logina\",\"user.grouptwonetwork\"],\"to_date\":\"20190611\",\"to_hour\":\"14\",\"productId\":\"11188\",\"action\":[{\"eventType\":\"acc\",\"eventOriginal\":\"$appClick\",\"childFilterParam\":{\"conditions\":[]}}]}";
         jo1 = JSONObject.parseObject(inputStr);
         impl.getQueryResult(jo1);
@@ -1088,6 +1089,104 @@ public class CustomActionServiceImpl  {
         }
         commWhere.add(dateCon);
         return commWhere;
+    }
+
+
+    public static void main(String[] args) throws Exception{
+
+        String resStr = "{\"msg\":\"自定义事件查询成功\",\"code\":0,\"data\":{\"detail_result\":{\"series\":[\"20190809\",\"20190810\",\"20190811\",\"20190812\",\"20190813\",\"20190814\",\"20190815\"],\"rows\":[{\"values\":[[0,5],[0,0],[0,0],[0,5],[0,10],[0,10],[0,0]],\"by_values\":[\"中国\",\"vivo X6Plus 05\"],\"event_indicator\":[\"$appClick\\u0001acc\\u0001A\",\"e_sys_login\\u0001userid\\u0001B\"]},{\"values\":[[0,4],[0,0],[0,0],[0,4],[0,8],[0,8],[0,0]],\"by_values\":[\"中国\",\"vivo X6Plus 04\"],\"event_indicator\":[\"$appClick\\u0001acc\\u0001A\",\"e_sys_login\\u0001userid\\u0001B\"]},{\"values\":[[0,6],[0,0],[0,0],[0,6],[0,12],[0,12],[0,0]],\"by_values\":[\"中国\",\"vivo X6Plus 06\"],\"event_indicator\":[\"$appClick\\u0001acc\\u0001A\",\"e_sys_login\\u0001userid\\u0001B\"]},{\"values\":[[0,3],[0,0],[0,0],[0,3],[0,6],[0,6],[0,0]],\"by_values\":[\"中国\",\"vivo X6Plus 012别名\"],\"event_indicator\":[\"$appClick\\u0001acc\\u0001A\",\"e_sys_login\\u0001userid\\u0001B\"]},{\"values\":[[0,3],[0,0],[0,0],[0,3],[0,6],[0,6],[0,0]],\"by_values\":[\"中国\",\"vivo X6Plus 03bak\"],\"event_indicator\":[\"$appClick\\u0001acc\\u0001A\",\"e_sys_login\\u0001userid\\u0001B\"]}]}}}";
+//        new CustomActionServiceImpl().saveDataToHbase(10001,"cobub3:action_10001",JSONObject.parseObject(resStr).getJSONObject("data"));
+
+
+        String s = "{\"jobId\":\"tmp_actionreport_job_a2d74085-b166-4f39-9a30-87c4b09f6d42\",\"result\":[\"sys_android006\\u0001wifi006\\u0001e_sys_login\\u0001acc\\u0001A\\u000120190809\\u00016\",\"sys_android003\\u0001wifi003\\u0001e_sys_login\\u0001acc\\u0001A\\u0001null\\u00019\",\"sys_android006\\u0001wifi006\\u0001e_sys_login\\u0001acc\\u0001A\\u0001null\\u000118\",\"sys_android002\\u0001wifi002\\u0001e_sys_login\\u0001acc\\u0001A\\u000120190809\\u00012\",\"sys_android004\\u0001wifi004\\u0001e_sys_login\\u0001acc\\u0001A\\u000120190809\\u00014\",\"sys_android003\\u0001wifi003\\u0001e_sys_login\\u0001acc\\u0001A\\u000120190808\\u00016\",\"sys_android001\\u0001wifi001\\u0001e_sys_login\\u0001acc\\u0001A\\u000120190809\\u00011\",\"sys_android002\\u0001wifi002\\u0001e_sys_login\\u0001acc\\u0001A\\u000120190808\\u00014\",\"androidp_pf_fo001\\u0001wuxian_wifi001\\u0001$appClick\\u0001userid\\u0001B\\u000120190808\\u00011\",\"sys_android005\\u0001wifi005\\u0001e_sys_login\\u0001acc\\u0001A\\u0001null\\u000115\",\"sys_android001\\u0001wifi001\\u0001e_sys_login\\u0001acc\\u0001A\\u0001null\\u00013\",\"sys_android004\\u0001wifi004\\u0001e_sys_login\\u0001acc\\u0001A\\u0001null\\u000112\",\"sys_android004\\u0001wifi004\\u0001e_sys_login\\u0001acc\\u0001A\\u000120190808\\u00018\",\"sys_android002\\u0001wifi002\\u0001e_sys_login\\u0001acc\\u0001A\\u0001null\\u00016\",\"sys_android001\\u0001wifi001\\u0001e_sys_login\\u0001acc\\u0001A\\u000120190808\\u00012\",\"androidp_pf_fo001\\u0001wuxian_wifi001\\u0001$appClick\\u0001userid\\u0001B\\u0001null\\u00011\",\"sys_android003\\u0001wifi003\\u0001e_sys_login\\u0001acc\\u0001A\\u000120190809\\u00013\",\"sys_android005\\u0001wifi005\\u0001e_sys_login\\u0001acc\\u0001A\\u000120190808\\u000110\",\"sys_android006\\u0001wifi006\\u0001e_sys_login\\u0001acc\\u0001A\\u000120190808\\u000112\",\"sys_android005\\u0001wifi005\\u0001e_sys_login\\u0001acc\\u0001A\\u000120190809\\u00015\"] }";
+
+        JSONObject data = JSONObject.parseObject(resStr).getJSONObject("data");
+
+        JSONArray save_result = new CustomActionServiceImpl().toSaveDataOp(JSONObject.parseObject(s));
+        data.put("save_result",save_result);
+        new CustomActionServiceImpl().saveDataToHbase(10001,"cobub3:action_10001",data);
+    }
+
+
+    private JSONArray toSaveDataOp(JSONObject jo){
+        if (!jo.containsKey("result") || jo.getJSONArray("result").isEmpty()){
+            return new JSONArray();
+        }
+        JSONArray result = jo.getJSONArray("result");
+
+        JSONArray ja = new JSONArray();
+        result.forEach(x->{
+            String[] split = x.toString().split(Constants.SEPARATOR);
+            int len = split.length;
+            String date = split[len - 2];
+            if (null != date && !"null".equalsIgnoreCase(date)){
+                String num = split[len - 1]; //
+                String flag = split[len-3];
+                String indicator = split[len-4];
+                String action = split[len-5];
+                StringJoiner by = new StringJoiner(Constants.SEPARATOR);
+                if(len == 5 ){
+                    by.add("all");
+                }else {
+                    for (int i = 0; i < len - 5; i++) {
+                        by.add(split[i]);
+                    }
+                }
+                String rkSuffix = String.join(Constants.SEPARATOR,date,action,indicator,by.toString(),flag);
+                JSONObject j = new JSONObject();
+                j.put(rkSuffix,num);
+                ja.add(j);
+            }
+        });
+        return ja;
+    }
+
+    private void saveDataToHbase( Integer reportId, String tableName,JSONObject data){
+        if (data.isEmpty() || null == data){
+            return;
+        }
+        if(!data.containsKey("save_result") ){
+            return;
+        }
+        if(data.containsKey("save_result") && (data.getJSONArray("save_result").isEmpty() ||  null == data.getJSONArray("save_result"))){
+            return;
+        }
+        String qualifier = "num";
+        int PUT_NUM_PER_BATCH = 200;
+        Table table = Connection2hbase.getTable(tableName);
+        List<Put> puts = new ArrayList<>();
+        data.getJSONArray("save_result").forEach(v->{
+            JSONObject obj = JSONObject.parseObject(v.toString());
+            obj.forEach((rkSuffix,num)->{
+                String rk = String.join(Constants.SEPARATOR, String.valueOf(reportId), rkSuffix);
+                Put put = new Put(Bytes.toBytes(rk));
+                put.addColumn(Bytes.toBytes("f"),Bytes.toBytes(qualifier),Bytes.toBytes(num.toString()));
+                puts.add(put);
+
+                if (puts.size() % PUT_NUM_PER_BATCH == 0) {
+                    try {
+                        table.put(puts);
+                        puts.clear();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            });
+        });
+        if (!puts.isEmpty()) {
+            try {
+                table.put(puts);
+                puts.clear();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            table.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }

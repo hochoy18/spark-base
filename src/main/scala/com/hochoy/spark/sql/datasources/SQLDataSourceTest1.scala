@@ -309,7 +309,6 @@ object SQLDataSourceTest1 {
           (new ImmutableBytesWritable, put)
         })
       })
-    res.map().mapPartitions()
 
 
   }

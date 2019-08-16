@@ -19,6 +19,7 @@ public class Constants {
     public static final String DATATYPE = "dataType";
     public static final String STRING = "string";
     public static final String METADATALIST = "metadataList";
+    public static final String AL_SPLIT = "\001";
 
 
     /**

@@ -1,13 +1,17 @@
 package com.hochoy.spark.sql.datasources
 
+import com.hochoy.cobub3_test.Constants
 import com.hochoy.spark.hbase.GlobalHConnection
 import com.hochoy.spark.utils.Constants._
 import com.hochoy.spark.utils.SparkUtils._
 import com.hochoy.utils.BitmapUtils
 import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.client.Put
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.util.Bytes
-import org.apache.spark.sql.SaveMode
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{Row, SaveMode}
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.roaringbitmap.RoaringBitmap
 
 import scala.collection.mutable
@@ -254,42 +258,60 @@ object SQLDataSourceTest1 {
     })
     println("xxxxxxxxxxx",m)*/
 
+//    retentionTest
     retention(sql)
+  }
+  case class Sale(date: String, userset: Set[Int] )
+  def retentionTest:Unit ={
+
+    val l = List(
+      ("20190808",Set(2,4,6,8)),
+      ("20190809",Set(1,3,5,7,9)),
+      ("20190810",Set(1,2,9,0)),
+      ("20190808",Set(1,2,3,4))
+    )
+    val rdd = spark.sparkContext.parallelize(l,3).cache()
+
+    val rdd1: RDD[(String, Set[Int])] = rdd
+
+    val value: RDD[(String, Set[Int])] = rdd1.aggregateByKey( zeroValue = (Set[Int]()) )( seqOp = (U, V) ⇒ U ++ V, combOp = (U1, U2) ⇒ U1 ++ U2 )
+
+
+    val tuples = value.collect()
+    tuples.foreach(println(_))
+
+
+
   }
 
   def retention(sql: String): Unit = {
     val parquet = spark.read.parquet("D:/advance/bigdata/spark/user/cobub3/parquet")
     parquet.createOrReplaceTempView("parquetTmpTable")
     val query = spark.sql(sql)
+//    query.groupByKey(row =>{row})
+    query.groupBy("first_day","by_day","usersets").count().show()
 
-    val rdd = query.rdd.collect()
-    var userMapSet =  Map[String ,mutable.Set[Int]]()
-    rdd.foreach(row => {
+    val res: RDD[(ImmutableBytesWritable, Put)] = query.rdd.map(row => {
       val first_day = row.getAs[String]("first_day")
-      val by_day = if(row.getAs[Any]("by_day") == null) "all" else row.getAs[Any]("by_day")
+      val by_day = if (row.getAs[Any]("by_day") == null) "all" else row.getAs[Any]("by_day")
       val usersets: Set[Int] = row.getAs[mutable.WrappedArray[Int]]("usersets").toSet
-      val set = usersets
-      val rk = first_day + "_" + by_day
-      val us:mutable.Set[Int] = if (userMapSet.contains(rk)) userMapSet(rk).++(set) else mutable.Set.empty.++(set)
-      userMapSet += (rk -> us)
-    })
-    println(".........................")
-    val puts:ListBuffer[Put] = ListBuffer[Put]()
-    userMapSet.foreach(v=> {
-      val rb = RoaringBitmap.bitmapOf()
-      v._2.foreach(rb.add(_))
-      val bytes = BitmapUtils.serializeBitMapToByteArray(rb)
+      (s"${first_day}${Constants.AL_SPLIT}${by_day}", usersets)
+    }).aggregateByKey(Set[Int]())((U, V) ⇒ U ++ V, (U1, U2) ⇒ U1 ++ U2)
+      .repartition(spark.conf.get("spark.executor.instances").toInt * spark.conf.get("spark.executor.cores").toInt)
+      .mapPartitions(p => {
+        p.map(v => {
+          val rb = RoaringBitmap.bitmapOf()
+          v._2.foreach(rb.add(_))
+          val bytes = BitmapUtils.serializeBitMapToByteArray(rb)
+          val put = new Put(Bytes.toBytes(v._1))
+          put.addColumn(Bytes.toBytes("f"), Bytes.toBytes("count"), Bytes.toBytes(v._2.size.toLong))
+          put.addColumn(Bytes.toBytes("f"), Bytes.toBytes("userset"), bytes)
+          (new ImmutableBytesWritable, put)
+        })
+      })
+    res.map().mapPartitions()
 
-      val put = new Put(Bytes.toBytes(v._1))
-      put.addColumn(Bytes.toBytes("f"),Bytes.toBytes("count"),Bytes.toBytes(v._2.size))
-      put.addColumn(Bytes.toBytes("f"),Bytes.toBytes("userset"),bytes)
-      puts += put
-    })
-    puts
-//    val retentionTab = GlobalHConnection.getConn().getTable(TableName.valueOf("cobub3:retention_11011"))
-//    import scala.collection.JavaConversions._
-//    val p: List[Put] = puts.toList
-//    retentionTab.put(p)
+
   }
 
 

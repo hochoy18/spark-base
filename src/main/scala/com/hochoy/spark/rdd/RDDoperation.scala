@@ -79,13 +79,17 @@ object RDDoperation {
 
 
     val count_ : RDD[(String, Int)] = rdd1.aggregateByKey(
-      zeroValue = 0 )(seqOp = (U, V) ⇒ U + V,
-      combOp = (U1, U2) ⇒ U1 + U2)
+      zeroValue = 0 )(
+      seqOp = (U, V) ⇒ U + V,
+      combOp = (U1, U2) ⇒ U1 + U2
+    )
     println("---------------aggregateByKey----------------")
     rdd1.foreach(println)
     println
     count_.foreach(println)
-    val s_c: RDD[(String, (Int, Int))] = rdd1.aggregateByKey(zeroValue = (0, 0))(
+    val s_c: RDD[(String, (Int, Int))] = rdd1.aggregateByKey(
+      zeroValue = (0, 0)
+    )(
       seqOp = (U, V) => (U._1 + V, U._2 + 1),
       combOp = (U1, U2) ⇒ (U1._1 + U2._1, U1._2 + U2._2)
     )

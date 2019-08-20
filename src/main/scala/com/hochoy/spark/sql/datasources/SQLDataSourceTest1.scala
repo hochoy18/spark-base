@@ -5,10 +5,12 @@ import com.hochoy.spark.hbase.GlobalHConnection
 import com.hochoy.spark.utils.Constants._
 import com.hochoy.spark.utils.SparkUtils._
 import com.hochoy.utils.BitmapUtils
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.client.Put
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.util.Bytes
+import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SaveMode}
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
@@ -35,21 +37,7 @@ object SQLDataSourceTest1 {
 
   def main(args: Array[String]) {
     retention
-
-    //    println(s"warehouse_dir :   $warehouse_dir")
-    //
-    //    clearAndCache
-    //    //  Generic Load/Save Functions
-    //    loadAndSave
-    //
-    //    //Run SQL on files directly
-    //    runSQLAndSave
-    //
-    //    //Loading Data Programmatically
-    //    runBasicParquetExample
-    //
-    //    //Schema Merging
-    //    runParquetSchemaMergingExample
+//    score
   }
 
   def loadAndSave() = {
@@ -241,22 +229,11 @@ object SQLDataSourceTest1 {
 
   def retention: Unit = {
     val sql = """ SELECT from_unixtime(unix_timestamp(tc.first_day, 'yyyy-MM-dd'), 'yyyy-MM-dd') as first_day , tc.by_day as by_day, collect_set(tc.global_user_id) AS usersets FROM (SELECT  TL.global_user_id, TL.servertime AS first_day, TR.servertime AS second_day,DATEDIFF(TR.servertime, TL.servertime) AS by_day FROM (select ta.global_user_id, ta.servertime AS servertime from  (select global_user_id, servertime from parquetTmpTable where  productid = '11188' AND day >= 20190708 AND  day <= 20190711  AND  category = 'event' AND action = '$appClick' ) ta ) TL LEFT JOIN (select ta.global_user_id, ta.servertime AS servertime from  (select global_user_id, servertime from parquetTmpTable where  productid = '11188' AND day >= 20190708 AND  day <= 20190714  AND  category = 'event' AND action = '$appClick' ) ta ) TR ON TL.global_user_id = TR.global_user_id AND TL.servertime < TR.servertime ) tc GROUP BY from_unixtime(unix_timestamp(tc.first_day, 'yyyy-MM-dd'), 'yyyy-MM-dd'), tc.by_day  GROUPING SETS((from_unixtime(unix_timestamp(tc.first_day, 'yyyy-MM-dd'), 'yyyy-MM-dd') ,tc.by_day), (from_unixtime(unix_timestamp(tc.first_day, 'yyyy-MM-dd'), 'yyyy-MM-dd'))) """
-   /* val l = List(1,2,3,4,5)
 
 
-    val context = spark.sparkContext
-    val ll = context.parallelize(l)
-    var m = Map[String ,mutable.Set[Int]]()
-    val acc = spark.sparkContext
-    var mm = Map[String ,Set[Int]]()
-//    ll.collect().foreach(println)
-    ll.foreach(v=>{
-      m += (v.toString +"___" -> mutable.Set.empty.+(v));
-      println(v)
-      println(m)
-      m
-    })
-    println("xxxxxxxxxxx",m)*/
+    val s = Set[Int](1,2,3,4,5)
+//    s.foreach(println(_))
+
 
 //    retentionTest
     retention(sql)
@@ -285,23 +262,24 @@ object SQLDataSourceTest1 {
   }
 
   def retention(sql: String): Unit = {
-    val parquet = spark.read.parquet("D:/advance/bigdata/spark/user/cobub3/parquet")
+    val parquet = spark.read.parquet("file:///D:/advance/bigdata/spark/user/cobub3/parquet")
     parquet.createOrReplaceTempView("parquetTmpTable")
     val query = spark.sql(sql)
 //    query.groupByKey(row =>{row})
     query.groupBy("first_day","by_day","usersets").count().show()
+    query.show(100)
 
     val res: RDD[(ImmutableBytesWritable, Put)] = query.rdd.map(row => {
-      val first_day = row.getAs[String]("first_day")
-      val by_day = if (row.getAs[Any]("by_day") == null) "all" else row.getAs[Any]("by_day")
-      val usersets: Set[Int] = row.getAs[mutable.WrappedArray[Int]]("usersets").toSet
+      val first_day = row.getAs[String]("first_day").replaceAll("-","")
+      val by_day: Any = row.getAs[Any]("by_day")
+      val usersets: Set[String] = row.getAs[mutable.WrappedArray[String]]("usersets").toSet[String]
       (s"${first_day}${Constants.AL_SPLIT}${by_day}", usersets)
-    }).aggregateByKey(Set[Int]())((U, V) ⇒ U ++ V, (U1, U2) ⇒ U1 ++ U2)
+    }).aggregateByKey(Set[String]())((U, V) ⇒ U ++ V, (U1, U2) ⇒ U1 ++ U2)
       .repartition(spark.conf.get("spark.executor.instances").toInt * spark.conf.get("spark.executor.cores").toInt)
       .mapPartitions(p => {
         p.map(v => {
           val rb = RoaringBitmap.bitmapOf()
-          v._2.foreach(rb.add(_))
+          v._2.foreach(v0 => rb.add(Integer.valueOf(v0.toString)))
           val bytes = BitmapUtils.serializeBitMapToByteArray(rb)
           val put = new Put(Bytes.toBytes(v._1))
           put.addColumn(Bytes.toBytes("f"), Bytes.toBytes("count"), Bytes.toBytes(v._2.size.toLong))
@@ -311,48 +289,28 @@ object SQLDataSourceTest1 {
       })
 
 
+    val tuples = res.collect()
+
+    tuples.size
+
+
+
+
+
   }
 
+  def score: Unit ={
+    val sql = """select name,lesson,score from score order by lesson,name,score"""
+    score(sql)
+  }
+  def score(sql :String ): Unit ={
+    val json = spark.read.json("file:///D:\\advance\\bigdata\\spark\\sparktest01\\src\\main\\scala\\com\\hochoy\\spark\\sql\\data\\score.json")
 
-  /*
+    json.createTempView("score")
+    spark.sql("select * from score").show
+    spark.sql(sql).show(100)
 
-    def sparkOnhbase():Unit={
-      import org.apache.spark.sql._
-      import org.apache.spark.sql.execution.datasources.hbase._
-      import org.apache.hadoop.hbase.HBaseConfiguration
-      spark.sparkContext.getConf
+  }
 
-      val config = HBaseConfiguration.create()
-      config.set("hbase.zookeeper.quorum", "tdhtest01,tdhtest02,tdhtest03");
-      config.set("hbase.zookeeper.property.clientPort","2181")
-      config.set("zookeeper.znode.parent","/hyperbase1")
-      println("............"+spark.sparkContext.getConf.getAllWithPrefix("hbase"))
-
-      def catalog = s"""{
-                       |"table":{"namespace":"default", "name":"Contacts"},
-                       |"rowkey":"key",
-                       |"columns":{
-                       |"rowkey":{"cf":"rowkey", "col":"key", "type":"string"},
-                       |"officeAddress":{"cf":"Office", "col":"Address", "type":"string"},
-                       |"officePhone":{"cf":"Office", "col":"Phone", "type":"string"},
-                       |"personalName":{"cf":"Personal", "col":"Name", "type":"string"},
-                       |"personalPhone":{"cf":"Personal", "col":"Phone", "type":"string"}
-                       |}
-                       |}""".stripMargin
-
-      def withCatalog(cat: String): DataFrame = {
-        spark.sqlContext
-          .read
-          .options(Map(HBaseTableCatalog.tableCatalog->cat))
-          .format("org.apache.spark.sql.execution.datasources.hbase")
-          .load()
-      }
-
-      val df = withCatalog(catalog)
-
-      df.show()
-
-    }
-  */
 
 }

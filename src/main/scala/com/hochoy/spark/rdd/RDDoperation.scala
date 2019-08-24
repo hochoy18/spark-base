@@ -16,15 +16,15 @@ object RDDoperation {
 
   val sc = SparkUtils.createSparkContext(this.getClass.getName)
   //  sc.getConf.set("spark.io.compression.codec", "snappy")
-  sc.setLogLevel("WARN")
+//  sc.setLogLevel("WARN")
 
   def main(args: Array[String]): Unit = {
     //    sumdef
-    aggregateTest
+//    aggregateTest
     //    groupByKeyTest
     //    mapPartitionWithIndexTest
     //    joinDependency
-
+    combineByKeyTest
 
   }
 
@@ -307,6 +307,30 @@ object RDDoperation {
       result.iterator
     })
     searchLogRdd.collect().foreach(println)
+
+  }
+  def combineByKeyTest():Unit={
+    val a = sc.parallelize(List("dog","cat","gnu","salmon","rabbit","turkey","wolf","bear","bee"), 3)
+    val b = sc.parallelize(List(1,1,2,2,2,1,2,2,2), 3)
+    val c = b.zip(a)
+    println(c)
+
+
+
+
+    val initialScores = Array(
+      (("1", "011"), 1),
+      (("1", "012"), 1),
+      (("2", "011"), 1),
+      (("2", "013"),1),
+      (("2", "014"),1))
+    val rdd1: RDD[((String, String), Int)] = sc.parallelize(initialScores)
+    val rdd2: RDD[(String, (String, Int))] = rdd1.map(λ=> (λ._1._1,(λ._1._2,λ._2)))
+//    rdd2.combineByKey((v) => (v),)
+
+
+
+
 
   }
 

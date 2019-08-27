@@ -29,5 +29,5 @@ object Constants {
   val USER_SPARK_PATH = USER_DIR + "\\src\\main\\scala\\com\\hochoy\\spark\\"
 
   val FILE_PATH = "sql\\data\\"
-
+  val RETENTION_SEPARATOR  : String = "@@@@@@@"
 }

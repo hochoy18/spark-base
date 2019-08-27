@@ -339,7 +339,33 @@ public class DateUtil {
         return sdf_d.format(calendar.getTime());
     }
 
-    public static void main(String[] args){
+    public static String getSundayOfDay(String date ,String pattern) throws Exception{
+        SimpleDateFormat sdf=new SimpleDateFormat(pattern); //设置时间格式
+        Calendar cal = Calendar.getInstance();
+        Date time=sdf.parse(date);
+        cal.setTime(time);
+        int dayWeek = cal.get(Calendar.DAY_OF_WEEK);//获得当前日期是一个星期的第几天
+        if(1 == dayWeek) {
+            cal.add(Calendar.DAY_OF_MONTH, -1);
+        }
+        cal.setFirstDayOfWeek(Calendar.MONDAY);//设置一个星期的第一天，按中国的习惯一个星期的第一天是星期一
+        int day = cal.get(Calendar.DAY_OF_WEEK);//获得当前日期是一个星期的第几天
+        cal.add(Calendar.DATE, cal.getFirstDayOfWeek()-day);//根据日历的规则，给当前日期减去星期几与一个星期第一天的差值
+
+        cal.add(Calendar.DATE, 6);
+        return  sdf.format(cal.getTime());
+    }
+
+    public static void main(String[] args) throws  Exception{
+
+        System.out.println(getSundayOfDay("2019-08-19", "yyyy-MM-dd"));
+        System.out.println(getSundayOfDay("2019-08-20", "yyyy-MM-dd"));
+        System.out.println(getSundayOfDay("2019-08-21", "yyyy-MM-dd"));
+        System.out.println(getSundayOfDay("2019-08-22", "yyyy-MM-dd"));
+        System.out.println(getSundayOfDay("2019-08-23", "yyyy-MM-dd"));
+        System.out.println(getSundayOfDay("2019-08-24", "yyyy-MM-dd"));
+        System.out.println(getSundayOfDay("2019-08-25", "yyyy-MM-dd"));
+        System.out.println(getSundayOfDay("2019-08-26", "yyyy-MM-dd"));
 //    System.out.println(getFirstDayOfMonth("20180829"));
 //    System.out.println(getDayDiff("20181208",-6));
 //    System.out.println(getDayOfRange("20180811","20180811"));
@@ -349,7 +375,7 @@ public class DateUtil {
 //    System.out.println(getLastMonth("20190131",-1));
 //    System.out.println(getGapDays("20190101","20181001"));
         //System.out.println(getDayOfTheWeek("20190518"));
-        System.out.println(getNextSatTheWeek("20190511"));
+        System.out.println(getLastDayOfWeek("20190821"));
         //System.out.println(getLastDayTheMonth("20190402"));
     }
 

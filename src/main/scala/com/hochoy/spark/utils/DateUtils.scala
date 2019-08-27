@@ -3,23 +3,19 @@ package com.hochoy.spark.utils
 import java.text.{ParseException, SimpleDateFormat}
 import java.util.{Calendar, Date, GregorianCalendar}
 
-import com.hochoy.spark.sql.datasources.SQLDataSourceTest1.{spark, warehouse_dir}
-import com.hochoy.spark.utils.Constants.{FILE_PATH, USER_SPARK_PATH}
-import org.apache.spark.sql.SaveMode
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
-import scala.util.Try
 
 /** Describe:
   * Created by IntelliJ IDEA.
   * Time: 11:26
   *
-  * @author hochoy <hochoy18@sina.com> 
+  * @author cai.he <cai.he@wbkit.com>
   * @Version V1.0.0
   */
 object DateUtils {
-
+  val LOGGER = LoggerFactory.getLogger(getClass)
   final val NOT_USER_DEFAULT = "-9999999"
 
   /**
@@ -42,7 +38,7 @@ object DateUtils {
       val res = sub.toInt
       if (NOT_USER_DEFAULT == default || res >= 0) {
         sub
-      } else {
+      }else {
         default
       }
     } catch {
@@ -50,36 +46,16 @@ object DateUtils {
     }
   }
 
-  def getFirstDay(date: String, pattern: String = "yyyy-MM-dd", f: (String, String) ⇒ String): String = {
-    val firstDay = f(date, pattern)
+  /**
+    * 获取指定日期所在周/月 的第一天的日期( 以周一为一个星期的第一天)
+    * @param date
+    * @param pattern
+    * @param f
+    * @return
+    */
+  private def getFirstDay(date: String,  pattern: String = "yyyy-MM-dd",f:(String,String)⇒String):String = {
+    val firstDay = f(date,pattern)
     firstDay
-  }
-
-  def date_first(date: String, pattern: String = "yyyy-MM-dd", dateType: String): String = {
-    val diff = dateType match {
-      case "week" ⇒ getFirstDay(date, pattern, DateBasicFunction.getFirstDayOfWeek)
-      case "month" ⇒ getFirstDay(date, pattern, DateBasicFunction.getFirstDayOfMonth)
-      case _ ⇒ null
-    }
-    diff
-  }
-
-  def main(args: Array[String]): Unit = {
-
-
-    println(date_diff("20190611", "20190219", "yyyyMMdd", "month"))
-    println(date_diff("20190611", "20190915", "yyyyMMdd", "month"))
-    println(date_diff("20190611", "20190609", "yyyyMMdd", "month", "0"))
-    println(date_diff("20190611", "20190601", "yyyyMMdd", "month", "0"))
-
-
-    System.exit(-1)
-    (20190601 to 20190630).foreach(x ⇒ println(s"week : ", date_first(x.toString, "yyyyMMdd", "week")))
-    println("----------------------------")
-    (20190601 to 20190630).foreach(x ⇒ println(s"month : ", date_first(x.toString, "yyyyMMdd", "month")))
-    println("----------------------------")
-    (20190701 to 20190731).foreach(x ⇒ println(s"month : ", date_first(x.toString, "yyyyMMdd", "month")))
-
   }
 
   /**
@@ -96,14 +72,35 @@ object DateUtils {
   }
 
   def date_diff(startDate: String, endDate: String, pattern: String, dateType: String, defaultValue: String): String = {
+    LOGGER.info("startDate：{},endDate ：{},pattern ：{},dateType ：{},defaultValue ：{}"
+      ,startDate,endDate,pattern,dateType,defaultValue)
     val diff = dateType match {
       case "day" ⇒ getDiffWithDefault(startDate, endDate, pattern, defaultValue, DateBasicFunction.getDateDiff)
-      case "week" ⇒ getDiffWithDefault(startDate, endDate, pattern, defaultValue, DateBasicFunction.getWeekDiff)
+      case "week" ⇒ getDiffWithDefault(startDate, endDate, pattern, defaultValue, DateBasicFunction.getWeekDiffOfTwoDate)
       case "month" ⇒ getDiffWithDefault(startDate, endDate, pattern, defaultValue, DateBasicFunction.getMonthDiff)
       case _ ⇒ null
     }
     diff
   }
+
+  /**
+    * 获取指定日期所在周/月 的第一天的日期( 以周一为一个星期的第一天)
+    * @param date 指定日期
+    * @param pattern
+    * @param dateType week/month
+    * @return
+    */
+  def date_first( date: String,  pattern: String = "yyyy-MM-dd", dateType: String): String = {
+    LOGGER.info("date：{}, pattern ：{},dateType ：{} ",date,pattern,dateType)
+    val diff = dateType match {
+      case "week" ⇒ getFirstDay(date,  pattern, DateBasicFunction.getFirstDayOfWeek)
+      case "month" ⇒ getFirstDay(date,  pattern, DateBasicFunction.getFirstDayOfMonth)
+      case _ ⇒ null
+    }
+    diff
+  }
+
+
 
 
 }
@@ -111,26 +108,6 @@ object DateUtils {
 
 object DateBasicFunction {
   val logger = LoggerFactory.getLogger(getClass)
-
-
-  def dateOp(start: String, end: String, endDate: String, unit: String = "day"): List[Int] = {
-    unit match {
-      case "day" ⇒ {
-
-        null
-      }
-      case "week" ⇒ {
-
-        null
-      }
-      case "month" ⇒ {
-
-        null
-      }
-      case _ ⇒ List.empty
-    }
-
-  }
 
 
   /**
@@ -215,7 +192,7 @@ object DateBasicFunction {
       val date = sdf.parse(time);
       result = getFirstDayOfWeek(date, pattern);
     } catch {
-      case e: ParseException ⇒ e.printStackTrace()
+      case e: ParseException ⇒ logger.error("ParseException:",e)
     }
     result
   }
@@ -385,5 +362,65 @@ object DateBasicFunction {
     }
   }
 
+  /**
+    * 获取指定日期 所在周 的<周日>
+    * @param date
+    * @param pattern
+    * @return
+    */
+  def  getSundayOfDay( date:String, pattern: String ) :String = {
+    var sunday :String = null
+    if(null == date || "null".equalsIgnoreCase(date))
+      sunday = null
+    else{
+      val sdf=new SimpleDateFormat(pattern) //设置时间格式
+      val cal = Calendar.getInstance()
+      try{
+        val time =sdf.parse(date);
+        cal.setTime(time)
+      }catch {
+        case e:ParseException => logger.error("ParseException",e)
+      }
+      val dayWeek = cal.get(Calendar.DAY_OF_WEEK)//获得当前日期是一个星期的第几天
+      if(1 == dayWeek) {
+        cal.add(Calendar.DAY_OF_MONTH, -1)
+      }
+      cal.setFirstDayOfWeek(Calendar.MONDAY)//设置一个星期的第一天，按中国的习惯一个星期的第一天是星期一
+      val day = cal.get(Calendar.DAY_OF_WEEK) //获得当前日期是一个星期的第几天
+      cal.add(Calendar.DATE, cal.getFirstDayOfWeek()-day) //根据日历的规则，给当前日期减去星期几与一个星期第一天的差值
+      cal.add(Calendar.DATE, 6)
+      sunday = sdf.format(cal.getTime())
+    }
+    sunday
+  }
+
+
+  /**
+    * 获取两个日期间的自然周数
+    * @param startDate
+    * @param endDate
+    * @param pattern
+    * @return
+    */
+  def getWeekDiffOfTwoDate(startDate: String, endDate: String, pattern: String = "yyyy-MM-dd"): String = {
+    var weekDiff : String  = null
+
+    if (null == startDate || null == endDate)
+      weekDiff = null
+
+    val start = getSundayOfDay(startDate,pattern)
+    val end = getSundayOfDay(endDate,pattern)
+    if(start == end){
+      weekDiff = 0.toString
+    }else {
+      val dayDiff = getDateDiff(start,end,pattern)
+      if (dayDiff != null && !"null".equalsIgnoreCase(dayDiff)){
+        weekDiff = (dayDiff.toInt / 7).toString
+      }else{
+        weekDiff = null
+      }
+    }
+    weekDiff
+  }
 
 }

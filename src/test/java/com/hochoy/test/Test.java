@@ -1,5 +1,9 @@
 package com.hochoy.test;
 
+import com.hochoy.utils.BitmapUtils;
+import org.roaringbitmap.RoaringBitmap;
+import scala.actors.threadpool.Arrays;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,10 +15,28 @@ import java.util.Set;
  */
 public class Test {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws  Exception{
 
-        Map<Long, Map<String, Long>> stringMapMap = MapTest.test1(genList(), genData());
-        System.out.println(stringMapMap);
+//        Map<Long, Map<String, Long>> stringMapMap = MapTest.test1(genList(), genData());
+//        System.out.println(stringMapMap);
+
+        String s = ":0\u0000\u0000\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0010\u0000\u0000\u0000\u0004\u0000";
+        RoaringBitmap integers = BitmapUtils.deSerializeByteArrayToBitMap(s.getBytes("iso8859-1"));
+        for (int i : integers.toArray()) {
+            System.out.println(i);
+        }
+        s= ":0\\u0000\\u0000\\u0001\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0010\\u0000\\u0000\\u0000\\u0004\\u0000";
+        integers = BitmapUtils.deSerializeByteArrayToBitMap(s.getBytes("iso8859-1"));
+        for (int i : integers.toArray()) {
+            System.out.println(i);
+        }
+
+        System.exit(-1);
+        Integer[] arr = {1,2,3,4,5,6};
+        List<Integer> list = Arrays.asList(arr);
+        List<Integer> res = new ArrayList<>();
+        list.forEach(res::add);
+        res.forEach(System.out::println);
 
     }
 

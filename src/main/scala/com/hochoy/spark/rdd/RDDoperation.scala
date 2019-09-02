@@ -1,7 +1,9 @@
 package com.hochoy.spark.rdd
 
 import com.hochoy.spark.utils.SparkUtils
+import com.hochoy.utils.BitmapUtils
 import org.apache.spark.rdd.RDD
+import org.roaringbitmap.RoaringBitmap
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -24,8 +26,9 @@ object RDDoperation {
     //    groupByKeyTest
     //    mapPartitionWithIndexTest
     //    joinDependency
-    combineByKeyTest
-
+//    combineByKeyTest
+//    sortBy
+    unionTest
   }
 
   val score = List(
@@ -334,4 +337,94 @@ object RDDoperation {
 
   }
 
+  def sortBy():Unit = {
+
+//    val studentsScore  = sc.textFile("file:///D:/advance/bigdata/spark/sparktest01/src/main/scala/com/hochoy/spark/rdd/data/scores.txt")
+//      .map(_.split(","))
+//    val groups=studentsScore.map(scoreInfo=>(scoreInfo(1),scoreInfo(2).toInt,scoreInfo(3).toInt,scoreInfo(4).toInt,scoreInfo(5),scoreInfo(6)))
+//
+//    val topK=groups.groupBy(item=>(item._6,item._5)).map(subG=>{
+//      val (departmentId,classId) = subG._1
+//      //语文前3
+//      val languageTopK=subG._2.toList.sortBy(_._2)(Ordering.Int.reverse).take(3).map(item=>item._2+"分:学号"+item._1)
+//      //数学前3
+//      val mathTopK=subG._2.toList.sortBy(_._3)(Ordering.Int.reverse).take(3).map(item=>item._3+"分:学号"+item._1)
+//      //外语前3
+//      val englishTopK=subG._2.toList.sortBy(_._4)(Ordering.Int.reverse).take(3).map(item=>item._4+"分:学号"+item._1)
+//      (departmentId,classId,Map("语文前3"->languageTopK,"数学前3"->mathTopK,"外语前3"->englishTopK))
+//    })
+//    topK.foreach(println)
+
+
+
+
+    val list = List(
+      ("20190808",null,"afsda fdasd fas",1),
+      ("20190808",null,"afsda ad fafadf",2),
+      ("20190809",null,"afsda fdasd sfa",1),
+      ("20190809",null,"afsda ad fasswf",5)
+    )
+    val rdd: RDD[(String, Null, String, Int)] = sc.makeRDD(list)
+//    rdd.map(row => ((row._1,row._2),row._3)).groupByKey()
+//    val value: RDD[((String, Null), List[(String, Null, String, Int)])] = rdd.groupBy(r =>(r._1,r._2)).map(v => (v._1,v._2.toList.sortBy(_._4).take(0)))
+//    value.collect().foreach(println(_))
+
+    val value: RDD[(String, Null, String, Int)] = rdd.groupBy(item => (item._1, item._2))
+      .map(data => {
+        val head: (String, Null, String, Int) = data._2.toList.sortBy(it => it._4)(Ordering.Int.reverse).head
+        head
+      })
+    val res0: RDD[(String, Null, String, Int)] = value.map(v=>(v._1,v._2,v._3,v._4))
+    res0.foreach(v=>println(v))
+
+
+
+  }
+
+  def unionTest(): Unit ={
+    val res0 = List((100,1),(101,1),(102,1),(103,1),(201,1))
+    val res1 = List((200,1),(201,1),(202,1),(203,1))
+    val rdd0: RDD[(Int, Int)] = sc.makeRDD(res0)
+    val rdd1: RDD[(Int, Int)] = sc.makeRDD(res1)
+    val rdd: RDD[(Int, Int)] = rdd0.union(rdd1)
+    rdd.collect().foreach(println(_))
+    Thread.sleep(1000 * 100)
+  }
+
+
+
+}
+object test {
+  def main(args: Array[String]): Unit = {
+//    listTest
+
+    test1
+
+  }
+
+  def test1={
+    val set1 = Set(1,2,3,4,5,6,7,8,20)
+    val set2:Set[Int] = Set(1,2,3,4,5,6,7,11111111)
+
+    val bitmap1: RoaringBitmap = RoaringBitmap.bitmapOf()
+    val bitmap2: RoaringBitmap = RoaringBitmap.bitmapOf()
+    set1.foreach(bitmap1.add(_))
+    set2.foreach(bitmap2.add(_))
+    val str1 = new String(BitmapUtils.serializeBitMapToByteArray(bitmap1),"iso8859-1")
+    val str2 = new String(BitmapUtils.serializeBitMapToByteArray(bitmap2),"iso8859-1")
+    println(str1.size)
+    println(str2.size)
+  }
+  def listTest(): Unit ={
+    val list = List(
+      ("20190808",null,"afsda fdasd fas",1),
+      ("20190808",null,"afsda ad fafadf",2),
+      ("20190809",null,"afsda fdasd sfa",1),
+      ("20190809",null,"afsda ad fasswf",5)
+    )
+    val resHead: (String, Null, String, Int) = list.head
+    println(resHead)
+    val head: (String, Null, String, Int) = list.sortBy(it => it._4)(Ordering.Int.reverse).head
+    println(head)
+  }
 }

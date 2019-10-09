@@ -3,11 +3,13 @@ package com.hochoy.spark.sql.datasources
 import java.nio.charset.Charset
 import java.util.Base64
 
+import scala.collection.mutable.ListBuffer
 import com.alibaba.fastjson.{JSON, JSONObject}
 import com.hochoy.cobub3_test.Constants
 import com.hochoy.spark.hbase.GlobalHConnection
+import com.hochoy.spark.utils.CaseClasses.Event
 import com.hochoy.spark.utils.Constants._
-import com.hochoy.spark.utils.DateUtils
+import com.hochoy.spark.utils.{DateUtils, Util}
 import com.hochoy.spark.utils.SparkUtils._
 import com.hochoy.utils.BitmapUtils
 import org.apache.hadoop.conf.Configuration
@@ -23,6 +25,7 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.storage.StorageLevel
 import org.roaringbitmap.RoaringBitmap
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 import scala.collection.parallel.immutable
@@ -44,7 +47,8 @@ object SQLDataSourceTest1 {
   val warehouse_dir = spark.conf.get(SPARK_SQL_WAREHOUSE_DIR)
 
   def main(args: Array[String]) {
-    retention
+    funnel0
+    //    retention
     //    score
   }
 
@@ -510,6 +514,137 @@ object SQLDataSourceTest1 {
     userSet.foreach(v => rb.add(Integer.valueOf(v)))
     val bytes: Array[Byte] = BitmapUtils.serializeBitMapToByteArray(rb)
     new String(bytes, Charset.forName("UTF-8"))
+  }
+
+  val logger = LoggerFactory.getLogger(getClass)
+
+  def funnel0(): Int = {
+    val parquet = spark.read.parquet("/user/ubas/parquet")
+    parquet.createOrReplaceTempView("parquetTmpTable")
+    val sql = "select global_user_id,sessionid,case when action='$exitPage' then pagetitle else case when action='$appClick' then element_id else action end end as action,unix_timestamp(clienttime),platform,version  from parquetTmpTable  where (category in ('event','usinglog') and deviceid is not null and day=20190930 and productid='22' and (action in ('e_sys_login','ylhkh_jh_smxx') or (action = '$exitPage' and pagetitle in('sy001','sy002')) or (action = '$appClick' and element_id in('lc_sjc_xqy_wh')) ))"
+    val day = "20190930"
+    val funnelId = "23"
+    val fF = "e_sys_login||ylhkh_jh_smxx||lc_sjc_xqy_wh||sy001$$sy002"
+
+    funnel(sql, day, funnelId, fF)
+  }
+
+  def funnel(sql: String, day: String, funnelId: String, fF: String): Int = {
+
+
+    val bFunnelDef = fF.split("\\|\\|").toList
+    val eventLog = spark.sql(sql)
+    eventLog.show()
+    val rows = eventLog.collect()
+    rows.foreach(println(_))
+    val events = eventLog.rdd.map { event => // event.getString(0)获取的可能是deviceid,global_user_id，看传进的sql里面定的是哪个
+      Event(event.getString(0), event.getString(1), event.getString(2), event.getLong(3), event.getString(4), event.getString(5))
+    }
+    val eventC = events.collect()
+    eventC.foreach(println(_))
+    val eventGroups = events.groupBy { e => // TODO 根据 sessionID gid platform version 分组，再对分组后的value对 clienttime排序
+      (e.sessionid, e.global_user_id, e.platform, e.version)
+    }.mapValues { eventGroup =>
+      eventGroup.toList.sortBy(_.clienttime)
+    }
+
+    val eventGroupsC = eventGroups.collect()
+    eventGroupsC.foreach(println(_))
+
+    val protoFun = eventGroups.flatMap {
+      case (
+        (_, gloabal_user_id, platform, version), eventGroup)
+      =>
+        //      val de = ((_, gloabal_user_id, platform, version), eventGroup)
+        //      println(de)
+        val funnels = Util.extract(eventGroup.map(_.action), bFunnelDef)
+        val pairList = ListBuffer[(String, (Map[Int, Long], String))]() // rowkey ->
+        pairList += s"$funnelId${Constants.AL_SPLIT}$day${Constants.AL_SPLIT}$platform${Constants.AL_SPLIT}$version" -> (funnels, gloabal_user_id) //(platform,version)
+        pairList += s"$funnelId${Constants.AL_SPLIT}$day${Constants.AL_SPLIT}$platform${Constants.AL_SPLIT}null" -> (funnels, gloabal_user_id) //(platform)
+        pairList += s"$funnelId${Constants.AL_SPLIT}$day${Constants.AL_SPLIT}null${Constants.AL_SPLIT}$version" -> (funnels, gloabal_user_id) //(version)
+        pairList += s"$funnelId${Constants.AL_SPLIT}$day${Constants.AL_SPLIT}null${Constants.AL_SPLIT}null" -> (funnels, gloabal_user_id) //()
+
+
+    }.cache()
+    val protoFunC = protoFun.collect()
+    protoFunC.foreach(println(_))
+
+
+    val value = protoFun.map { case (key, (funnels, gloabal_user_id)) =>
+      val qualifier = "CF"
+      (key, qualifier) -> funnels
+    }
+    val tuples: Array[((String, String), Map[Int, Long])] = value.collect()
+    val values1 = value.reduceByKey { (a, b) =>
+      a.map { case (k, v) =>
+        k -> (v + b(k))
+      }
+    }
+    val tuples1: Array[((String, String), Map[Int, Long])] = values1.collect()
+    // (rk,"CF"), map)
+    // count total funnels
+    val c = values1.map { case (key, map) =>
+      val value = (0 until map.size).map(k => map(k)).mkString(",")
+      (key, value)
+    }.collect()
+    c.foreach(println(_))
+
+    // count unique funnels
+    val uc = protoFun.map { case (key, (funnels, gloabal_user_id)) =>
+      val qualifier = "UF"
+      (key, qualifier) -> funnels.map { case (k, v) =>
+        k -> (if (v != 0L) Some(gloabal_user_id) else None)
+      }
+    }.aggregateByKey(mutable.HashMap.empty[Int, mutable.HashSet[String]])(
+      Util.mergeValuesToSetByKey,
+      Util.unionSetsByKey
+    ).mapPartitions { p =>
+      val saveUsers = true
+      val hTable = if (saveUsers) {
+        //        GlobalHConnection.setConf(hbaseZKConfig)
+        //        GlobalHConnection.getConn().getTable(TableName.valueOf(resultTable))
+      } else null
+      val res = p.map {
+        // map的类型：HashMap[Int, mutable.HashSet[String]] ，key表示funelId的层次，
+        // 比如0->[userid1,userid2,userid3],1->[userid1,userid2],2->[userid1]
+        // 即该转换率funnelId，第一个事件[userid1,userid2,userid3]访问了
+        //                    第二个事件[userid1,userid2]访问了
+        //                    第三个事件[userid1]访问了
+        case (key, map) =>
+          val value = (0 until map.size)
+            .map { k =>
+              if (saveUsers) {
+                val rb = RoaringBitmap.bitmapOf()
+                map(k).foreach { gloabal_user_id =>
+                  try {
+                    val gid = gloabal_user_id.toInt
+                    rb.add(gid)
+                  } catch {
+                    case e: Exception => println(e)
+                  }
+
+                }
+                val bytes = BitmapUtils.serializeBitMapToByteArray(rb)
+                val put = new Put(Bytes.toBytes(key._1))
+                put.addColumn(Bytes.toBytes("f"), Bytes.toBytes("USERS_" + k.toString), bytes)
+                //                hTable.put(put)
+              }
+              map(k).size.toLong
+            }.mkString(",")
+          (key, value)
+      }
+      //      if(saveUsers) hTable.close
+      res
+
+    }.collect()
+
+    uc.foreach(println(_))
+    val res = c ++ uc // (rowkey,qualifer) -> value
+    for ((k, v) <- res) {
+      //      logger.info(":::::::" + k._1 + "," + k._2 + "===" + v)
+    }
+    res.size
+
   }
 
 

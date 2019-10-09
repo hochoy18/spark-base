@@ -356,27 +356,113 @@ public class DateUtil {
         return  sdf.format(cal.getTime());
     }
 
-    public static void main(String[] args) throws  Exception{
+//    public static void main(String[] args) throws  Exception{
+//
+//        System.out.println(getSundayOfDay("2019-08-19", "yyyy-MM-dd"));
+//        System.out.println(getSundayOfDay("2019-08-20", "yyyy-MM-dd"));
+//        System.out.println(getSundayOfDay("2019-08-21", "yyyy-MM-dd"));
+//        System.out.println(getSundayOfDay("2019-08-22", "yyyy-MM-dd"));
+//        System.out.println(getSundayOfDay("2019-08-23", "yyyy-MM-dd"));
+//        System.out.println(getSundayOfDay("2019-08-24", "yyyy-MM-dd"));
+//        System.out.println(getSundayOfDay("2019-08-25", "yyyy-MM-dd"));
+//        System.out.println(getSundayOfDay("2019-08-26", "yyyy-MM-dd"));
+////    System.out.println(getFirstDayOfMonth("20180829"));
+////    System.out.println(getDayDiff("20181208",-6));
+////    System.out.println(getDayOfRange("20180811","20180811"));
+////    System.out.println(getDate(new Date(),-1));
+////    System.out.println(getDayHour());
+////    System.out.println(getDayOfMonthList("20181231"));
+////    System.out.println(getLastMonth("20190131",-1));
+////    System.out.println(getGapDays("20190101","20181001"));
+//        //System.out.println(getDayOfTheWeek("20190518"));
+//        System.out.println(getLastDayOfWeek("20190821"));
+//        //System.out.println(getLastDayTheMonth("20190402"));
+//    }
 
-        System.out.println(getSundayOfDay("2019-08-19", "yyyy-MM-dd"));
-        System.out.println(getSundayOfDay("2019-08-20", "yyyy-MM-dd"));
-        System.out.println(getSundayOfDay("2019-08-21", "yyyy-MM-dd"));
-        System.out.println(getSundayOfDay("2019-08-22", "yyyy-MM-dd"));
-        System.out.println(getSundayOfDay("2019-08-23", "yyyy-MM-dd"));
-        System.out.println(getSundayOfDay("2019-08-24", "yyyy-MM-dd"));
-        System.out.println(getSundayOfDay("2019-08-25", "yyyy-MM-dd"));
-        System.out.println(getSundayOfDay("2019-08-26", "yyyy-MM-dd"));
-//    System.out.println(getFirstDayOfMonth("20180829"));
-//    System.out.println(getDayDiff("20181208",-6));
-//    System.out.println(getDayOfRange("20180811","20180811"));
-//    System.out.println(getDate(new Date(),-1));
-//    System.out.println(getDayHour());
-//    System.out.println(getDayOfMonthList("20181231"));
-//    System.out.println(getLastMonth("20190131",-1));
-//    System.out.println(getGapDays("20190101","20181001"));
-        //System.out.println(getDayOfTheWeek("20190518"));
-        System.out.println(getLastDayOfWeek("20190821"));
-        //System.out.println(getLastDayTheMonth("20190402"));
+
+
+    public static String getLastDayOfWeek(String date , String pattern, int startFlag) {
+        if (startFlag < 1 || startFlag > 7)
+            throw  new RuntimeException("startFlag is between 1 and 7 ,and startFlag is :" + startFlag);
+        SimpleDateFormat sdf=new SimpleDateFormat(pattern); //设置时间格式
+        Calendar cal = Calendar.getInstance();
+        try{
+            Date time =sdf.parse(date);
+            cal.setTime(time);
+        }catch (ParseException e ){
+            logger.error("ParseException caused by ",e);
+        }
+
+        if(1 ==  cal.get(Calendar.DAY_OF_WEEK)) {
+            cal.add(Calendar.DAY_OF_MONTH, -1);
+        }
+
+        cal.setFirstDayOfWeek(startFlag);//设置一个星期的第一天，按中国的习惯一个星期的第一天是星期一
+        cal.add(Calendar.DATE, cal.getFirstDayOfWeek()-cal.get(Calendar.DAY_OF_WEEK));//根据日历的规则，给当前日期减去星期几与一个星期第一天的差值
+
+        cal.add(Calendar.DATE, 6);
+        return  sdf.format(cal.getTime());
     }
 
+
+    public static String getFirstDayOfWeek(String currentDate, String pattern,  int startFlag) {
+        if (startFlag < 1 || startFlag > 7)
+            throw  new RuntimeException("startFlag is between 1 and 7 ,and startFlag is :" + startFlag);
+        String returnDate = null;
+        SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+        try {
+            Date date = sdf.parse(currentDate);
+            Calendar c = Calendar.getInstance();
+            c.setTime(date);
+            int weekIndex = c.get(Calendar.DAY_OF_WEEK);
+            c.add(Calendar.DAY_OF_YEAR, -weekIndex + 2);
+            date = c.getTime();
+            returnDate = sdf.format(date);
+        } catch (ParseException e) {
+            logger.error(PARSE_EXCEPTION, e);
+        }
+        return returnDate;
+    }
+
+    /**
+     * 输入的是String，格式诸如20120102，实现加(num > 0)/减(num < 0)num天的功能，返回的格式为String，诸如20120101
+     *
+     * @param date
+     * @param num
+     * @return
+     * @throws ParseException
+     */
+    public static String stringDateDecrease(String date, int num) {
+        String year = date.substring(0, 4);
+        String month = date.substring(4, 6);
+        String day = date.substring(6);
+        String date1 = year + "-" + month + "-" + day;
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date startDate = new Date();
+        try {
+            startDate = sdf.parse(date1);
+        } catch (ParseException e) {
+            logger.error("ParseException",e);
+        }
+        Calendar cd = Calendar.getInstance();
+        cd.setTime(startDate);
+        cd.add(Calendar.DATE, num);
+        String dateStr = sdf.format(cd.getTime());
+        String year1 = dateStr.substring(0, 4);
+        String month1 = dateStr.substring(5, 7);
+        String day1 = dateStr.substring(8);
+        return year1 + month1 + day1;
+    }
+
+
+    public static void main(String[] args) {
+        System.out.println(getLastDayOfWeek("20190916","yyyyMMdd",1));
+        System.out.println(getLastDayOfWeek("20190916","yyyyMMdd",2));
+        System.out.println(getLastDayOfWeek("20190916","yyyyMMdd",3));
+        System.out.println(getLastDayOfWeek("20190916","yyyyMMdd",4));
+        System.out.println(getLastDayOfWeek("20190916","yyyyMMdd",5));
+        System.out.println(getLastDayOfWeek("20190916","yyyyMMdd",6));
+        System.out.println(getLastDayOfWeek("20190916","yyyyMMdd",7));
+        System.out.println(getLastDayOfWeek("20190909"));
+    }
 }

@@ -102,7 +102,23 @@ spark 配置的两种类型：
 
 #### [Memory Tuning](http://spark.apache.org/docs/2.3.3/tuning.html#memory-tuning "Memory Tuning")
 
+##### [Memory Management Overview](http://spark.apache.org/docs/2.3.3/tuning.html#memory-management-overview "Memory Management Overview")
+##### [Determining Memory Consumption](http://spark.apache.org/docs/2.3.3/tuning.html#determining-memory-consumption "Determining Memory Consumption")
+##### [Tuning Data Structures](http://spark.apache.org/docs/2.3.3/tuning.html#tuning-data-structures "Tuning Data Structures")
+##### [Serialized RDD Storage](http://spark.apache.org/docs/2.3.3/tuning.html#serialized-rdd-storage "Serialized RDD Storage")
+##### [Garbage Collection Tuning](http://spark.apache.org/docs/2.3.3/tuning.html#garbage-collection-tuning "Garbage Collection Tuning")
+
+
+
+
 #### [Other Considerations](http://spark.apache.org/docs/2.3.3/tuning.html#other-considerations "Other Considerations")
+
+##### [Level of Parallelism](http://spark.apache.org/docs/2.3.3/tuning.html#level-of-parallelism "Level of Parallelism")
+##### [Memory Usage of Reduce Tasks](http://spark.apache.org/docs/2.3.3/tuning.html#memory-usage-of-reduce-tasks "Memory Usage of Reduce Tasks")
+##### [Broadcasting Large Variables](http://spark.apache.org/docs/2.3.3/tuning.html#broadcasting-large-variables "Broadcasting Large Variables")
+##### [Data Locality](http://spark.apache.org/docs/2.3.3/tuning.html#data-locality "Data Locality")
+
+
 
 ### [Job Scheduling](http://spark.apache.org/docs/2.3.3/job-scheduling.html "Job Scheduling")
 ### [Hardware Provisioning](http://spark.apache.org/docs/2.3.3/hardware-provisioning.html "Hardware Provisioning")

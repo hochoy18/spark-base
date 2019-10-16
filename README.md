@@ -1,4 +1,4 @@
-# [Spark](http://spark.apache.org,"spark")
+# [Spark](http://spark.apache.org "spark")
 
 ## Spark Overview
 
@@ -97,14 +97,62 @@ spark 配置的两种类型：
 
 ### [Monitoring and Instrumentation]( http://spark.apache.org/docs/2.3.3/monitoring.html "Monitoring and Instrumentation")
 
+
+
 ### [Tuning Spark]( http://spark.apache.org/docs/2.3.3/tuning.html "Tuning Spark")
 #### [Data Serialization](http://spark.apache.org/docs/2.3.3/tuning.html#data-serialization "Data Serialization")
+```
+    Java serialization :
+    Kryo serialization :  
+        conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer") 
+        conf.set("spark.serializer", classOf[KryoSerializer].getName)
+```
 
-#### [Memory Tuning](http://spark.apache.org/docs/2.3.3/tuning.html#memory-tuning "Memory Tuning")
+#### [Memory Tuning](http://spark.apache.org/docs/2.3.3/tuning.html#memory-tuning)
+***内存调优需要考虑的三个方面：***
+* 对象使用的内存大小
+* 访问对象的内存开销
+* 垃圾回收的开销 
 
-##### [Memory Management Overview](http://spark.apache.org/docs/2.3.3/tuning.html#memory-management-overview "Memory Management Overview")
-##### [Determining Memory Consumption](http://spark.apache.org/docs/2.3.3/tuning.html#determining-memory-consumption "Determining Memory Consumption")
+***java对象的访问快速但是比其他领域的原始数据消耗的空间大 2 ~ 5倍，原因如下：*** 
+- java对象的对象头（object header）：其大小大约16B，包含指针等的信息
+- java字符串：由于字符串是由字符（char)构成的数组，它需要保存一些诸如长度length之类的数据，由于String内部使用UTF-16编码，因此Java字符串将每个字符存储为两个字节。
+- 常用集合类：像HashMap 、 LinkedList这些用链接数据结构包装每一个实体（entry)的类，这个集合对象不止有一个对象头，集合中的每个实体（entry）对象还有指向下一个对象的指针（大小通常为 8 Byte）
+- 以封装（boxed）对象的形式存储java.lang.Integer 等基本数据类型的集合
+
+##### [Memory Management Overview](http://spark.apache.org/docs/2.3.3/tuning.html#memory-management-overview )
+
+***spark 内存方面的使用大部分都归属于以下两类：执行内存和存储内存（execution and storage）：***
++ 执行内存是指用作shuffle，join，sort，aggregate 等计算的内存，而存储内存是指内部数据的跨集群缓存和传输。
++ spark中，执行内存和存储内存共享统一的数据区域（M）。 execution memory 不在使用时，storage memory 可以获取所有可用内存,反之亦然。
++ 在必要的情况下，execution memory 可以驱逐。但只在总存储内存（total storage memory）低于某一特定的阈值（R）。
+    换句话说，在高速缓存块（cached blocks）未被逐出时，R 是 M 以内的子区域。但是，由于实施的复杂性，storage memory 却无法驱逐执行 execution memory。
+***
+***spark的这种内存设计保证了其以下几种特性：***
++ 对于不使用缓存的 application ，可以将整个内存空间用于execution（计算等），这也避免了不必要的磁盘溢出。
++ 那些使用缓存的 application 在其数据块不被驱逐前提下可以保留最小的存储空间（R）。
++ 这种方法提供出的现成合理的性能，适用于各种工作负载，而无需对如何存储在内部的划分的用户专业知识。
+
+***
+虽然有两个相关的配置，普通用户不应该需要调整它们的默认值适用于大多数工作负载
+```
+    spark.memory.fraction 
+    spark.memory.storageFraction
+```
+
+
+##### [Determining Memory Consumption](http://spark.apache.org/docs/2.3.3/tuning.html#determining-memory-consumption)
+确定一个数据集（dataset）需要消耗多少内存的最佳方法是：创建一个RDD，并将它缓存，然后在web UI界面查看 Storage 页面。该页面将告诉您RDD占用了多少内存。
+使用 SizeEstimator#estimate()方法可以估算特定对象的内存消耗。
+
+
 ##### [Tuning Data Structures](http://spark.apache.org/docs/2.3.3/tuning.html#tuning-data-structures "Tuning Data Structures")
+数据结构尽可能的使用对象的数组，基本数据类型，而尽可能少的使用诸如HashMap等的标准的Java或者Scala集合类。[fastutil](http://fastutil.di.unimi.it) 库提供方便的集合类基本类型是与Java标准库兼容。
+尽可能避免嵌套结构有很多小物件和指针。
+考虑使用数字ID或枚举对象，而不是字符串键。
+如果您的 RAM 少于32 GB，设置JVM 参数 -XX：+ UseCompressedOops 使指针是四个字节而不是8。您可以在spark-env.sh添加这些选项。
+
+
 ##### [Serialized RDD Storage](http://spark.apache.org/docs/2.3.3/tuning.html#serialized-rdd-storage "Serialized RDD Storage")
 ##### [Garbage Collection Tuning](http://spark.apache.org/docs/2.3.3/tuning.html#garbage-collection-tuning "Garbage Collection Tuning")
 

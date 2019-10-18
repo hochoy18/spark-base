@@ -1,5 +1,7 @@
 package com.hochoy.spark.utils
 
+import java.io.File
+
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.{SparkConf, SparkContext}
@@ -13,7 +15,8 @@ import com.hochoy.spark.utils.Constants._
   */
  object SparkUtils {
 
-  def hadoopHomeSet: String = System.setProperty("hadoop.home.dir", System.getProperty("user.dir") + "\\..\\..\\hadoop-common-2.2.0-bin");
+  def hadoopHomeSet: String =
+    System.setProperty("hadoop.home.dir", System.getProperty("user.dir") + File.separator + "hadoop-common-2.2.0-bin");
 
   def conf(appName: String, num: Int = 1): SparkConf = {
     val conf = new SparkConf().setAppName(appName)

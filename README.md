@@ -109,6 +109,8 @@ spark 配置的两种类型：
 ```
 
 #### [Memory Tuning](http://spark.apache.org/docs/2.3.3/tuning.html#memory-tuning)
+>[Spark调优秘诀](http://www.mamicode.com/info-detail-2164217.html)  
+
 ***内存调优需要考虑的三个方面：***
 * 对象使用的内存大小
 * 访问对象的内存开销
@@ -121,12 +123,12 @@ spark 配置的两种类型：
 - 以封装（boxed）对象的形式存储java.lang.Integer 等基本数据类型的集合
 
 ##### [Memory Management Overview](http://spark.apache.org/docs/2.3.3/tuning.html#memory-management-overview )
-
+***
 ***spark 内存方面的使用大部分都归属于以下两类：执行内存和存储内存（execution and storage）：***
-+ 执行内存是指用作shuffle，join，sort，aggregate 等计算的内存，而存储内存是指内部数据的跨集群缓存和传输。
-+ spark中，执行内存和存储内存共享统一的数据区域（M）。 execution memory 不在使用时，storage memory 可以获取所有可用内存,反之亦然。
++ 执行内存是指用作shuffle，join，sort，aggregate 等计算的内存，而存储内存是指内部数据在集群间的缓存和传输。
++ spark中，执行内存和存储内存共享统一的数据区域（M）。 execution memory 不在使用时，storage memory 可以使用所有的可用内存,反之亦然。
 + 在必要的情况下，execution memory 可以驱逐。但只在总存储内存（total storage memory）低于某一特定的阈值（R）。
-    换句话说，在高速缓存块（cached blocks）未被逐出时，R 是 M 以内的子区域。但是，由于实施的复杂性，storage memory 却无法驱逐执行 execution memory。
+    换句话说，在高速缓存块（cached blocks）未被逐出时，R 是 M 以内的子区域。但是，由于实施的复杂性，storage memory 却无法驱逐 execution memory。
 ***
 ***spark的这种内存设计保证了其以下几种特性：***
 + 对于不使用缓存的 application ，可以将整个内存空间用于execution（计算等），这也避免了不必要的磁盘溢出。
@@ -135,10 +137,9 @@ spark 配置的两种类型：
 
 ***
 虽然有两个相关的配置，普通用户不应该需要调整它们的默认值适用于大多数工作负载
-```
-    spark.memory.fraction 
-    spark.memory.storageFraction
-```
+   + [spark.memory.fraction](http://spark.apache.org/docs/2.3.3/configuration.html#memory-management)
+      + 用于执行和存储的比例，该值越低，溢出和缓存数据清理越频繁
+   + [spark.memory.storageFraction](http://spark.apache.org/docs/2.3.3/configuration.html#memory-management)
 
 
 ##### [Determining Memory Consumption](http://spark.apache.org/docs/2.3.3/tuning.html#determining-memory-consumption)
@@ -147,10 +148,11 @@ spark 配置的两种类型：
 
 
 ##### [Tuning Data Structures](http://spark.apache.org/docs/2.3.3/tuning.html#tuning-data-structures "Tuning Data Structures")
-数据结构尽可能的使用对象的数组，基本数据类型，而尽可能少的使用诸如HashMap等的标准的Java或者Scala集合类。[fastutil](http://fastutil.di.unimi.it) 库提供方便的集合类基本类型是与Java标准库兼容。
-尽可能避免嵌套结构有很多小物件和指针。
-考虑使用数字ID或枚举对象，而不是字符串键。
-如果您的 RAM 少于32 GB，设置JVM 参数 -XX：+ UseCompressedOops 使指针是四个字节而不是8。您可以在spark-env.sh添加这些选项。
+- 数据结构尽可能的使用对象的数组，基本数据类型，而尽可能少的使用诸如HashMap等的标准的Java或者Scala集合类。
+[fastutil](http://fastutil.di.unimi.it) 库提供方便的集合类基本类型是与Java标准库兼容。
+- 尽可能避免使用小对象、指针的嵌套结构
+- 使用数字类型的ID或枚举对象，而不是字符串。
+- 如果您的 RAM 少于32 GB，设置JVM 参数 -XX：+ UseCompressedOops 使指针是四个字节而不是8。您可以在spark-env.sh添加这些选项。
 
 
 ##### [Serialized RDD Storage](http://spark.apache.org/docs/2.3.3/tuning.html#serialized-rdd-storage "Serialized RDD Storage")

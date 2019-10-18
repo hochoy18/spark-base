@@ -21,7 +21,7 @@ object Constants {
 
   val USER_DIR = {
     hadoopHomeSet
-    System.getProperty("user.dir")
+    "file:///"+System.getProperty("user.dir")
   }
 
   val TARGET_DIR = USER_DIR + "\\target"

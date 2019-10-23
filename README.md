@@ -10,11 +10,35 @@
 ### [Quick Start](http://spark.apache.org/docs/2.3.3/quick-start.html  "quick-start.html")
 ### [RDD Programming Guide](http://spark.apache.org/docs/2.3.3/rdd-programming-guide.html "RDD Programming Guide")
 ### [Spark SQL, DataFrames and Datasets Guide](http://spark.apache.org/docs/2.3.3/sql-programming-guide.html "Spark SQL, DataFrames and Datasets Guide")
-### [Spark Streaming Programming Guide](http://spark.apache.org/docs/2.3.3/streaming-programming-guide.html "Spark Streaming Programming Guide")
 
 
 
+### [Spark Streaming Programming Guide](http://spark.apache.org/docs/2.3.3/streaming-programming-guide.html)
+#### [Overview](http://spark.apache.org/docs/2.3.3/streaming-programming-guide.html#overview)
 
+<img src="http://spark.apache.org/docs/2.3.3/img/streaming-arch.png" width="70%" bgcolor="white">
+<img src="http://spark.apache.org/docs/2.3.3/img/streaming-flow.png"  width="70%" bgcolor="white">
+
+#### [A Quick Example](http://spark.apache.org/docs/2.3.3/streaming-programming-guide.html#a-quick-example)
+
+#### [Basic Concepts](http://spark.apache.org/docs/2.3.3/streaming-programming-guide.html#basic-concepts)
+##### [Linking](http://spark.apache.org/docs/2.3.3/streaming-programming-guide.html#linking)
+##### [Initializing StreamingContext](http://spark.apache.org/docs/2.3.3/streaming-programming-guide.html#initializing-streamingcontext)
+
+***StreamingContext 常用的创建方式***
+```
+ new StreamingContext(new SparkContext(),Seconds(1))
+ new StreamingContext(new SparkContext(), Durations.seconds(1))
+ new StreamingContext(new SparkConf(),Seconds(10))
+```
+***要点***
+- Once a context has been started, no new streaming computations can be set up or added to it.
+- Once a context has been stopped, it cannot be restarted.
+- Only one StreamingContext can be active in a JVM at the same time.
+- stop() on StreamingContext also stops the SparkContext. To stop only the StreamingContext, set the optional parameter of stop() called stopSparkContext to false.
+- A SparkContext can be re-used to create multiple StreamingContexts, as long as the previous StreamingContext is stopped (without stopping the SparkContext) before the next StreamingContext is created.
+
+##### [Discretized Streams (DStreams)](http://spark.apache.org/docs/2.3.3/streaming-programming-guide.html#discretized-streams-dstreams)
 
 
 ## Deploying

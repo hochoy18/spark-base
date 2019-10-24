@@ -42,12 +42,22 @@
 
 
 ## Deploying
-###[Cluster Mode Overview](http://spark.apache.org/docs/2.3.3/cluster-overview.html "Cluster Mode Overview")
-###[Submitting Applications](http://spark.apache.org/docs/2.3.3/submitting-applications.html  "Submitting Applications")
+###[Cluster Mode Overview](http://spark.apache.org/docs/2.3.3/cluster-overview.html)
+本文档简要概述了Spark如何在群集上运行，以使您更容易理解所涉及的组件。 通读[应用程序提交指南](http://spark.apache.org/docs/2.3.3/submitting-applications.html)，
+可以了解有关在集群上启动应用程序的信息。
+
+### [Components](http://spark.apache.org/docs/2.3.3/cluster-overview.html#components)
+
+
+###[Submitting Applications](http://spark.apache.org/docs/2.3.3/submitting-applications.html)
+
 ###[Spark Standalone Mode](http://spark.apache.org/docs/2.3.3/spark-standalone.html "Spark Standalone Mode")
-###[Running Spark on YARN](http://spark.apache.org/docs/2.3.3/running-on-yarn.html  "Running Spark on YARN")
 
-
+###[Running Spark on YARN](http://spark.apache.org/docs/2.3.3/running-on-yarn.html)
+#### [Launching Spark on YARN](http://spark.apache.org/docs/2.3.3/running-on-yarn.html#launching-spark-on-yarn)
+Ensure that HADOOP_CONF_DIR or YARN_CONF_DIR points to the directory which contains the (client side) configuration files for the Hadoop cluster. 
+***These configs are used to write to HDFS and connect to the YARN ResourceManager. The configuration contained in this directory will be 
+distributed to the YARN cluster so that all containers used by the application use the same configuration.*** 
 
 
 

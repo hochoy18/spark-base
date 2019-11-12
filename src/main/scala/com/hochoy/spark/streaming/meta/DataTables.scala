@@ -198,5 +198,11 @@ case class DataTables(nameSpace: String) extends Serializable {
     val families: Array[Array[Byte]]
 
   }
+  object CobubRetentionReport extends Serializable {
+    val name = s"$nameSpace:cobub_retention_report"
+  }
+  object CobubActionReport extends Serializable {
+    val name = s"$nameSpace:cobub_action_report"
+  }
 
 }

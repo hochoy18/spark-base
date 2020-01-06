@@ -2,6 +2,7 @@ package com.hochoy.java8;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
@@ -29,10 +30,10 @@ public class MapTest {
     static Map<Integer, Integer> cache = new ConcurrentHashMap<>(10);
 
     public static void main(String[] args) {
-        test2();
 
-
+        testTreeMap();
         System.exit(-1);
+        test2();
         mapComputeIfAbsent();
     }
 
@@ -85,4 +86,19 @@ public class MapTest {
         System.out.println("calculating fibonacci( " + i + " ）");
         return fibonncci(i - 2) + fibonncci(i - 1);
     }
+
+    static void testTreeMap(){
+        Map<Integer,Integer> map = new TreeMap<>();
+        map.put(1,2);
+        map.put(2,3);
+        map.put(5,6);
+        map.put(0,2);
+        map.put(3,3);
+        map.put(-1,2);
+        map.put(2,1);
+        map.forEach((k,v)->{
+            System.out.println(k + "  :   " +v);
+        });
+    }
+
 }

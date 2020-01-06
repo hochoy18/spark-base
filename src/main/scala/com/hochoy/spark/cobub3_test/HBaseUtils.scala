@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.util
 
-import com.hochoy.cobub3_test.{Constants, Formatter}
+import com.hochoy.cobub3_test.{Constants}
 import com.hochoy.spark.hbase.GlobalHConnection
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.util.Bytes
@@ -288,10 +288,10 @@ object HBaseUtils {
   /**
     * Generate MD5 prefix rowkey by productID and deviceID or userID .
     */
-   def genMD5Rk(productId: String, other: String): String = {
-    val Body = s"$productId${Constants.AL_SPLIT}$other"
-    Formatter.genPrefix(MessageDigest.getInstance("MD5"), Body, 4).substring(0, 3) + Constants.AL_SPLIT + Body
-  }
+//   def genMD5Rk(productId: String, other: String): String = {
+//    val Body = s"$productId${Constants.AL_SPLIT}$other"
+////    Formatter.genPrefix(MessageDigest.getInstance("MD5"), Body, 4).substring(0, 3) + Constants.AL_SPLIT + Body
+//  }
 
 
   def getSeqResults(table: Table, rks: List[(String, String, String)]): Map[String, Int] = {

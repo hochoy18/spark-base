@@ -73,6 +73,13 @@
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-spark</artifactId>
             <version>1.2.0-cdh5.9.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.hbase</groupId>
+                    <artifactId>hbase-client</artifactId>
+                </exclusion>
+
+            </exclusions>
         </dependency>
         <!--<dependency>-->
             <!--<groupId>org.apache.phoenix</groupId>-->
@@ -188,18 +195,25 @@
             <artifactId>fastjson</artifactId>
             <version>1.2.47</version>
         </dependency>
+        <!--<dependency>-->
+            <!--<groupId>org.apache.hbase</groupId>-->
+            <!--<artifactId>hbase-server</artifactId>-->
+            <!--<version>${hbase.version}</version>-->
+            <!--&lt;!&ndash;<scope>provided</scope>&ndash;&gt;-->
+            <!--<exclusions>-->
+                <!--<exclusion>-->
+                    <!--<groupId>io.netty</groupId>-->
+                    <!--<artifactId>netty-all</artifactId>-->
+                <!--</exclusion>-->
+            <!--</exclusions>-->
+        <!--</dependency>-->
+        <!-- https://mvnrepository.com/artifact/org.apache.hbase/hbase-client -->
         <dependency>
             <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-server</artifactId>
+            <artifactId>hbase-client</artifactId>
             <version>${hbase.version}</version>
-            <!--<scope>provided</scope>-->
-            <exclusions>
-                <exclusion>
-                    <groupId>io.netty</groupId>
-                    <artifactId>netty-all</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
+
 
         <dependency>
             <groupId>io.netty</groupId>

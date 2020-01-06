@@ -7,6 +7,7 @@ import scala.collection.mutable.ListBuffer
 import com.alibaba.fastjson.{JSON, JSONObject}
 import com.hochoy.cobub3_test.Constants
 import com.hochoy.spark.hbase.GlobalHConnection
+import com.hochoy.spark.rdd.HBaseReadOrWrite
 import com.hochoy.spark.utils.CaseClasses.Event
 import com.hochoy.spark.utils.Constants._
 import com.hochoy.spark.utils.{DateUtils, Util}
@@ -14,11 +15,11 @@ import com.hochoy.spark.utils.SparkUtils._
 import com.hochoy.utils.BitmapUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.TableName
-import org.apache.hadoop.hbase.client.Put
+import org.apache.hadoop.hbase.client.{Put, Result}
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hive.ql.index.bitmap.BitmapObjectOutput
-import org.apache.spark.SparkConf
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SaveMode}
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
@@ -47,10 +48,19 @@ object SQLDataSourceTest1 {
   val warehouse_dir = spark.conf.get(SPARK_SQL_WAREHOUSE_DIR)
 
   def main(args: Array[String]) {
-    funnel0
+    hbaseTest
+//    funnel0
     //    retention
     //    score
   }
+
+  def hbaseTest(): Unit ={
+    val sc: SparkContext = spark.sparkContext
+
+    val rdd: RDD[(ImmutableBytesWritable, Result)] = HBaseReadOrWrite.readHBase("action","15",sc)
+    println(rdd.count())
+  }
+
 
   def loadAndSave() = {
     //  Generic Load/Save Functions

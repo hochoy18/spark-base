@@ -265,6 +265,24 @@
             <artifactId>fastutil</artifactId>
             <version>8.2.1</version>
         </dependency>
+
+
+        <!--&lt;!&ndash; https://mvnrepository.com/artifact/org.apache.hbase/hbase-testing-util &ndash;&gt;-->
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-testing-util</artifactId>
+            <version>${hbase.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.apache.hbase/hbase-it -->
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-it</artifactId>
+            <version>${hbase.version}</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

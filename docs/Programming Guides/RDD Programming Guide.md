@@ -109,10 +109,10 @@ Some notes on reading files with Spark:
 
 ## Shared Variables
 
-## Broadcast Variables
+### Broadcast Variables
 
 
-## Accumulators
+### Accumulators
 
 ## Deploying to a Cluster
 

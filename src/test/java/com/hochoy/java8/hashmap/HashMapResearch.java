@@ -9,7 +9,6 @@ public class HashMapResearch {
 
     public static void main(String[] args) {
         mapTestKey();
-
     }
 
     /**
@@ -24,6 +23,24 @@ public class HashMapResearch {
         map.put(new MapTestKey("223"),"113");
         map.put(new MapTestKey("224"),"114");
         map.put(new MapTestKey("1113"),"113");
+        // 7
+        map.put(new MapTestKey("111a"),"111");
+        map.put(new MapTestKey("1111a"),"111");
+        map.put(new MapTestKey("222a"),"112");
+        map.put(new MapTestKey("222222a"),"111");
+        map.put(new MapTestKey("223a"),"113");
+        map.put(new MapTestKey("224a"),"114");
+        map.put(new MapTestKey("1113a"),"113");
+        // 7
+        map.put(new MapTestKey("111b"),"111");
+        map.put(new MapTestKey("1111b"),"111");
+        map.put(new MapTestKey("222b"),"112");
+        map.put(new MapTestKey("222222b"),"111");
+        map.put(new MapTestKey("223b"),"113");
+        map.put(new MapTestKey("224b"),"114");
+        map.put(new MapTestKey("1113b"),"113");
+
+
         System.out.println(map);
     }
 

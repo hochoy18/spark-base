@@ -13,7 +13,7 @@ public class Test {
 
     public static void main(String[] args) throws  Exception{
 
-        MapTest.test11();
+
 
 
 //        Map<Long, Map<String, Long>> stringMapMap = MapTest.test1(genList(), genData());
@@ -95,38 +95,6 @@ class CustomerList extends ArrayList{
 class MapTest {
 
     public static void  test11(){
-        Map map = new HashMap<MapTestKey,String>();
-        map.put(new MapTestKey("111"),"111");
-        map.put(new MapTestKey("1111"),"111");
-        map.put(new MapTestKey("222"),"112");
-        map.put(new MapTestKey("222222"),"111");
-        map.put(new MapTestKey("223"),"113");
-        map.put(new MapTestKey("224"),"114");
-        map.put(new MapTestKey("1113"),"113");
-        System.out.println(map);
-
-
-//        Map map = new HashMap<String,String>();
-//        map.put("test","test");
-//        map.put("test","test333");
-//        map.put("test1","test333");
-//        map.put("test31","test333");
-//        map.put("test32","test333");
-//        map.put("test33","test333");
-//        map.put("test34","test333");
-//        map.put("test35","test333");
-//        map.put("test36","test333");
-//        map.put("test37","test333");
-//        map.put("test38","test333");
-//        map.put("test39","test333");
-//        map.put("test41","test333");
-//        map.put("test42","test333");
-//        map.put("test43","test333");
-//        map.put("test44","test333");
-//        map.put("test45","test333");
-//        map.put("test46","test333");
-//        map.put("test47","test333");
-//        map.put("test48","test333");
 
 
     }
@@ -174,23 +142,4 @@ class MapTest {
         return res;
     }
 
-}
-class MapTestKey{
-    private String key_test;
-
-    public MapTestKey(String key_test) {
-        this.key_test = key_test;
-    }
-
-    @Override
-    public String toString() {
-        return "MapTestKey{" +
-                "key_test='" + key_test + '\'' +
-                '}';
-    }
-
-    @Override
-    public int hashCode() {
-        return key_test.length();
-    }
 }

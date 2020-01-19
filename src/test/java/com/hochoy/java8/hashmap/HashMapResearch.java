@@ -16,29 +16,33 @@ public class HashMapResearch {
      */
     static  void mapTestKey(){
         Map map = new HashMap<MapTestKey,String>();
-        map.put(new MapTestKey("111"),"111");
-        map.put(new MapTestKey("1111"),"111");
-        map.put(new MapTestKey("222"),"112");
-        map.put(new MapTestKey("222222"),"111");
-        map.put(new MapTestKey("223"),"113");
-        map.put(new MapTestKey("224"),"114");
-        map.put(new MapTestKey("1113"),"113");
-        // 7
-        map.put(new MapTestKey("111a"),"111");
-        map.put(new MapTestKey("1111a"),"111");
-        map.put(new MapTestKey("222a"),"112");
-        map.put(new MapTestKey("222222a"),"111");
-        map.put(new MapTestKey("223a"),"113");
-        map.put(new MapTestKey("224a"),"114");
-        map.put(new MapTestKey("1113a"),"113");
-        // 7
-        map.put(new MapTestKey("111b"),"111");
-        map.put(new MapTestKey("1111b"),"111");
-        map.put(new MapTestKey("222b"),"112");
-        map.put(new MapTestKey("222222b"),"111");
-        map.put(new MapTestKey("223b"),"113");
-        map.put(new MapTestKey("224b"),"114");
-        map.put(new MapTestKey("1113b"),"113");
+        map.put(new MapTestKey("1110"),"1110");
+        map.put(new MapTestKey("1111"),"1111");
+        map.put(new MapTestKey("1112"),"1112");
+        map.put(new MapTestKey("1113"),"1113");
+        map.put(new MapTestKey("1114"),"1114");
+        map.put(new MapTestKey("1115"),"1115");
+        map.put(new MapTestKey("1116"),"1116");
+        map.put(new MapTestKey("1117"),"1117");
+        map.put(new MapTestKey("1118"),"1118");
+        map.put(new MapTestKey("1119"),"1119");
+        map.put(new MapTestKey("1120"),"1120");
+        map.put(new MapTestKey("1121"),"1121");
+        map.put(new MapTestKey("1122"),"1122");
+        map.put(new MapTestKey("1123"),"1123");
+        map.put(new MapTestKey("1124"),"1124");
+        map.put(new MapTestKey("1125"),"1125");
+        map.put(new MapTestKey("1126"),"1126");
+        map.put(new MapTestKey("1127"),"1127");
+        map.put(new MapTestKey("1128"),"1128");
+        map.put(new MapTestKey("1129"),"1129");
+        map.put(new MapTestKey("1130"),"1130");
+        map.put(new MapTestKey("1131"),"1131");
+        map.put(new MapTestKey("1132"),"1132");
+        map.put(new MapTestKey("1133"),"1133");
+        map.put(new MapTestKey("1134"),"1134");
+        map.put(new MapTestKey("1135"),"1135");
+
 
 
         System.out.println(map);
@@ -79,25 +83,24 @@ public class HashMapResearch {
         }
 
     }
+   static class MapTestKey{
+        private String key_test;
 
-}
+        public MapTestKey(String key_test) {
+            this.key_test = key_test;
+        }
 
-class MapTestKey{
-    private String key_test;
+        @Override
+        public String toString() {
+            return "MapTestKey{" +
+                    "key_test='" + key_test + '\'' +
+                    '}';
+        }
 
-    public MapTestKey(String key_test) {
-        this.key_test = key_test;
-    }
-
-    @Override
-    public String toString() {
-        return "MapTestKey{" +
-                "key_test='" + key_test + '\'' +
-                '}';
-    }
-
-    @Override
-    public int hashCode() {
-        return key_test.length();
+        @Override
+        public int hashCode() {
+            return key_test.length();
+        }
     }
 }
+

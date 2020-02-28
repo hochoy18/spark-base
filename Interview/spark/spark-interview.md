@@ -40,3 +40,18 @@
 
 ### Spark task原理 
 
+### 状态管理
+
+   1. updateStateByKey 不适合大数据量下 的计算，可以采用Redis 或者alluxio，
+   2. key超时，如何清空，来节约内存
+        
+   3. 初始状态
+
+对于状态的算子一定要开启checkpoint，即指定checkpoint 目录即可，
+```
+ssc.checkpoint("/opt/checkpoint")
+```
+checkpoint 的频率
+5 - 10 个滑动窗口，进行一次checkpoint，
+
+

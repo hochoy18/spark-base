@@ -1,8 +1,11 @@
 package com.hochoy.spark.streaming
 
+import java.util.Properties
+
 import kafka.common.TopicAndPartition
 import kafka.message.MessageAndMetadata
 import kafka.serializer.{DefaultDecoder, StringDecoder}
+import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.spark.SparkConf
 import org.apache.spark.streaming.dstream.InputDStream
 import org.apache.spark.streaming.kafka.KafkaUtils
@@ -61,5 +64,17 @@ object KafkaOffsetTest {
     ssc.start()
     ssc.awaitTermination()
   }
+//  def getLastOffsets(kafkaParams:Map[String,Object],topics: String):Map[TopicAndPartition,Long] = {
+//    import scala.collection.JavaConverters._
+//
+//    val prop = new Properties()
+//    prop.putAll(kafkaParams.asJava)
+//
+//    val consumer = new KafkaConsumer[String,String](prop)
+//    consumer.subscribe(topics)
+//
+//
+//  }
+
 
 }

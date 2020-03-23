@@ -33,3 +33,13 @@
    - LSO：是 LastStableOffset 的简称，对未完成的事务而言，LSO 的值等于事务中第一条消息的位置(firstUnstableOffset)，对已完成的事务而言，它的值同 HW 相同
    - LW：Low Watermark 低水位, 代表 AR 集合中最小的 logStartOffset 值。
 
+- Offsets and Consumer Position  and committed offset
+对于分区中的每条记录，kafka维护一个数值偏移量。这个偏移量是分区中一条记录的唯一标识，同时也是消费者在分区中的位置。例如，一个消费者在分区中的position是5，表示  
+   - 它已经消费了偏移量从0到4的记录，
+   - 接下来它将消费偏移量为5的记录。  
+   相对于消费者用户来说，这里实际上有两个位置的概念。
+消费者的position表示下一条将要消费的记录的offset。每次消费者通过调用poll(long)接收消息的时候这个position会自动增加。
+committed position表示已经被存储的最后一个偏移量。
+   - 消费者可以自动的周期性提交offsets，
+   - 也可以通过调用提交API(e.g. commitSync and commitAsync)手动的提交position。  
+committed offset :表示已经提交过的消费位移

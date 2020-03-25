@@ -1,4 +1,4 @@
-package com.hochoy.leetcode.basic.algorithm;
+package com.hochoy.leetcode.basic.algorithm.tree;
 
 public class BinarySortTree {
     public static void main(String[] args) {

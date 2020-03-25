@@ -15,14 +15,15 @@ public class Solution {
 
     public boolean isUnique(String astr) {
         char[] chars = astr.toCharArray();
-        for (int i = 0; i < chars.length -1; i++) {
+        for (int i = 0; i < chars.length - 1; i++) {
             for (int i1 = i + 1; i1 < chars.length; i1++) {
-                if (chars[i] == chars[i1]){
+                if (chars[i] == chars[i1]) {
                     return false;
                 }
             }
         }
         return true;
     }
+
 
 }

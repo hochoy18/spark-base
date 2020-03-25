@@ -62,11 +62,13 @@
 -  Kafka 是如何做到消息的有序性
    - kafka 中的每个 partition 中的消息在写入时都是有序的，而且单独一个 partition 只能由一个消费者去消费，可以在里面保证消息的顺序性。但是分区之间的消息是不保证有序的。
 
+
 - ISR、OSR、AR 是什么
    - ISR：In-Sync Replicas 副本同步队列
    - OSR：Out-of-Sync Replicas
    - AR：Assigned Replicas 所有副本  
     ISR是由leader维护，follower从leader同步数据有一些延迟（具体可以参见 图文了解 Kafka 的副本复制机制），超过相应的阈值会把 follower 剔除出 ISR, 存入OSR（Out-of-Sync Replicas ）列表，新加入的follower也会先存放在OSR中。AR=ISR+OSR。
+
 
 - LEO、HW、LSO、LW等分别代表什么
    - LEO：是 LogEndOffset 的简称，代表当前日志文件中下一条
@@ -75,17 +77,65 @@
    - LW： Low Watermark 低水位, 代表 AR 集合中最小的 logStartOffset 值。
 
 
+
  -  在什么情况下会出现消息丢失
    - auto.commit.enable=true，消费端自动提交offset设置为true，当消费者拉到消息之后，还没有处理完 commit interval 提交间隔就到了，提交了offersets。这时consummer又挂了，重启后，从下一个offersets开始消费，之前的消息丢失了。
    - 网络负载高、磁盘很忙，写入失败，又没有设置消息重试，导致数据丢失。
    - 磁盘坏了已落盘数据丢失。
    - 单 批 数 据 的 长 度 超 过 限 制 会 丢 失 数 据 ， 报kafka.common.Mess3.ageSizeTooLargeException异常
 
+
 - Kafka 数据丢失分析和解决方案
 https://blog.csdn.net/dec_sun/article/details/89075211
 
+
 - 消费者和消费者组的关系：
 
+
+- Kafka 的每个分区只能被一个消费者线程，如何做到多个线程同时消费一个分区？
+https://www.iteblog.com/archives/2551.html
+
+- Kafka 数据传输的事务级别
+   - at-most-once：消息不会被重复发送，最多被传输一次，但也有可能一次不传输
+   - at-least-once：消息不会被漏发送，最少被传输一次，但也有可能被重复传输.
+   - exactly-once：不会漏传输也不会重复传输,每个消息都被传输
+
+
+- Kafka 幂等性介绍 TODO
+   - 幂等性的定义：对接口的多次调用所产生的结果和调用一次是一致的。幂等可以保证上生产者发送的消息，不会丢失，而且不会重复
+   - 如何实现幂等  
+   实现幂等的关键点就是服务端可以区分请求是否重复，过滤掉重复的请求。要区分请求是否重复的有两点：
+      - 唯一标识：要想区分请求是否重复，请求中就得有唯一标识。例如支付请求中，订单号就是唯一标识
+      - 记录下已处理过的请求标识：光有唯一标识还不够，还需要记录下哪些请求是已经处理过的，这样当收到新的请求时，用新请求中的标识和处理记录进行比较，
+      如果处理记录中有相同的标识，说明是重复交易，拒绝掉。
+   - 幂等的实现原理  
+   为了实现Producer的幂等性，Kafka引入了Producer ID（即PID）和Sequence Number
+      - PID。每个新的Producer在初始化的时候会被分配一个唯一的PID，这个PID对用户是不可见的。
+      - Sequence Number ：对于每个PID，该Producer发送数据的每个<Topic, Partition>都对应一个从0开始单调递增的Sequence Number  
+   Kafka可能存在多个生产者，会同时产生消息，但对Kafka来说，只需要保证每个生产者内部的消息幂等就可以了，所有引入了PID来标识不同的生产者。  
+   对于Kafka来说，要解决的是生产者发送消息的幂等问题。也即需要区分每条消息是否重复。
+   Kafka通过为每条消息增加一个Sequence Number，通过Sequence Number来区分每条消息。每条消息对应一个分区，不同的分区产生的消息不可能重复。
+   所有Sequence Number对应每个分区
+   Broker端在缓存中保存了这seq number，对于接收的每条消息，如果其序号比Broker缓存中序号大于1则接受它，否则将其丢弃。这样就可以实现了消息重复提交了。
+   但是，只能保证单个Producer对于同一个<Topic, Partition>的Exactly Once语义。不能保证同一个Producer一个topic不同的partition幂等。
+   
+    
+
+
+
+- [对 Kafka 事务的理解](http://www.jasongj.com/kafka/transaction/)
+   - 提供事务机制的必要性：
+      - exactly-once
+      - 操作的原子性：多个操作要么全部成功要么全部失败，不存在部分成功部分失败的可能
+         - 操作结果更可控，有助于提升数据一致性
+         - 便于故障恢复。因为操作是原子的，从故障中恢复时只需要重试该操作（如果原操作失败）或者直接跳过该操作（如果原操作成功），
+         而不需要记录中间状态，更不需要针对中间状态作特殊处理
+      - 有状态操作的可恢复性
+   - 实现事务机制的步骤
+      - 幂等性发送
+      - 事务性的保证
+      
+   - 事务机制的原理       
 
 
 - Offsets and Consumer Position  and committed offset

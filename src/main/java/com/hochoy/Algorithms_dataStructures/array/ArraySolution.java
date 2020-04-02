@@ -11,7 +11,8 @@ public class ArraySolution {
 
 
         int[] nums = {-1, 0, 1, 2, -1, -4};
-        solution.threeSum(nums);
+        List<List<Integer>> lists = solution.threeSum(nums);
+        System.out.println(lists);
 
       /* int [] nums = {2, 7, 11, 7};
        int target = 14;

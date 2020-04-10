@@ -15,9 +15,10 @@ object KafkaOffsetTest {
   //nc -l -p 9999
   def main(args: Array[String]): Unit = {
     val sparkConf = new SparkConf()
-    sparkConf.setMaster("local[2]")
+      .setMaster("local[2]")
       .setAppName("test")
-      .set("spark.serializer","org.apache.spark.serializer.KryoSerializer")
+      .set("spark.serializer",classOf[org.apache.spark.serializer.KryoSerializer].getName)
+
 
 
     val ssc = new StreamingContext(sparkConf, Seconds(10))

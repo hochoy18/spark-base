@@ -15,7 +15,7 @@ public class KafkaProducerAnalysis {
 
     private static final Logger logger = LoggerFactory.getLogger(KafkaProducerAnalysis.class);
 
-    static int MSG_SIZE = (int)1e6;
+    static int MSG_SIZE = (int)1e2;
     static ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     static CountDownLatch countDownLatch = new CountDownLatch(MSG_SIZE);
 

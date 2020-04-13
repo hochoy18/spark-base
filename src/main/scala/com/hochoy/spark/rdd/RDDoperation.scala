@@ -2,6 +2,7 @@ package com.hochoy.spark.rdd
 
 import com.hochoy.spark.utils.SparkUtils
 import com.hochoy.utils.BitmapUtils
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.roaringbitmap.RoaringBitmap
 
@@ -21,6 +22,7 @@ object RDDoperation {
 //  sc.setLogLevel("WARN")
 
   def main(args: Array[String]): Unit = {
+    joinDependency1
     //    sumdef
 //    aggregateTest
     //    groupByKeyTest
@@ -28,7 +30,7 @@ object RDDoperation {
     //    joinDependency
 //    combineByKeyTest
 //    sortBy
-    unionTest
+//    unionTest
   }
 
   val score = List(
@@ -282,34 +284,61 @@ object RDDoperation {
   }
 
   def joinDependency1(): Unit = {
-    //https://www.cnblogs.com/wbh1000/p/9827344.html
-    val userPath = "";
-    val logPath = "";
-    val userRdd = sc.textFile(userPath).map(x ⇒ (x.split("\t")(0), x.split("\t")(1)))
-    val userMapBroadCast = sc.broadcast(userRdd.collectAsMap())
-    val searchLogRdd = sc.textFile(logPath).mapPartitionsWithIndex((index, f) ⇒ {
-      val userMap = userMapBroadCast.value
-      var result = ArrayBuffer[(String)]();
-      var count = 0
-      f.foreach(log ⇒ {
-        count = count + 1
-        val lineArrs = log.split("\t")
-        val uid = lineArrs(1)
-        val newLine: StringBuilder = new StringBuilder
-        if (userMap.contains(uid)) {
-          newLine.append(lineArrs(0)).append("\t")
-          newLine.append(lineArrs(1)).append("\t")
-          newLine.append(userMap.get(uid).get).append("\t")
-          for (i <- 2 to lineArrs.length - 1) {
-            newLine.append(lineArrs(i)).append("\t")
-          }
+
+    //部分人信息(身份证,姓名)
+    val people_rdd = sc.parallelize(Array(("110","lsw"),("222","yyy"))).cache()
+//    val people_info: collection.Map[String, String] = people_rdd.collectAsMap()
+
+    //全国的学生详细信息(身份证,学校名称,学号...)
+    val student_all: RDD[(String, (String, String))] = sc.parallelize(
+      Array(("110",( "s1", "211")),
+      ("111", ("s2", "222")),
+      ("112", ("s3", "233")),
+      ("113", ("s2", "244"))))
+
+    val join: RDD[(String, ((String, String), String))] = student_all.join(people_rdd)
+    join.foreach(println)
+
+    people_rdd.join(student_all).foreach(println)
+
+
+    // broadcast
+
+    val people_info: collection.Map[String, String] = people_rdd.collectAsMap()
+
+    val bd: Broadcast[collection.Map[String, String]] = sc.broadcast(people_info)
+    /**
+      * 使用mapPartition而不是用map，减少创建broadCastMap.value的空间消耗
+      * 同时匹配不到的数据也不需要返回（）
+      * */
+    val join1: RDD[(String, (String, String), String)] = student_all.mapPartitions(p => {
+      val people: collection.Map[String, String] = bd.value
+      val arrayBuffer = ArrayBuffer[(String, (String, String), String)]()
+
+      p.foreach(e => {
+        if (people.contains(e._1)) {
+          arrayBuffer.+=((e._1, e._2, people(e._1)))
         }
-        result.+(newLine.toString())
       })
-      println("partition_" + index + "处理的行数为：" + count)
-      result.iterator
+      arrayBuffer.iterator
     })
-    searchLogRdd.collect().foreach(println)
+    println("-----------------------")
+    join1.foreach(println)
+    println("-----------------------")
+
+    val res1 =  student_all.mapPartitions(it =>{
+      val people: collection.Map[String, String] = bd.value
+      for{
+        e <- it
+        if(people.contains(e._1))
+      } yield (e._1, e._2,people(e._1))
+    })
+
+
+    res1.foreach(println)
+
+
+    Thread.sleep(1000 * 60 )
 
   }
   def combineByKeyTest():Unit={

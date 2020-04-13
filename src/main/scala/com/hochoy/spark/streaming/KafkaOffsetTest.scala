@@ -7,9 +7,11 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.dstream.InputDStream
-import org.apache.spark.streaming.kafka010.{ConsumerStrategies, KafkaUtils, LocationStrategies}
+import org.apache.spark.streaming.kafka010._
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import com.hochoy.spark.utils.EnhancedMethods._
+
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 object KafkaOffsetTest {
 
@@ -46,6 +48,8 @@ object KafkaOffsetTest {
     val dStream: InputDStream[ConsumerRecord[String, String]] = KafkaUtils.createDirectStream(
       ssc, LocationStrategies.PreferConsistent, ConsumerStrategies.Subscribe[String, String](topics, kafkaParams))
 
+    val list = ListBuffer[(String,Int,Long,Long)]()
+
     dStream.foreachRDD(rdd => {
       if (!rdd.isEmpty()) {
 
@@ -70,11 +74,18 @@ object KafkaOffsetTest {
         res0.collect().foreach(e => printf("action : %s,productId : %s , deviceId : %s ,userId:  %s sessionId : %s, serverTime : %s , is_update : %s%n"
           , e._1,e._2,e._3,e._4,e._5,e._6,e._7))
 
+        val offsetRanges: Array[OffsetRange] = rdd.asInstanceOf[HasOffsetRanges].offsetRanges
 
-
+        offsetRanges.foreach(range => {
+          list.append((range.topic,range.partition,range.fromOffset,range.untilOffset))
+        })
+        println("\n\n")
+        list.toList.foreach(r => printf("offsetRanges  ：  %s ",r))
       }
 
     })
+
+
 
 //    dStream.foreachRDD(p => {
 //      p.collect().foreach(e => println("xx" + e.key() + "\n" + e.value()))

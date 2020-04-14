@@ -20,3 +20,7 @@ The Spark cluster mode overview explains the key concepts in running on a cluste
 - [**Apache Mesos**](http://spark.apache.org/docs/latest/running-on-mesos.html)
 - [**Hadoop YARN**](http://spark.apache.org/docs/latest/running-on-yarn.html)
 - [**Kubernetes**](http://spark.apache.org/docs/latest/running-on-kubernetes.html)
+
+
+[Spark运行原理【史上最详细】](https://blog.csdn.net/lovechendongxing/article/details/81746988)
+[Spark核心技术原理透视一（Spark运行原理）](https://www.sohu.com/a/217196727_100065429)

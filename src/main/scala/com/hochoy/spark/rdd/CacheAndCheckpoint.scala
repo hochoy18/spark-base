@@ -25,11 +25,20 @@ object CacheAndCheckpoint {
       ("math", 100), ("hadoop", 34),
       ("hbase", 200))
     val rdd1 = sc.makeRDD(score,2).groupByKey()
-    rdd1.checkpoint()
+//    rdd1.checkpoint()
+    rdd1.persist(StorageLevel.MEMORY_ONLY_2)
+    rdd1.localCheckpoint()
+//        rdd1.foreach(println)
+//    rdd1.take(1).foreach(println)
+
+
+
+
+
+
     rdd1.foreach(println)
     println("------------------------")
 
-    rdd1.persist(StorageLevel.MEMORY_ONLY_2)
     val avg = rdd1.map(e=>(e._1,e._2.sum / e._2.size))
     val total = rdd1.map(e=>(e._1,e._2.sum))
 

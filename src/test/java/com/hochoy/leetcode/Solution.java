@@ -2,6 +2,8 @@ package com.hochoy.leetcode;
 
 import org.junit.Test;
 
+import java.util.Stack;
+
 public class Solution {
 
 
@@ -156,7 +158,7 @@ public class Solution {
     public void merge(int[] A, int m, int[] B, int n) {
         for (int b = 0; b < n; b++) {
 
-            for (int a = 0; a < m ; a++) {
+            for (int a = 0; a < m; a++) {
 
                 if (B[b] < A[a]) {
 
@@ -164,7 +166,7 @@ public class Solution {
 
                     System.arraycopy(A, a, res, 0, m - n - a);
 
-                    System.arraycopy(res,0,A,a+1, m-n-a);
+                    System.arraycopy(res, 0, A, a + 1, m - n - a);
 
 
                 }
@@ -180,10 +182,9 @@ public class Solution {
     }
 
 
-
     @Test
-    public void removeElement(){
-        int[] nums = {0,1,2,2,3,0,4,2};
+    public void removeElement() {
+        int[] nums = {0, 1, 2, 2, 3, 0, 4, 2};
         int val = 2;
         int i = removeElement(nums, val);
         System.out.println(i);
@@ -194,9 +195,71 @@ public class Solution {
         int count = 0;
         for (int i = 0; i < nums.length; i++) {
             if (nums[i] != val)
-                count ++;
+                count++;
         }
 
         return count;
+    }
+
+    class ListNode {
+        int val;
+        ListNode next;
+
+        ListNode(int x) {
+            val = x;
+        }
+    }
+
+    @Test
+    public void addTwoNumbers() {
+        ListNode l11 = new ListNode(7);
+        ListNode l12 = new ListNode(2);
+        ListNode l13 = new ListNode(4);
+        ListNode l14 = new ListNode(3);
+        l13.next = l14;
+        l12.next = l13;
+        l11.next = l12;
+
+
+        ListNode l21 = new ListNode(5);
+        ListNode l22 = new ListNode(6);
+        ListNode l23 = new ListNode(4);
+        l22.next = l23;
+        l21.next = l22;
+        addTwoNumbers(l11, l21);
+    }
+
+    public ListNode addTwoNumbers(ListNode l1, ListNode l2) {
+
+        Stack<ListNode> reverse = reverse(l1);
+        Stack<ListNode> reverse1 = reverse(l2);
+        reverse.pop();
+        reverse.size();
+        for (ListNode listNode : reverse) {
+            System.out.println(listNode.val);
+        }
+        for (ListNode listNode : reverse1) {
+            System.out.println(listNode.val);
+        }
+        return null;
+    }
+
+    public Stack<ListNode> reverse(ListNode node) {
+        Stack<ListNode> stack = new Stack();
+        if (null == node)
+            return null;
+        if (null == node.next)
+            stack.push(node);
+        else {
+            ListNode tmp = node;
+            while (null != tmp) {
+                stack.push(tmp);
+                tmp = tmp.next;
+
+            }
+        }
+
+
+        return stack;
     }
 }

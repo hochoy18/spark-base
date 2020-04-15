@@ -1,14 +1,14 @@
-checkpoint 的使用和源码说明：
-[spark checkpoint流程分析](https://zhuanlan.zhihu.com/p/87115691)
-[Spark之localCheckpoint](https://zhuanlan.zhihu.com/p/87983748)
-[深入浅出Spark的Checkpoint机制](https://blog.csdn.net/m0_37803704/article/details/86243241?depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-3&utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-3)
- 
- ### checkpoint 使用
+
+## Spark checkpoint 详述
+
+ *本文基于 spark2.4.4 版本进行分析，如有刊误望告之，求指教*
+
+### 使用
  
  
  - step1 设置checkpoint 目录  
 ```
-sc.setCheckpointDir("hdfs://tdhtest01:8020/tmp/hc")
+sc.setCheckpointDir("hdfs://hadoop01:8020/tmp/hc")
 ```
  
 - step2 调用 RDD#checkpoint()方法  
@@ -23,8 +23,8 @@ sc.setCheckpointDir("hdfs://tdhtest01:8020/tmp/hc")
 ```
  
  
- ### 原理：
- step3 触发action 时会调用 rdd.doCheckpoint() 函数
+ ### 原理
+ 触发 action 时会调用 rdd.doCheckpoint() 函数
  ```
   /**
    * Run a function on a given set of partitions in an RDD and pass the results to the given
@@ -71,13 +71,18 @@ cpState ：关联RDD的checkpoint 状态
 cpRDD ：显然，这个就是被 Checkpoint 的 RDD 的数据  
 checkpoint()：物化RDD 以及持久化RDD的内容，并且在RDD 首次触发action 之后就会调用。checkpoint完成的最后，标记cpStatus为Checkpointed，并在markCheckpointed中清除依赖关系  
 ```
-           // Update our state and truncate the RDD lineage
-           RDDCheckpointData.synchronized {
-             cpRDD = Some(newRDD)
-             cpState = Checkpointed
-             rdd.markCheckpointed()
-           }
-``` 
+  final def checkpoint(): Unit = {
+  
+    ......
+  
+    // Update our state and truncate the RDD lineage
+    RDDCheckpointData.synchronized {
+      cpRDD = Some(newRDD)
+      cpState = Checkpointed
+      rdd.markCheckpointed()
+    }
+  }
+```
 
 doCheckpoint(): CheckpointRDD[T] ：物化RDD 和持久化RDD 内容的具体实现
 
@@ -151,9 +156,6 @@ markCheckpointed:清除依赖关系
 
 
 
-
-
-
 #### LocalRDDCheckpointData
 
 
@@ -167,7 +169,7 @@ markCheckpointed:清除依赖关系
 
 ```
 
-    sc.setCheckpointDir("hdfs://tdhtest01:8020/tmp/hochoy")
+    sc.setCheckpointDir("hdfs://hadoop01:8020/tmp/hochoy")
     val rdd1 = sc.parallelize(score,2).groupByKey()
     rdd1.localCheckpoint()
     rdd1.foreach(println)
@@ -405,3 +407,11 @@ RDD#runJob
 				new LocalCheckpointRDD[T](rdd)
    				
 ```
+
+
+
+### 参考文献
+- [1] [spark checkpoint流程分析](https://zhuanlan.zhihu.com/p/87115691)  
+- [2] [Spark之localCheckpoint](https://zhuanlan.zhihu.com/p/87983748)  
+- [3] [深入浅出Spark的Checkpoint机制](https://blog.csdn.net/m0_37803704/article/details/86243241?depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-3&utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-3)
+ 

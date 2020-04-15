@@ -4,15 +4,23 @@ checkpoint 的使用和源码说明：
 [深入浅出Spark的Checkpoint机制](https://blog.csdn.net/m0_37803704/article/details/86243241?depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-3&utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromBaidu-3)
  
  ### checkpoint 使用
- //使用：step1 设置checkpoint 目录
- sc.setCheckpointDir("hdfs://tdhtest01:8020/tmp/hc")
  
- // step2 调用 RDD#checkpoint()方法
- val rdd1 = sc.parallelize(score,2).groupByKey().map(e=>(e._1,e._2.sum / e._2.size))
- rdd1.checkpoint()
  
- // step3 触发action
+ - step1 设置checkpoint 目录  
+```
+sc.setCheckpointDir("hdfs://tdhtest01:8020/tmp/hc")
+```
+ 
+- step2 调用 RDD#checkpoint()方法  
+```
+  val rdd1 = sc.parallelize(score,2).groupByKey().map(e=>(e._1,e._2.sum / e._2.size))  
+  rdd1.checkpoint()
+```
+ 
+- step3 触发action
+```
  rdd1.foreach(println)
+```
  
  
  ### 原理：
@@ -49,19 +57,19 @@ checkpoint 的使用和源码说明：
 
 ```
 
-主要看 RDD#doCheckpoint() 中的  checkpointData.get.checkpoint() checkpointData.get 返回一个 RDDCheckpointData对象，该对象有两个子类 LocalRDDCheckpointData 和  ReliableRDDCheckpointData
+主要看 RDD#doCheckpoint() 中的  checkpointData.get.checkpoint() ,  checkpointData.get 返回一个 RDDCheckpointData对象，该对象有两个子类 LocalRDDCheckpointData 和  ReliableRDDCheckpointData  
 
 再来看一下 RDDCheckpointData 类 及其两个子类：LocalRDDCheckpointData 和  ReliableRDDCheckpointData
 
 
 #### RDDCheckpointData
 
-RDDCheckpointData：此类包含与RDD检查点相关的所有信息。 这个类的每个实例都与一个RDD相关联。 它管理相关RDD的检查点过程，并通过提供更新的分区来管理检查点后的状态，检查点RDD的迭代器和首选位置。
-通俗的说就是保存 要 checkpoint 的RDD 的checkpoint 元数据信息
-其主要属性和方法如下：
-cpState ：关联RDD的checkpoint 状态
-cpRDD ：显然，这个就是被 Checkpoint 的 RDD 的数据
-    checkpoint()：物化RDD 以及持久化RDD的内容，并且在RDD 首次触发action 之后就会调用。checkpoint完成的最后，标记cpStatus为Checkpointed，并在markCheckpointed中清除依赖关系
+RDDCheckpointData：此类包含与RDD检查点相关的所有信息。 这个类的每个实例都与一个RDD相关联。 它管理相关RDD的检查点过程，并通过提供更新的分区来管理检查点后的状态，检查点RDD的迭代器和首选位置。  
+通俗的说就是保存 要 checkpoint 的RDD 的checkpoint 元数据信息  
+其主要属性和方法如下：  
+cpState ：关联RDD的checkpoint 状态  
+cpRDD ：显然，这个就是被 Checkpoint 的 RDD 的数据  
+checkpoint()：物化RDD 以及持久化RDD的内容，并且在RDD 首次触发action 之后就会调用。checkpoint完成的最后，标记cpStatus为Checkpointed，并在markCheckpointed中清除依赖关系  
 ```
            // Update our state and truncate the RDD lineage
            RDDCheckpointData.synchronized {
@@ -131,7 +139,8 @@ private[spark] abstract class RDDCheckpointData[T: ClassTag](@transient private 
   }
 ```
 
-markCheckpointed:清楚依赖关系
+markCheckpointed:清除依赖关系
+
 ```
   private[spark] def markCheckpointed(): Unit = {
     clearDependencies()
@@ -147,13 +156,15 @@ markCheckpointed:清楚依赖关系
 
 #### LocalRDDCheckpointData
 
-LocalRDDCheckpointData：
-   - 首先要求必须支持disk存储
-   - 其次囿于某些action的限制，例如take等，并没有触发所有分区的转换。这样对于那些未经计算的RDD分区需要重新生成。
+
+- LocalRDDCheckpointData：
+   - 首先要求必须支持disk存储（其实在 RDDlocalCheckpoint() 就已经被强制设置成disk了）
+   - 其次囿于某些action的限制，例如take等，并没有触发所有分区的转换。这样对于那些未经计算的RDD分区需要重新生成。（待定TODO）
    最终交付的是一个根据该RDD新生成的 LocalCheckpointRDD。
 
 
-触发：
+- 触发：
+
 ```
 
     sc.setCheckpointDir("hdfs://tdhtest01:8020/tmp/hochoy")
@@ -164,7 +175,8 @@ LocalRDDCheckpointData：
 ```
 
 
-LocalRDDCheckpointData#doCheckpoint()：没有写到 文件系统的 操作
+- LocalRDDCheckpointData#doCheckpoint()：没有写到 文件系统的 操作  
+
 ```
 
   /**
@@ -193,8 +205,9 @@ LocalRDDCheckpointData#doCheckpoint()：没有写到 文件系统的 操作
 
 ```
 
-RDD#localCheckpoint() 代码
+- RDD#localCheckpoint() 代码  
 其中 有 persist 的操作
+
 ```
 
   /**
@@ -272,6 +285,7 @@ ReliableRDDCheckpointData：就是把 RDD Checkpoint 到可依赖的文件系统
 
 
 RDD#doCheckpoint()
+
 ```
   /**
    * Performs the checkpointing of this RDD by saving this. It is called after a job using this RDD
@@ -328,13 +342,14 @@ checkpointData.get.checkpoint()
   }
 ```
 
-在改方法中我们主要看  ```val newRDD = doCheckpoint()```,以及当 RDDCheckpointData 是ReliableRDDCheckpointData时，该方法的实际实现，
+在改方法中我们主要看  *val newRDD = doCheckpoint()*,以及当 RDDCheckpointData 是ReliableRDDCheckpointData时，该方法的实际实现，
 方法中第一行及为将 rdd 以文件形式写入 checkpoint 目录。
 ReliableCheckpointRDD.writeRDDToCheckpointDirectory() 方法的注释：
-```Write RDD to checkpoint files and return a ReliableCheckpointRDD representing the RDD.```
+*Write RDD to checkpoint files and return a ReliableCheckpointRDD representing the RDD.*
 
 
-ReliableRDDCheckpointData#doCheckpoint() 
+ReliableRDDCheckpointData#doCheckpoint()  
+
 ```
   /**
    * Materialize this RDD and write its content to a reliable DFS.
@@ -358,13 +373,13 @@ ReliableRDDCheckpointData#doCheckpoint()
 
 #### 调用栈
 
+以 take 算子为例(其他算子一样)：  
 
-以 take 算子为例(其他算子一样)：
+- ReliableRDDCheckpointData  的调用栈 
 
-- ReliableRDDCheckpointData  的调用栈  
 ```
 RDD#checkpoint()
-	checkpointData = Some(new ReliableRDDCheckpointData(this))
+    checkpointData = Some(new ReliableRDDCheckpointData(this))
 RDD#runJob
 	RDD#doCheckpoint()
 		RDDCheckpointData#checkpoint()
@@ -378,6 +393,7 @@ RDD#runJob
 	
 	
 - LocalRDDCheckpointData 的调用栈  
+
 ```
 RDD#localCheckpoint()
 	RDD#persist(LocalRDDCheckpointData.DEFAULT_STORAGE_LEVEL)

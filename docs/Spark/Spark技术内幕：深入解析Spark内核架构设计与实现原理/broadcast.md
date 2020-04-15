@@ -1,19 +1,20 @@
-### Broadcast原理
+### 浅析 Broadcast
 
-主要有三种对象 BroadcastManager、BroadcastFactory 和 Broadcast，
-BroadcastManager 负责Broadcast的全局管理，
-BroadcastFactory 负责创建或取消Broadcast，
-Broadcast为实际的一次广播操作。
+- 主要有三种对象 BroadcastManager、BroadcastFactory 和 Broadcast  
+   - [BroadcastManager](#2) 负责Broadcast的全局管理
+   - [BroadcastFactory](#3) 负责创建或取消Broadcast
+   - [Broadcast](#1) 为实际的一次广播操作  
  
-BroadcastManager 是 BroadcastFactory 的封装，负责了BroadcastFactory从初始化到 stop 的整个生命周期。
-- 初始化阶段，会初始化一个 TorrentBroadcastFactory 工厂对象， 并initialized 设置为 true
-- 在运行期间，它会调用BroadcastFactory的```newBroadcast```方法和```unbroadcast```方法来控制变量的广播，每次广播有递增的唯一ID```nextBroadcastId```
-- 最后它还负责了BroadcastFactory的关闭。
+ 
+- BroadcastManager 是 BroadcastFactory 的封装，负责了BroadcastFactory从初始化到 stop 的整个生命周期。
+   - 初始化阶段，会初始化一个 TorrentBroadcastFactory 工厂对象， 并initialized 设置为 true
+   - 在运行期间，它会调用BroadcastFactory的```newBroadcast```方法和```unbroadcast```方法来控制变量的广播，每次广播有递增的唯一ID```nextBroadcastId```
+   - 最后它还负责了 BroadcastFactory 的关闭。
 
 
-#### Broadcast
+####  <span id = "1"> Broadcast</span>
 - TorrentBroadcast 的原理
-``` 
+```
 /**
  * A BitTorrent-like implementation of [[org.apache.spark.broadcast.Broadcast]].
  *
@@ -36,9 +37,9 @@ BroadcastManager 是 BroadcastFactory 的封装，负责了BroadcastFactory从�
  * @param id A unique identifier for the broadcast variable.
  */
 ```
-机制如下：
-Driver 将序列化对象划分为小块，并将这些小块存储在 Driver 的BlockManager中。  
-在每个 executor 上，executor首先尝试从其BlockManager获取被广播对象。如果不存在，则使用远程抓取从Driver和/或其他executor（如果可用）中获取广播对象。一旦获取了广播对象，它就会将块放在自己的BlockManager中，准备好让其他executor从中获取。
+- 机制如下
+   - Driver 将序列化对象划分为小块，并将这些小块存储在 Driver 的BlockManager中。  
+   - 在每个 executor 上，executor首先尝试从其BlockManager获取被广播对象。如果不存在，则使用远程抓取从Driver和/或其他executor（如果可用）中获取广播对象。一旦获取了广播对象，它就会将块放在自己的BlockManager中，准备好让其他executor从中获取。
 
 
 - 这段注释说明了TorrentBroadcast实现的原理，其中关键的部分在于利用BlockManager的分布式结构来储存和获取数据块。  
@@ -55,9 +56,9 @@ Driver 将序列化对象划分为小块，并将这些小块存储在 Driver �
 
 
 
-- [Broadcast 就是将数据从一个节点发送到其他各个节点上去](http://ddrv.cn/a/247828)  
+- Broadcast 就是将数据从一个节点发送到其他各个节点上去 [](http://ddrv.cn/a/247828)  
    - Driver 端：    
-      - Driver 先把 data 序列化到 byteArray，然后切割成 BLOCK_SIZE（由 ```spark.broadcast.blockSize = 4MB``` 设置）大小的 data block。
+      - Driver 先把 data 序列化到 byteArray，然后切割成 BLOCK_SIZE（由 ```spark.broadcast.blockSize = 4MB```设置）大小的 data block。
       - 完成分块切割后，就将分块信息（称为 meta 信息）存放到 driver 自己的 blockManager 里面，StorageLevel 为内存＋磁盘(MEMORY_AND_DISK)，
       - 同时会通知 driver 自己的 blockManagerMaster 说 meta 信息已经存放好。
       - **通知 blockManagerMaster 这一步很重要，因为 blockManagerMaster 可以被 driver 和所有 executor 访问到，信息被存放到 blockManagerMaster 就变成了全局信息。** 
@@ -71,7 +72,7 @@ Driver 将序列化对象划分为小块，并将这些小块存储在 Driver �
 
 
 
-####  <span id = "1"> BroadcastManager </span>
+####  <span id = "2"> BroadcastManager </span>
 BroadcastManager用于将配置信息和序列化后的RDD、Job及ShuffleDependency等信息在本地存储。如果为了容灾，也会复制到其他节点上。创建BroadcastManager的代码实现如下。
 ~~~
     // BroadcastManager是用来管理Broadcast，该对象在SparkEnv中创建
@@ -102,6 +103,7 @@ BroadcastManager在其初始化的过程中就会调用自身的initialize方法
 - 最后将BroadcastManager自身标记为初始化完成状态。
 
 BroadcastManager中的三个方法
+
 ```
   def stop() {
     broadcastFactory.stop()
@@ -116,6 +118,7 @@ BroadcastManager中的三个方法
   }
 
 ```
+
 BroadcastManager的三个方法都分别代理了TorrentBroadcastFactory的对应方法
 
 
@@ -123,7 +126,7 @@ BroadcastManager的三个方法都分别代理了TorrentBroadcastFactory的对�
 
 
 
-#### BroadcastFactory
+####  <span id = "3">BroadcastFactory</span>
 
 BroadcastFactory 作为一个工厂类 在 BroadcastManager 中被初始化，目前只有 TorrentBroadcastFactory 一个实现类。
  
@@ -131,7 +134,7 @@ BroadcastFactory 在 BroadcastManager 中 以成员变量的方式被声明
 ```
     private var broadcastFactory: BroadcastFactory = null
 ```
-在 BroadcastManager#initialize()中以 TorrentBroadcastFactory被初始化，可参见 BroadcastManager 的[initialize()](#1) 方法
+在 BroadcastManager#initialize()中以 TorrentBroadcastFactory被初始化，可参见 BroadcastManager 的[initialize()](#2) 方法
  
 ```
   private def initialize() {
@@ -140,11 +143,13 @@ BroadcastFactory 在 BroadcastManager 中 以成员变量的方式被声明
     ...
   }
 ```
+
 trait BroadcastFactory 有 四个方法，其功能分别是：
 - 初始化(initialize)
 - 广播一个新的变量(newBroadcast)
 - 删除一个已有的变量(unbroadcast) 
 - 关闭BroadcastFactory (关闭)
+
 ```
 private[spark] trait BroadcastFactory {
 
@@ -165,8 +170,3 @@ private[spark] trait BroadcastFactory {
 }
 
 ```
-
-
-
-
-

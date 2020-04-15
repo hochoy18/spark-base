@@ -362,6 +362,7 @@ ReliableRDDCheckpointData#doCheckpoint()
 以 take 算子为例(其他算子一样)：
 
 - ReliableRDDCheckpointData  的调用栈  
+```
 RDD#checkpoint()
 	checkpointData = Some(new ReliableRDDCheckpointData(this))
 RDD#runJob
@@ -370,11 +371,14 @@ RDD#runJob
 			RDDCheckpointData#doCheckpoint()
 				ReliableRDDCheckpointData#doCheckpoint()
 					val newRDD = ReliableCheckpointRDD.writeRDDToCheckpointDirectory(rdd, cpDir)
+
+```
 			
 	
 	
 	
 - LocalRDDCheckpointData 的调用栈  
+```
 RDD#localCheckpoint()
 	RDD#persist(LocalRDDCheckpointData.DEFAULT_STORAGE_LEVEL)
 	checkpointData = Some(new LocalRDDCheckpointData(this))
@@ -383,3 +387,5 @@ RDD#runJob
 		RDDCheckpointData#checkpoint()
 			LocalRDDCheckpointData#doCheckpoint()
 				new LocalCheckpointRDD[T](rdd)
+   				
+```

@@ -1,9 +1,8 @@
 package com.hochoy.test;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import org.junit.Test;
+
+import java.util.*;
 
 public class JavaTest {
 
@@ -37,5 +36,32 @@ public class JavaTest {
         }
         newCmd.addAll(cmd);
         return newCmd;
+    }
+
+
+    @Test
+    public void  arrayListTest(){
+
+        List<String> list = new ArrayList();
+        System.out.println(list);
+        list.add(null);
+        list.add(null);
+        list.add(null);
+        System.out.println(list);
+
+        String[] arr = {null,null,null};
+        for (String s : arr) {
+            System.out.println(s);
+        }
+
+        List<String> list1 = new LinkedList<>();
+        list1.add(null);
+        list1.add(null);
+        System.out.println(list1);
+
+        Vector<String> vector = new Vector<>();
+        vector.add(null);
+        vector.add(null);
+        System.out.println(vector);
     }
 }

@@ -48,10 +48,11 @@ object SQLDataSourceTest1 {
   val warehouse_dir = spark.conf.get(SPARK_SQL_WAREHOUSE_DIR)
 
   def main(args: Array[String]) {
-    hbaseTest
+//    hbaseTest
 //    funnel0
     //    retention
     //    score
+    loadAndSave
   }
 
   def hbaseTest(): Unit ={

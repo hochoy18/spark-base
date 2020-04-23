@@ -60,9 +60,12 @@
   private val killExecutorThread = ThreadUtils.newDaemonSingleThreadExecutor("kill-executor-thread")
 
 ```
-- executorLastSeen: 以 executor id 为key, 接收到此执行器的最后一个心跳的时间戳 为value 的Map，
-- eventLoopThread ： 一个单守护线程的调度线程池，其名称为heartbeat-receiver-event-loop-thread，是整个HeartbeatReceiver的事件处理线程。
-- killExecutorThread ： 一个单守护线程的普通线程池，其名称为kill-executor-thread，用来异步执行杀掉Executor的任务。
+- executorLastSeen: 用于维护Executor的身份标识与HeartbeatReceiver最后一次收到Executor的心跳（HeartBeat）消息的时间戳之间的映射关系。
+  以 executor id 为key, 接收到此执行器的最后一个心跳的时间戳 为value 的Map
+- eventLoopThread ：类型为ScheduledThreadPoolExecutor，用于执行心跳接收器的超时检查任务，eventLoopThread是一个只包含一个单守护线程的调度线程池，
+  此线程以heartbeat-receiver-event-loop-thread作为名称,是整个HeartbeatReceiver的事件处理线程。
+- killExecutorThread ：以Executors.newSingleThreadExecutor方式创建的Executor-Service，运行的单线程用于异步“杀死”（kill）Executor，此线程以kill-executor-thread作为名称。
+  
 
 
 

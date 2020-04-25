@@ -74,7 +74,7 @@ An internal RPC interface is used for communication with the driver,except in th
 
 
 ##### 关键函数说明
-- launchTask ：启动 Task  
+- *launchTask* ：启动 Task  ,通过线程池 threadPool 调度 TaskRunner，执行 TaskRunner#run()
     ```
       def launchTask(context: ExecutorBackend, taskDescription: TaskDescription): Unit = {
         val tr = new TaskRunner(context, taskDescription)
@@ -84,9 +84,36 @@ An internal RPC interface is used for communication with the driver,except in th
     ```
 
 
-- killTask
+- *killTask* : 通过 taskReaperPool 调度TaskReaper#run() -> TaskRunner#kill 或 直接调用 taskRunner#kill
+    ```
+      def killTask(taskId: Long, interruptThread: Boolean, reason: String): Unit = {
+        val taskRunner = runningTasks.get(taskId)
+        if (taskRunner != null) {
+          if (taskReaperEnabled) {
+            val maybeNewTaskReaper: Option[TaskReaper] = taskReaperForTask.synchronized {
+              val shouldCreateReaper = taskReaperForTask.get(taskId) match {
+                case None => true
+                case Some(existingReaper) => interruptThread && !existingReaper.interruptThread
+              }
+              if (shouldCreateReaper) {
+                val taskReaper = new TaskReaper(
+                  taskRunner, interruptThread = interruptThread, reason = reason)
+                taskReaperForTask(taskId) = taskReaper
+                Some(taskReaper)
+              } else {
+                None
+              }
+            }
+            // Execute the TaskReaper from outside of the synchronized block.
+            maybeNewTaskReaper.foreach(taskReaperPool.execute)
+          } else {
+            taskRunner.kill(interruptThread = interruptThread, reason = reason)
+          }
+        }
+      }
+    ```
 
-- startDriverHeartbeater :启动心跳,调用 reportHeartBeat() 函数， 在初始化的时候被调用
+- *startDriverHeartbeater* :启动心跳,调用 reportHeartBeat() 函数， 在初始化的时候被调用
     ```
       /**
        * Schedules a task to report heartbeat and partial metrics for active tasks to driver.
@@ -105,7 +132,7 @@ An internal RPC interface is used for communication with the driver,except in th
     
     ```
 
-- reportHeartBeat
+- *reportHeartBeat* : 向 driver 定时汇报 心跳（heartbeat ) 和 度量（metrics)，由 startDriverHeartbeater() 函数定时调度。
     ```
       /** Reports heartbeat and metrics for active tasks to the driver. */
       private def reportHeartBeat(): Unit = {
@@ -145,25 +172,30 @@ An internal RPC interface is used for communication with the driver,except in th
     ```
 
 
-- computeTotalGcTime
-
+- *computeTotalGcTime* ： 计算本jvm进程花在GC上的总时间
+    ```
+      /** Returns the total amount of time this JVM process has spent in garbage collection. */
+      private def computeTotalGcTime(): Long = {
+        ManagementFactory.getGarbageCollectorMXBeans.asScala.map(_.getCollectionTime).sum
+      }
+    ```
 ##### 成员变量说明
 
-- threadPool : 使用 ```Executors.newCachedThreadPool ```方式创建的 ThreadPoolExecutor，用此线程池运行以"Executor task launch worker"为前缀的 TaskRunner 线程
+- *threadPool* : 使用 ```Executors.newCachedThreadPool ```方式创建的 ThreadPoolExecutor，用此线程池运行以"Executor task launch worker"为前缀的 TaskRunner 线程
 
-- taskReaperPool：使用 ```Executors.newCachedThreadPool``` 方式创建的 ThreadPoolExecutor，此线程池执行的线程用于监督 Task 的 kill 和 cancel 。
+- *taskReaperPool* ：使用 ```Executors.newCachedThreadPool``` 方式创建的 ThreadPoolExecutor，此线程池执行的线程用于监督 Task 的 kill 和 cancel 。
 
-- runningTasks : 用于维护正在运行的Task的身份标识(taskId)与TaskRunner之间的映射关系。
+- *runningTasks* : 用于维护正在运行的Task的身份标识(taskId)与TaskRunner之间的映射关系。
 
-- heartbeater : 只有一个线程的 ScheduledThreadPoolExecutor（线程池调度器），此线程池运行以```driver-heartbeater```作为名称的线程。该调度器 以 ```spark.executor.heartbeatInterval``` 
+- *heartbeater* : 只有一个线程的 ScheduledThreadPoolExecutor（线程池调度器），此线程池运行以```driver-heartbeater```作为名称的线程。该调度器 以 ```spark.executor.heartbeatInterval``` 
   毫秒的频率定时被调起 执行 ```reportHeartBeat() ```，将 active状态 task 的 心跳 (heartbeat)和 度量 ( metrics ) 向 driver 汇报
 
-- heartbeatReceiverRef : HeartbeatReceiver 的 RpcEndpointRef，通过调用RpcEnv的setupEndpointRef方法获得。
+- *heartbeatReceiverRef* : HeartbeatReceiver 的 RpcEndpointRef，通过调用RpcEnv的setupEndpointRef方法获得。
 
 
-- executorId：当前Executor的身份标识
+- *executorId* ：当前Executor的身份标识
 
-##### 内部类说明： 
-- TaskRunner 
+##### 内部类说明
+- TaskRunner ：是一个实现 java.lang.Runnable 的类
 
-- TaskReaper
+- TaskReaper : 

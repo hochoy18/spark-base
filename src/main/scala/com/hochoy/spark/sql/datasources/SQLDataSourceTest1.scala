@@ -24,6 +24,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SaveMode}
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.expressions.UserDefinedFunction
+import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.storage.StorageLevel
 import org.roaringbitmap.RoaringBitmap
 import org.slf4j.LoggerFactory
@@ -48,17 +49,40 @@ object SQLDataSourceTest1 {
   val warehouse_dir = spark.conf.get(SPARK_SQL_WAREHOUSE_DIR)
 
   def main(args: Array[String]) {
-//    hbaseTest
-//    funnel0
+    //    hbaseTest
+    //    funnel0
     //    retention
     //    score
-    loadAndSave
+    //    loadAndSave
+
+    val sql = "SELECT A.ACTIONATTACH ,A.ACTIONATTACH ,A.ACTIONATTACH   FROM  parquetTmpTable A  LIMIT 50  ";
+    schemaTest(sql)
   }
 
-  def hbaseTest(): Unit ={
+  def schemaTest(sql: String): Unit = {
+
+    val parquet = spark.read.parquet("file:///D:\\user\\ubas\\parquet")
+    parquet.createOrReplaceTempView("parquetTmpTable")
+    val query = spark.sql(sql).cache()
+
+        val fieldList = getSchemaFieldList(query.schema)
+        logger.info("fifth execution plan ::: {}", query.explain(true))
+        logger.info("fields ::: {}", fieldList)
+
+
+    val fields: Array[StructField] = query.schema.fields
+    val rows = query.take(100)
+    rows.foreach(println)
+
+    Thread.sleep(1000 * 30 )
+
+  }
+
+
+  def hbaseTest(): Unit = {
     val sc: SparkContext = spark.sparkContext
 
-    val rdd: RDD[(ImmutableBytesWritable, Result)] = HBaseReadOrWrite.readHBase("action","15",sc)
+    val rdd: RDD[(ImmutableBytesWritable, Result)] = HBaseReadOrWrite.readHBase("action", "15", sc)
     println(rdd.count())
   }
 
@@ -108,12 +132,28 @@ object SQLDataSourceTest1 {
 
   }
 
+  def getSchemaFieldList(schema: StructType): Array[String] = {
+    schema.printTreeString()
+    if (schema.isEmpty) {
+      throw new UnsupportedOperationException(s"Empty schema $schema is not supported, please " +
+        s"provide at least one column of a type  ")
+    }
+    schema.fields.map { field =>
+      field.name + ":" + field.dataType.simpleString
+    }.reduce(_ + "," + _)
+
+    schema.fields.map(field => field.name + ":" + field.dataType.simpleString)
+  }
+
   def runSQLAndSave() = {
     //Run SQL on files directly
     val sqlDF = spark.sql(s"select * from parquet.`${USER_SPARK_PATH}${FILE_PATH}users.parquet`")
     sqlDF.printSchema()
-    sqlDF.show()
+    //    sqlDF.show()
 
+    val schemas: Array[String] = getSchemaFieldList(sqlDF.schema)
+
+    schemas.foreach(println)
     //Save Modes
     //http://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes
     /**

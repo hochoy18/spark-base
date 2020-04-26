@@ -27,7 +27,17 @@
 
 ### spark sql 的执行过程 
 
+Spark SQL 的原理和运行机制
 
+Catalyst 的整体架构
+
+Spark SQL 的 DataFrame
+
+
+Spark SQL 的优化策略：内存列式存储和内存缓存表、列存储压缩、逻辑查询优化、Join 的优化
+
+
+Spark的UDF
 
 ### Spark：原理、部署、优化 
 

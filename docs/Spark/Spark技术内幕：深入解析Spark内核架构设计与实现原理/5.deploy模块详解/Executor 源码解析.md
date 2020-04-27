@@ -1,7 +1,7 @@
-### Executor 源码解析
+## Executor 源码解析
 
 
-#### Executor 是干嘛的
+### Executor 是干嘛的
 处理任务的执行器，是一个JVM进程 ，是一个以线程池实现的运行 Task 的进程。看一下官网和代码注释对 Executor 的说明  
 
  - 官网介绍
@@ -14,10 +14,10 @@ An internal RPC interface is used for communication with the driver,except in th
 
     	
 
-#### Executor
+### Executor
 
 
-##### 主要调用栈
+#### 主要调用栈
  - CoarseGrainedExecutorBackend 
    - *CoarseGrainedExecutorBackend#receive()* :由 LaunchTask 类型的消息触发，以及 KillTask 类型的消息触发
         
@@ -73,7 +73,7 @@ An internal RPC interface is used for communication with the driver,except in th
     ```
 
 
-##### 关键函数说明
+#### 关键函数说明
 - *launchTask* ：启动 Task  ,通过线程池 threadPool 调度 TaskRunner，执行 TaskRunner#run()
     ```
       def launchTask(context: ExecutorBackend, taskDescription: TaskDescription): Unit = {
@@ -179,7 +179,7 @@ An internal RPC interface is used for communication with the driver,except in th
         ManagementFactory.getGarbageCollectorMXBeans.asScala.map(_.getCollectionTime).sum
       }
     ```
-##### 成员变量说明
+#### 成员变量说明
 
 - *threadPool* : 使用 ```Executors.newCachedThreadPool ```方式创建的 ThreadPoolExecutor，用此线程池运行以"Executor task launch worker"为前缀的 TaskRunner 线程
 
@@ -195,7 +195,7 @@ An internal RPC interface is used for communication with the driver,except in th
 
 - *executorId* ：当前Executor的身份标识
 
-##### 内部类说明
+#### 内部类说明
 - TaskRunner ：是一个实现 java.lang.Runnable 的类
 
 - TaskReaper : 

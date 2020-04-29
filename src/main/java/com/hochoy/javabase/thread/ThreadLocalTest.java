@@ -10,9 +10,10 @@ public class ThreadLocalTest {
 
     public static void main(String[] args) {
 
-
+        tl.set("the value is set by Main");
         new Thread(() -> {
             tl.set("the value is set by T1");
+            tl.set("the value is set by T1-1");
             System.out.println(Thread.currentThread().getName() + " -----  " + tl.get());
         }, "T1").start();
 
@@ -21,7 +22,7 @@ public class ThreadLocalTest {
             System.out.println(Thread.currentThread().getName() + " -----  " + tl.get());
         }, "T2").start();
 
-
+        System.out.println(Thread.currentThread().getName() + " -----  " + tl.get());
     }
 
 

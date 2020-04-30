@@ -21,6 +21,7 @@
         <scala.binary.version>2.11</scala.binary.version>
         <java-version>1.8</java-version>
         <phoenix.version>4.14.1-HBase-1.4</phoenix.version>
+        <jol.version>0.10</jol.version>
     </properties>
 
     <repositories>
@@ -87,6 +88,30 @@
             <!--<artifactId>javax.servlet-api</artifactId>-->
             <!--<version>3.1.0</version>-->
         <!--</dependency>-->
+
+        <!-- https://mvnrepository.com/artifact/org.openjdk.jol/jol-core -->
+        <dependency>
+            <groupId>org.openjdk.jol</groupId>
+            <artifactId>jol-core</artifactId>
+            <version>${jol.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jol</groupId>
+            <artifactId>jol-cli</artifactId>
+            <version>${jol.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jol</groupId>
+            <artifactId>jol-benchmarks</artifactId>
+            <version>${jol.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jol</groupId>
+            <artifactId>jol-samples</artifactId>
+            <version>${jol.version}</version>
+        </dependency>
+
+
         <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>

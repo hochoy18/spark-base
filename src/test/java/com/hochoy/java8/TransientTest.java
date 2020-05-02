@@ -46,6 +46,7 @@ public class TransientTest {
 class User implements Serializable {
 
     private static final long serialVersionUID = 8294180014912103005L;
+    private byte[] size = new byte[1024 * 1024 * 10];
 
     private String username;
     /**
@@ -76,5 +77,13 @@ class User implements Serializable {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "username='" + username + '\'' +
+                ", password='" + password + '\'' +
+                '}';
     }
 }

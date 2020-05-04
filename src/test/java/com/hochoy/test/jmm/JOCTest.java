@@ -1,5 +1,6 @@
 package com.hochoy.test.jmm;
 
+import com.hochoy.utils.HochoyUtils;
 import org.openjdk.jol.info.ClassLayout;
 
 public class JOCTest {
@@ -10,10 +11,17 @@ public class JOCTest {
                 8,"female");
 //        Object o = new Object();
 
-        System.out.println(ClassLayout.parseInstance(o).toPrintable());
+        System.out.println("1>>>>>>>>"+ClassLayout.parseInstance(o).toPrintable());
         System.out.println("============================================");
+
+        HochoyUtils.sleep(100);
+        int hashCode = o.hashCode();
+        System.out.println(hashCode);
+        System.out.println("2>>>>>>>>"+ClassLayout.parseInstance(o).toPrintable());
+
+        HochoyUtils.sleep(100);
         synchronized (o){
-            System.out.println(ClassLayout.parseInstance(o).toPrintable());
+            System.out.println("3>>>>>>>>"+ClassLayout.parseInstance(o).toPrintable());
         }
 
     }

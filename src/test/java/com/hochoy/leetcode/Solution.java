@@ -2,7 +2,7 @@ package com.hochoy.leetcode;
 
 import org.junit.Test;
 
-import java.util.Stack;
+import java.util.*;
 
 public class Solution {
 
@@ -261,5 +261,305 @@ public class Solution {
 
 
         return stack;
+    }
+
+
+    @Test
+    public void myStackTest() {
+
+        MyStack obj = new MyStack();
+        obj.push(111);
+        obj.push(32);
+        int param_2 = obj.pop();
+        System.out.println(param_2);
+        int param_3 = obj.top();
+        System.out.println(param_3);
+
+        boolean param_4 = obj.empty();
+        System.out.println(param_4);
+    }
+
+    @Test
+    public void calculate() {
+        String s = " 3+53 / 2 -9*3+8";
+//        s ="1*2-3/4+5*6-7*8+9/10+1";
+
+        // (3 + 4) *5 - 6
+        s = "   30 4 + 5 * 6 -   ";
+        int calculate = calc(s);
+        System.out.println(calculate);
+    }
+
+    public int calculate(String s) {
+        String s1 = s.replaceAll("\\s", "");
+        Stack<Integer> num = new Stack<>();
+        Stack<Character> op = new Stack<>();
+
+        char[] chars = s1.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+
+            char ch = chars[i];
+
+            if (isOp(ch)) {
+                if (op.empty()) {
+                    op.push(ch);
+                } else {
+
+                    /**
+                     *
+                     *  1     2
+                     * 10    5
+                     * 3
+                     *
+                     *         -
+                     * -    *
+                     * +
+                     */
+
+                    // * / :1
+                    // + - : 0
+                    if (priority(op.peek()) >= priority(ch)) {
+                        int num1 = num.pop();
+                        int num2 = num.pop();
+                        Character op1 = op.pop();
+                        int res = calc(num1, num2, op1);
+
+                        num.push(res);
+                        op.push(ch);
+//                        if (res != 0){
+//                           num.push(res);
+//                           op.push(ch);
+//                       }else {
+//                           op.pop();
+//                       }
+                    } else {
+                        op.push(ch);
+                    }
+
+                }
+
+
+            } else {
+                int idx = 1;
+                StringBuilder numStr = new StringBuilder();
+                numStr.append(ch - 48);
+
+//                if (idx == chars.length -1){
+//                    num.push(Integer.parseInt(numStr.toString()));
+//                }
+
+                while (i + idx < chars.length && !isOp(chars[i + idx])) {
+                    numStr.append(chars[i + idx] - 48);
+                    idx++;
+                }
+                num.push(Integer.parseInt(numStr.toString()));
+
+                if (idx > 1)
+                    i += (idx - 1);
+            }
+        }
+
+
+        while (!op.empty()) {
+            int num1 = num.pop();
+            int num2 = num.pop();
+            Character op1 = op.pop();
+            int res = calc(num1, num2, op1);
+            if (res != 0) {
+                num.push(res);
+            } else {
+                op.pop();
+            }
+        }
+        //s ="1*2-3/4+5*6-7*8+9/10";
+        // 2
+        /**
+         * 2
+         * 0
+         * 30
+         * 56
+         *
+         *
+         * -
+         * +
+         * -
+         * +
+
+         */
+
+        return num.pop();
+
+    }
+
+    private boolean isOp(char ch) {
+        return ch == '+' || ch == '-' || ch == '*' || ch == '/';
+    }
+
+    private int calc(int num1, int num2, char op) {
+        switch (op) {
+            case '+':
+                return num1 + num2;
+            case '-':
+                return num2 - num1;
+
+            case '*':
+                return num1 * num2;
+            case '/':
+                return num2 / num1;
+            default:
+                return 0;
+        }
+    }
+
+    private int priority(char op) {
+        return (op == '*' || op == '/') ? 1 : 0;
+    }
+
+
+    @Test
+    public void nibolan() {
+        List<String> xxx = xxx("11+((123+133)×14)-15");
+        System.out.println(xxx);
+
+        Stack<Integer> numStack = new Stack<>();
+        Stack<Character> opStack = new Stack<>();
+
+//        for (String s : xxx) {
+//            if (s.matches("\\d+")){
+//                //遇到操作数时，将其压s2；
+//                numStack.push(Integer.parseInt(s));
+//            }else if (s.charAt(0) == '+' || s.charAt(0) =='-' || s.charAt(0) =='*' ||s.charAt(0) == '/'){
+//                //4.  遇到运算符时，比较其与s1栈顶运算符的优先级：
+//                //4.1 如果s1为空，或栈顶运算符为左括号“(”，则直接将此运算符入栈；
+//                if (opStack.empty() || opStack.peek() == '('){
+//                    opStack.push(s.charAt(0));
+//
+//                }else if(priority(opStack.peek()) < priority(s.charAt(0))) {
+//                    //4.2 否则，若优先级比栈顶运算符的高，也将运算符压入s1
+//                    // （注意转换为前缀表达式时是优先级较高或相同，而这里则不包括相同的情况）；
+//                    opStack.push(s.charAt(0));
+//                }else {
+//                    numStack.push(Integer.parseInt(opStack.pop().toString()));
+//                }
+//
+//
+//            }else if (s.charAt('0') == '('){
+//                opStack.push(s.charAt(0));
+//            }else if ()
+//
+//        }
+
+    }
+
+//    int priority(char op ){
+//        return (op == '*' || op == '/') ? 1 : 0;
+//    }
+
+
+
+    public List<String> xxx(String expression) {
+        String s = expression.replaceAll("\\s", "");
+        List<String> list = new ArrayList<>();
+        int i = 0;
+        do {
+            char c = s.charAt(i);
+            if (c < 48 || c > 57) { //non-num
+                list.add(c + "");
+                i++;
+            } else { // num
+                String str = "";
+                while (i < s.length() && (c = s.charAt(i)) >= 48 && (c = s.charAt(i)) <= 57) {
+                    str += c;
+                    i++;
+                }
+                list.add(str);
+            }
+        } while (i < s.length());
+
+
+        return list;
+    }
+
+    public int calc(String s) {
+        List<String> list = Arrays.asList(s.trim().replaceAll("\\s", " ").split(" "));
+        Stack<String> stack = new Stack<>();
+
+        for (String value : list) {
+            if (value.matches("\\d+")) {
+                stack.push(value);
+            } else {
+                int num2 = Integer.parseInt(stack.pop());
+                int num1 = Integer.parseInt(stack.pop());
+                int res = 0;
+                switch (value) {
+                    case "+":
+                        res = num1 + num2;
+                        break;
+
+                    case "-":
+                        res = num1 - num2;
+                        break;
+
+                    case "*":
+                        res = num1 * num2;
+                        break;
+                    case "/":
+                        res = num1 / num2;
+                        break;
+                }
+                stack.push(String.valueOf(res));
+            }
+        }
+        return Integer.parseInt(stack.pop());
+    }
+
+}
+
+class MyStack {
+
+    /**
+     * Initialize your data structure here.
+     */
+    private Queue<Integer> input;
+    private Queue<Integer> output;
+
+    public MyStack() {
+        input = new LinkedList<>();
+        output = new LinkedList<>();
+    }
+
+    /**
+     * Push element x onto stack.
+     */
+    public void push(int x) {
+        input.offer(x);
+        // 将b队列中元素全部转给a队列
+        while (!output.isEmpty())
+            input.offer(output.poll());
+        // 交换a和b,使得a队列没有在push()的时候始终为空队列
+        Queue temp = input;
+        input = output;
+        output = temp;
+    }
+
+    /**
+     * Removes the element on top of the stack and returns that element.
+     */
+    public int pop() {
+        return output.poll();
+    }
+
+    /**
+     * Get the top element.
+     */
+    public int top() {
+        return output.peek();
+    }
+
+    /**
+     * Returns whether the stack is empty.
+     */
+    public boolean empty() {
+        return output.isEmpty();
     }
 }

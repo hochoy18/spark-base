@@ -52,6 +52,17 @@ Spark的UDF
 
 ### Spark task原理 
 
+### [spark 数据倾斜](https://mp.weixin.qq.com/s/lqMu6lfk-Ny1ZHYruEeBdA)
+https://www.cnblogs.com/vivotech/p/12106029.html
+
+
+### Spark数据本地化
+
+### [Spark内存调优](https://www.cnblogs.com/frankdeng/p/9301783.html)
+https://blog.51cto.com/14048416/2338730
+[Apache Spark 统一内存管理模型详解](https://www.iteblog.com/archives/2342.html)
+spark.memory.offHeap.size
+
 ### 状态管理
 
    1. updateStateByKey 不适合大数据量下 的计算，可以采用Redis 或者alluxio，

@@ -71,7 +71,8 @@ object SparkSqlOnSource {
 }
 
 class SparkSqlOnSource {
-  System.setProperty("HADOOP_USER_NAME", "hdfs")
+  val user = "cobub3"
+  System.setProperty("HADOOP_USER_NAME", user)
   val spark = SparkSession
     .builder()
     .appName("Spark SQL basic example")
@@ -81,9 +82,8 @@ class SparkSqlOnSource {
     .master("local")
     .getOrCreate()
 
-  import spark.implicits._
 
-  val path = "file:///D:" + File.separator + "user" + File.separator + "cobub3" + File.separator + "parquet"
+  val path = "file:///D:" + File.separator + "user" + File.separator + user + File.separator + "parquet"
   val tableName = "parquetTmpTable"
 
   spark
@@ -96,7 +96,13 @@ class SparkSqlOnSource {
   def test{
     println("x=========================================")
     val df1: DataFrame = spark.sql(s"select userid,sessionid,action,day from $tableName limit 10 ")
+    val schema = df1.schema
+    println("printTreeString=========================================")
+    schema.printTreeString()
+    println("isEmpty=========================================")
 
+    print(schema.isEmpty)
+    println("explain=========================================")
     df1.explain(true)
     df1.show()
     Thread.sleep(1000 * 60)

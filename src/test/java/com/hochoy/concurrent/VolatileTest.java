@@ -111,8 +111,7 @@ class VisibleTest {
 }
 
 
-public class VolatileTest {
-}
+
 
 
 

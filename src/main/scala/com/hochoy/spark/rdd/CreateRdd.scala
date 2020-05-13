@@ -1,13 +1,16 @@
 package com.hochoy.spark.rdd
 
 import java.io.File
+import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 
 import com.hochoy.spark.utils.Constants._
 import com.hochoy.spark.utils.SparkUtils._
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.{Partitioner, SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
+
+import scala.util.Random
 
 /**
   * Created by hochoy on 2018/9/15.
@@ -94,5 +97,42 @@ class CreateRdd{
 //    value.unpersist()
 
     Thread.sleep(3000 * 1000)
+  }
+}
+class ExamplePartitioner( num :Int) extends Partitioner{
+  override def numPartitions: Int = num
+
+  def getPartition(key: Any): Int = key match {
+    case null => 0
+    case _ => nonNegativeMod(key.hashCode + Random.nextInt(num), numPartitions)
+  }
+
+  def nonNegativeMod(x: Int, mod: Int): Int = {
+    val rawMod = x % mod
+    rawMod + (if (rawMod < 0) mod else 0)
+  }
+}
+object sample{
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf().setAppName("createRdd")
+    conf.setMaster(s"local[2]")
+    conf.set("spark.default.parallelism", "2")
+
+    val sc = new SparkContext(conf)
+    sc.setLogLevel("ALL")
+    val file1 = "file:///D:\\hello1.txt"
+
+    val rdd1: RDD[String] = sc.textFile(file1).persist(StorageLevel.MEMORY_ONLY)
+      .flatMap(_.split(Pattern.compile("\\s+").pattern()))
+
+    val sampleRdd: RDD[String] = rdd1.sample(true,0.1)
+    val count = sampleRdd.count()
+    val sample: Array[(String, Double)] = sampleRdd.map((_, 1)).reduceByKey(_ + _).map(e => (e._1, e._2.toDouble / count.toDouble))
+      .map(e =>e.swap).sortByKey(ascending = true).map(e => e.swap).top(10)
+    sample.foreach(e=>println(e._1,e._2.toString))
+
+    TimeUnit.SECONDS.sleep(30)
+
+
   }
 }

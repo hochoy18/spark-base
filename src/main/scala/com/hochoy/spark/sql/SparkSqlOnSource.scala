@@ -71,7 +71,7 @@ object SparkSqlOnSource {
 }
 
 class SparkSqlOnSource {
-  val user = "cobub3"
+  val user = "hdfs"
   System.setProperty("HADOOP_USER_NAME", user)
   val spark = SparkSession
     .builder()
@@ -83,7 +83,12 @@ class SparkSqlOnSource {
     .getOrCreate()
 
 
-  val path = "file:///D:" + File.separator + "user" + File.separator + user + File.separator + "parquet"
+  //  import com.hochoy.spark.sql.sql._
+  //  val path = dir2Path( File.separator ,"")
+  import com.hochoy.spark.implicits._
+
+  val path: String = buildPath("file:///D:", "user",  "cobub3", "parquet")
+
   val tableName = "parquetTmpTable"
 
   spark
@@ -93,9 +98,10 @@ class SparkSqlOnSource {
     .load(path)
     .createOrReplaceTempView(tableName)
 
-  def test{
+  def test {
     println("x=========================================")
-    val df1: DataFrame = spark.sql(s"select userid,sessionid,action,day from $tableName limit 10 ")
+
+    val df1: DataFrame = spark.sql(s"select userid,sessionid,action,day, count(1) from $tableName where day = '20190419' group by userid,sessionid,action,day order by action limit 10 ")
     val schema = df1.schema
     println("printTreeString=========================================")
     schema.printTreeString()

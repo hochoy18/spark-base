@@ -1,6 +1,7 @@
 package com.hochoy.spark.sql
 
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 import org.apache.spark.sql.types.{DataTypes, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -11,6 +12,8 @@ object SparkSqlOnSource {
   def main(args: Array[String]): Unit = {
 
     new SparkSqlOnSource().test
+
+    new SparkSqlOnSourceCSV().csvTest
 
   }
 
@@ -111,6 +114,50 @@ class SparkSqlOnSource {
     println("explain=========================================")
     df1.explain(true)
     df1.show()
-    Thread.sleep(1000 * 60)
+    Thread.sleep(1000 * 600)
   }
+}
+
+
+class SparkSqlOnSourceCSV {
+  val user = "hdfs"
+  System.setProperty("HADOOP_USER_NAME", user)
+  val spark = SparkSession
+    .builder()
+    .appName("Spark SQL basic example")
+    .config("spark.some.config.option", "some-value")
+    .config("spark.debug.maxToStringFields", 100)
+    .config("spark.sql.warehouse.dir", "target/spark-warehouse")
+    .master("local")
+    .getOrCreate()
+
+
+  System.getProperty("user.dir") + File.separator + "src" + File.separator + "main" + File.separator + "resources" + File.separator + "fairscheduler.xml"
+
+  import com.hochoy.spark.implicits._
+
+  def csvTest: Unit = {
+
+
+    val path: String = buildPath("file:///" + System.getProperty("user.dir"), "src", "main", "scala", "com", "hochoy", "spark", "sql", "data", "csv")
+
+    val df = spark.read.format("csv")
+      .option("sep", ",")
+      .option("inferSchema", "true")// 自动推断数据类型
+      .option("header", "true") // 第一行不作为数据，只作为列名
+      .load(path + File.separator + "*.csv")
+
+    df.createOrReplaceTempView("metadata")
+
+    val df1 = spark.sql("select * from metadata")
+    df1.printSchema()
+    println("======================================================================")
+    val df2 = spark.sql("select count(1) from metadata")
+    df2.show()
+    println("======================================================================")
+    df1.show(1000)
+
+    TimeUnit.SECONDS.sleep(60)
+  }
+
 }

@@ -1,10 +1,11 @@
 package com.hochoy.spark.sql
 
-import java.io.File
 import java.util.concurrent.TimeUnit
 
+import com.hochoy.spark.utils.Constants
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.types.{DataTypes, StructType}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
 object SparkSqlOnSource {
 
@@ -120,34 +121,30 @@ class SparkSqlOnSource {
 
 
 class SparkSqlOnSourceCSV {
+  Logger.getLogger("org.apache.spark").setLevel(Level.OFF)
+
   val user = "hdfs"
   System.setProperty("HADOOP_USER_NAME", user)
-  val transactionTable:String = "transactionTable"
+  val transactionTable:String = "transaction_Table"
+  import com.hochoy.spark.implicits._
 
   val spark = SparkSession
     .builder()
     .appName("Spark SQL basic example")
     .config("spark.some.config.option", "some-value")
     .config("spark.debug.maxToStringFields", 100)
-    .config("spark.sql.warehouse.dir", "target/spark-warehouse")
+    .config("spark.sql.warehouse.dir", buildPath("file:///" + System.getProperty("user.dir"), "target", "spark-warehouse"))
     .master("local")
     .getOrCreate()
 
 
-  System.getProperty("user.dir") + File.separator + "src" + File.separator + "main" + File.separator + "resources" + File.separator + "fairscheduler.xml"
-
-  import com.hochoy.spark.implicits._
-
+  val path: String = buildPath("file:///" + System.getProperty("user.dir"), "src", "main", "scala", "com", "hochoy", "spark", "sql", "data")
   def csvTest: Unit = {
-
-
-    val path: String = buildPath("file:///" + System.getProperty("user.dir"), "src", "main", "scala", "com", "hochoy", "spark", "sql", "data", "csv")
-
     val df = spark.read.format("csv")
       .option("sep", ",")
       .option("inferSchema", "true")// 自动推断数据类型
       .option("header", "true") // 第一行不作为数据，只作为列名
-      .load(path + File.separator + "trans*.csv")
+      .load(buildPath(path, "csv", "trans*.csv"))
 
     df.createOrReplaceTempView(transactionTable)
 
@@ -165,4 +162,55 @@ class SparkSqlOnSourceCSV {
     TimeUnit.SECONDS.sleep(60)
   }
 
+  def csvSaveTest(): Unit = {
+    val df = spark.read.format("csv")
+      .option("sep", ",")
+      .option("inferSchema", "true") // 自动推断数据类型
+      .option("header", "true") // 第一行不作为数据，只作为列名
+      .load(buildPath(path, "csv", "trans*.csv"))
+
+    df.createOrReplaceTempView(transactionTable)
+
+
+    val df2 = spark.sql(s"select * from $transactionTable")
+    df2.printSchema()
+    df2.show(100)
+    println("--------------------------------------------\n\n")
+
+
+    val warehouse_dir = spark.conf.get(Constants.SPARK_SQL_WAREHOUSE_DIR)
+    //    df2.write.csv(buildPath(warehouse_dir,"csv"))
+
+    var i = 0
+    while (i < 3) {
+      df2
+        .write
+        .format("csv")
+        .partitionBy("trans_channel","day")
+//        .bucketBy(3, "trans_channel")
+//        .sortBy("trans_time")
+        .option("path", buildPath(warehouse_dir, "csv"))
+        .mode(SaveMode.Overwrite)
+        .saveAsTable("trans_csv_tab")
+      i += 1
+      println("-----------------------", i)
+    }
+    println("--------------------------------------------\n\n")
+    TimeUnit.SECONDS.sleep(3)
+    spark.sql("select trans_channel ,count(1) from trans_csv_tab group by trans_channel").show(50)
+    spark.sql("select * from trans_csv_tab where trans_channel = 'pc'").show(50)
+    spark.sql("select * from trans_csv_tab where trans_channel = 'mobile'").show(50)
+    TimeUnit.SECONDS.sleep(30)
+
+  }
+
+
+}
+object SparkSqlOnSourceTest{
+  def main(args: Array[String]): Unit = {
+
+    val csv = new SparkSqlOnSourceCSV()
+    csv.csvSaveTest()
+//    csv.csvTest
+  }
 }

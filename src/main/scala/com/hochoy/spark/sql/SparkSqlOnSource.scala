@@ -151,13 +151,13 @@ class SparkSqlOnSourceCSV {
 
     df.createOrReplaceTempView(transactionTable)
 
-    spark.sql(s"desc ${transactionTable}").show()
+    spark.sql(s"desc $transactionTable").show()
     println("======================================================================")
 
-    val df1 = spark.sql(s"select * from ${transactionTable}")
+    val df1 = spark.sql(s"select * from $transactionTable")
     df1.printSchema()
     println("======================================================================")
-    val df2 = spark.sql(s"select count(1) from ${transactionTable}")
+    val df2 = spark.sql(s"select count(1) from $transactionTable")
     df2.show()
     println("======================================================================")
     df1.show()

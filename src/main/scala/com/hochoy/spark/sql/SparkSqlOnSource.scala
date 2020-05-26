@@ -11,7 +11,7 @@ object SparkSqlOnSource {
 
   def main(args: Array[String]): Unit = {
 
-    new SparkSqlOnSource().test
+//    new SparkSqlOnSource().test
 
     new SparkSqlOnSourceCSV().csvTest
 
@@ -122,6 +122,8 @@ class SparkSqlOnSource {
 class SparkSqlOnSourceCSV {
   val user = "hdfs"
   System.setProperty("HADOOP_USER_NAME", user)
+  val transactionTable:String = "transactionTable"
+
   val spark = SparkSession
     .builder()
     .appName("Spark SQL basic example")
@@ -145,17 +147,20 @@ class SparkSqlOnSourceCSV {
       .option("sep", ",")
       .option("inferSchema", "true")// 自动推断数据类型
       .option("header", "true") // 第一行不作为数据，只作为列名
-      .load(path + File.separator + "*.csv")
+      .load(path + File.separator + "trans*.csv")
 
-    df.createOrReplaceTempView("metadata")
+    df.createOrReplaceTempView(transactionTable)
 
-    val df1 = spark.sql("select * from metadata")
+    spark.sql(s"desc ${transactionTable}").show()
+    println("======================================================================")
+
+    val df1 = spark.sql(s"select * from ${transactionTable}")
     df1.printSchema()
     println("======================================================================")
-    val df2 = spark.sql("select count(1) from metadata")
+    val df2 = spark.sql(s"select count(1) from ${transactionTable}")
     df2.show()
     println("======================================================================")
-    df1.show(1000)
+    df1.show()
 
     TimeUnit.SECONDS.sleep(60)
   }

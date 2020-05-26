@@ -26,6 +26,8 @@
         <parquet.version>1.11.0</parquet.version>
 
         <antlr4.version>4.7.2</antlr4.version>
+        <commons-lang3.version>3.10</commons-lang3.version>
+        <commons-lang.version>2.6</commons-lang.version>
     </properties>
 
     <repositories>
@@ -82,6 +84,21 @@
     </pluginRepositories>
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons-lang3.version}</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/commons-lang/commons-lang -->
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>${commons-lang.version}</version>
+        </dependency>
+
+
+
         <!-- https://mvnrepository.com/artifact/org.antlr/antlr4-runtime -->
         <!--<dependency>-->
             <!--<groupId>org.antlr</groupId>-->
@@ -506,6 +523,54 @@
                     <target>${java-version}</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-versions</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>2.1.0</version>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <version>1.8</version>
+                                </requireJavaVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>enforce-banned-dependencies</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>commons-lang:commons-lang</exclude>
+                                        <exclude>commons-lang:commons-lang:jar:2.3</exclude>
+                                        <exclude>commons-lang:commons-lang:jar:2.4</exclude>
+                                        <exclude>commons-lang:commons-lang:jar:2.5</exclude>
+                                        <exclude>commons-lang:commons-lang:jar:2.6</exclude>
+                                        <exclude>org.apache.commons:commons-lang3</exclude>
+                                    </excludes>
+                                    <includes>
+                                    </includes>
+                                </bannedDependencies>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+
+
 
         </plugins>
     </build>

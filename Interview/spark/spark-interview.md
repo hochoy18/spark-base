@@ -96,3 +96,5 @@ checkpoint 的频率
 [独孤九剑-Spark面试80连击(上)](https://mp.weixin.qq.com/s/i1ZkCbhUM7Dcygvn2CrTSw)
 [独孤九剑-Spark面试80连击(下)](https://mp.weixin.qq.com/s/5YhDK0T3JUHySVCW13bv2Q)
 [Flink面试通关手册](https://mp.weixin.qq.com/s/xRqrojjFITuhswtjNJo7OQ)
+
+[FusionInsight HD 6.5.1产品文档](http://support-it.huawei.com/docs/zh-cn/fusioninsight-all/fusioninsight_hd_6.5.1_documentation)

@@ -1,11 +1,13 @@
 package com.hochoy.spark.sql
 
+import java.util.Properties
 import java.util.concurrent.TimeUnit
 
 import com.hochoy.spark.utils.Constants
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.types.{DataTypes, StructType}
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.sql.expressions.{MutableAggregationBuffer, UserDefinedAggregateFunction}
+import org.apache.spark.sql.types._
+import org.apache.spark.sql._
 
 object SparkSqlOnSource {
 
@@ -206,11 +208,210 @@ class SparkSqlOnSourceCSV {
 
 
 }
-object SparkSqlOnSourceTest{
+object SparkSqlOnSourceCSV{
   def main(args: Array[String]): Unit = {
 
     val csv = new SparkSqlOnSourceCSV()
     csv.csvSaveTest()
 //    csv.csvTest
   }
+}
+
+case class People(name:String,age:Int)
+
+class SparkSqlOnSourceJson{
+
+  val user = "hdfs"
+  System.setProperty("HADOOP_USER_NAME", user)
+  val transactionTable:String = "transaction_Table"
+  import com.hochoy.spark.implicits._
+
+
+  val spark = SparkSession
+    .builder()
+    .appName("Spark SQL basic example")
+    .config("spark.some.config.option", "some-value")
+    .config("spark.debug.maxToStringFields", 100)
+    .master("local[*]")
+    .getOrCreate()
+
+  // For implicit conversions like converting RDDs to DataFrames
+  import spark.implicits._
+
+  def createDF :Unit = {
+    val df = spark.read.json(buildPath(DATA_PATH,"people.json")).cache()
+    df.show()
+    df.printSchema()
+    df.select($"name").show()
+    df.select($"name",$"age" + 1).show()
+    df.filter($"age" >21).show()
+    df.groupBy($"age").count().show
+
+
+
+    TimeUnit.SECONDS.sleep(60)
+
+  }
+
+
+  def inferringSchemaByReflection  :Unit = {
+    val frame = spark.sparkContext
+      .textFile(buildPath(DATA_PATH, "people.txt"))
+      .map(_.split(","))
+      .map(att => People(att(0), att(1).toInt))
+      .toDF()
+
+    frame.createOrReplaceTempView("people")
+
+    val df1:DataFrame = spark.sql("select * from people where age between 19 and 29")
+    df1.show()
+    val value: Dataset[String] = df1.map(tee => "Name : " + tee(0) + ",age : " + tee(1))
+    value.show()
+
+    df1.map(tee=>"Name: " + tee.getAs[String]("name")).show()
+    df1.map(tee=>"age: " + tee.getAs[Int]("age")).show()
+
+    df1
+      .map(teenager => teenager.getValuesMap[Any](List("name", "age"))).collect()
+      .foreach(println)
+
+
+
+
+  }
+
+
+  def udaf:Unit = {
+    spark.udf.register("myUdaf",MyUDAF)
+    val df: DataFrame = spark.read.json(buildPath(DATA_PATH,"employees.json")).repartition(4)
+    df.createOrReplaceTempView("employees")
+    df.show()
+    val result = spark.sql("select myUdaf (salary,age ) as avg  from employees ")
+    result.show()
+    TimeUnit.SECONDS.sleep(30)
+  }
+
+}
+object SparkSqlOnSourceJson extends App{
+  private val sourceJson = new SparkSqlOnSourceJson()
+//  sourceJson.createDF
+//  sourceJson.inferringSchemaByReflection
+  sourceJson.udaf
+
+}
+
+class SparkSqlOnSourceJdbc {
+  val spark = SparkSession
+    .builder()
+    .appName(this.getClass.getName)
+    .config("spark.some.config.option", "some-value")
+    .config("spark.debug.maxToStringFields", 100)
+    .master("local[*]")
+    .getOrCreate()
+
+  // For implicit conversions like converting RDDs to DataFrames
+  import spark.implicits._
+
+  def jdbcTest:Unit ={
+    val url = "jdbc:mysql://localhost:3306/test"
+
+    val props: Properties = new Properties()
+    props.put("user","root")
+    props.put("password","123456")
+
+
+    val jdbcDf = spark.read.jdbc(url,"employee",props)
+      jdbcDf.createOrReplaceTempView("tmp_employee")
+
+    jdbcDf.printSchema()
+
+    val df = spark.sql("select name, age  from tmp_employee where age = 18 ")
+    df.show()
+
+    df.write.mode(SaveMode.Ignore).jdbc(url,"employee",props)
+    val jdbcDf1 = spark.read.jdbc(url,"employee",props)
+    jdbcDf1.show()
+    TimeUnit.SECONDS.sleep(30)
+
+  }
+
+}
+
+object SparkSqlOnSourceJdbc extends App{
+  private val sourceJdbc = new SparkSqlOnSourceJdbc()
+  //  sourceJson.createDF
+  //  sourceJson.inferringSchemaByReflection
+  sourceJdbc.jdbcTest
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+object MyUDAF extends UserDefinedAggregateFunction{
+
+  override def inputSchema: StructType =
+    new StructType()
+      .add("c_0",LongType)
+      .add("c_2",LongType)
+//      new StructType().add("inputColumn",LongType)
+//   StructType(StructField("inputColumn",LongType)::Nil)
+
+  override def bufferSchema: StructType = {
+//    StructType(StructField("sum", LongType) :: StructField("count", LongType) :: Nil)
+
+    new StructType()
+      .add("c0_s",LongType)
+      .add("c0_c",LongType)
+//      .add("c1_s",LongType)
+//      .add("c1_c",LongType)
+  }
+
+  override def dataType: DataType = DoubleType
+
+  override def deterministic: Boolean = true
+
+  override def initialize(buffer: MutableAggregationBuffer): Unit = {
+    buffer(0) = 0L
+    buffer(1) = 0L
+//    buffer(2) = 0L
+//    buffer(3) = 0L
+  }
+
+  override def update(buffer: MutableAggregationBuffer, input: Row): Unit = {
+    if (!input.isNullAt(0)) {
+
+      buffer(0) = buffer.getLong(0) + input.getLong(0)
+      buffer(1) = buffer.getLong(1) + input.getLong(1)
+//      buffer(1) = buffer.getLong(1) + 1
+//      buffer(2) = buffer.getLong(2) + input.getLong(1)
+//      buffer(3) = buffer.getLong(3) + 1
+    }
+  }
+
+  override def merge(buffer1: MutableAggregationBuffer, buffer2: Row): Unit = {
+    buffer1(0) = buffer1.getLong(0) + buffer2.getLong(0)
+    buffer1(1) = buffer1.getLong(1) + buffer2.getLong(1)
+//    buffer1(2) = buffer1.getLong(2) + buffer2.getLong(3)
+//    buffer1(3) = buffer1.getLong(2) + buffer2.getLong(3)
+  }
+
+  override def evaluate(buffer: Row): Double = {
+    buffer.getLong(0) / buffer.getLong(1)
+//    (buffer.getLong(0).toDouble / buffer.getLong(1))/(buffer.getLong(2).toDouble / buffer.getLong(3))
+  }
+
 }

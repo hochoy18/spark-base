@@ -21,6 +21,7 @@
         <scala.binary.version>2.11</scala.binary.version>
         <java-version>1.8</java-version>
         <phoenix.version>4.14.1-HBase-1.4</phoenix.version>
+        <!--<phoenix.version>4.8.0-HBase-1.2</phoenix.version>-->
         <jol.version>0.10</jol.version>
         <hive.version>2.3.7</hive.version>
         <parquet.version>1.11.0</parquet.version>
@@ -84,6 +85,18 @@
     </pluginRepositories>
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>29.0-jre</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+            <version>4.4.8</version>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -142,6 +155,12 @@
             <groupId>org.apache.hive</groupId>
             <artifactId>hive-jdbc</artifactId>
             <version>${hive.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.curator</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
 
@@ -244,12 +263,19 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <!--<dependency>-->
-            <!--<groupId>org.apache.phoenix</groupId>-->
-            <!--<artifactId>phoenix-spark</artifactId>-->
-            <!--<version>${phoenix.version}</version>-->
-            <!--<scope>provided</scope>-->
-        <!--</dependency>-->
+        <dependency>
+            <groupId>org.apache.phoenix</groupId>
+            <artifactId>phoenix-core</artifactId>
+            <version>${phoenix.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.phoenix</groupId>
+            <artifactId>phoenix-spark</artifactId>
+            <version>${phoenix.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
 
         <!--<dependency>-->
             <!--<groupId>com.hortonworks</groupId>-->
@@ -300,6 +326,10 @@
                 </exclusion>
                 <exclusion>
                     <groupId>com.sun.jersey</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.curator</groupId>
                     <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>
@@ -375,6 +405,14 @@
                 <exclusion>
                     <groupId>javax.ws.rs</groupId>
                     <artifactId>javax.ws.rs-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.glassfish.jersey.bundles.repackaged</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.curator</groupId>
+                    <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>

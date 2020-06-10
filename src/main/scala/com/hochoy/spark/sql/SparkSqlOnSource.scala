@@ -328,7 +328,7 @@ class SparkSqlOnSourceJdbc {
     val df = spark.sql("select name, age  from tmp_employee where age = 18 ")
     df.show()
 
-    df.write.mode(SaveMode.Ignore).jdbc(url,"employee",props)
+    df.write.mode(SaveMode.Append).jdbc(url,"employee",props)
     val jdbcDf1 = spark.read.jdbc(url,"employee",props)
     jdbcDf1.show()
     TimeUnit.SECONDS.sleep(30)

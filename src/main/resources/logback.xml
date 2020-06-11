@@ -14,7 +14,7 @@
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- 按天回滚 daily -->
             <!-- log.dir 在maven profile里配置 -->
-            <fileNamePattern>./logs/spark-test01.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>/tmp/logs/spark-test01.%d{yyyy-MM-dd}.log</fileNamePattern>
             <!-- 日志最大的历史 60天 -->
             <maxHistory>40</maxHistory>
         </rollingPolicy>

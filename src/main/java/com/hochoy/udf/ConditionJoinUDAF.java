@@ -97,9 +97,7 @@ class test2 {
 
         JavaRDD<String> lines = sc.textFile("E:/advance/bigdata/spark/sparktest01/src/main/java/com/hochoy/udf/example.txt");
         JavaRDD<Row> rows = lines.map(line -> RowFactory.create(line.split("\\^")));
-        rows.foreach(v -> {
-            System.out.println(v.get(0).toString()+"\t"+v.get(1).toString()+"\t"+v.get(2).toString());
-        });
+        rows.foreach(v -> System.out.println(v.get(0).toString()+"\t"+v.get(1).toString()+"\t"+v.get(2).toString()));
 
         List<StructField> structFields = new ArrayList<>();
         structFields.add(DataTypes.createStructField("a", DataTypes.StringType, true));

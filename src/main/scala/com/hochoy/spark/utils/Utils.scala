@@ -180,6 +180,10 @@ object Utils {
     val y = s.asInstanceOf[Map[String, String]]
     if(y.isEmpty) null
     else     y
+  }catch {
+    case e:Throwable =>
+      log.error(e.toString)
+      null
   }
 
 

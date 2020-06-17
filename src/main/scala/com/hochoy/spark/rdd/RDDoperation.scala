@@ -278,7 +278,6 @@ object RDDoperation {
       case (id, (name, add)) ⇒ (id, name.getOrElse("NULL"), add.getOrElse("NULL"))
     }.foreachPartition(it ⇒ it.foreach(println))
     Thread.sleep(500 * 1000)
-    rdd1
 
 
   }

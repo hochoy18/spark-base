@@ -160,25 +160,25 @@ object HBaseUtils {
 
 
 
-  /**
-    * clear a table ,through delete it first and then re-create it
-    */
-  def clearHTable(hTable: String, hbaseZKConfig: Map[String, String]): Unit = {
-
-    GlobalHConnection.setConf(hbaseZKConfig)
-    val admin = new HBaseAdmin(GlobalHConnection.getConf())
-    if (admin.tableExists(TableName.valueOf(hTable))) {
-      if (admin.isTableEnabled(TableName.valueOf(hTable))) admin.disableTable(TableName.valueOf(hTable))
-      admin.deleteTable(TableName.valueOf(hTable))
-    }
-
-    val htd = new HTableDescriptor(TableName.valueOf(hTable))
-    val hcd = new HColumnDescriptor("f")
-    //add  a column family to table
-    htd.addFamily(hcd)
-    admin.createTable(htd)
-
-  }
+//  /**
+//    * clear a table ,through delete it first and then re-create it
+//    */
+//  def clearHTable(hTable: String, hbaseZKConfig: Map[String, String]): Unit = {
+//
+//    GlobalHConnection.setConf(hbaseZKConfig)
+//    val admin = new HBaseAdmin(GlobalHConnection.getConf())
+//    if (admin.tableExists(TableName.valueOf(hTable))) {
+//      if (admin.isTableEnabled(TableName.valueOf(hTable))) admin.disableTable(TableName.valueOf(hTable))
+//      admin.deleteTable(TableName.valueOf(hTable))
+//    }
+//
+//    val htd = new HTableDescriptor(TableName.valueOf(hTable))
+//    val hcd = new HColumnDescriptor("f")
+//    //add  a column family to table
+//    htd.addFamily(hcd)
+//    admin.createTable(htd)
+//
+//  }
 
   //扫描记录
   def scanRecord(tablename: String, family: String, column: String, productId: String, hbaseZKConfig: Map[String, String]): String = {
@@ -276,7 +276,7 @@ object HBaseUtils {
       }
 
     } catch {
-      case e => logger.error(e.toString)
+      case e:Throwable => logger.error(e.toString)
 
     } finally {
       if (table != null)

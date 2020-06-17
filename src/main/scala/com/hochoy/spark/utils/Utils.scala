@@ -138,7 +138,7 @@ object Utils {
     try {
       s.toString.toFloat
     } catch {
-      case _ => -1.0f
+      case _:Throwable => -1.0f
     }
   }
 

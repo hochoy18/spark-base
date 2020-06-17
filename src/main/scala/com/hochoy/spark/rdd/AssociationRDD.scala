@@ -65,14 +65,14 @@ object AssociationRDD {
       (ss(0),ss(1))
     })
     val joinRdd1 = VideoPair.map(t1=>t1.swap).join(AreaPair)
-    joinRdd1.partitioner
-    joinRdd1.dependencies
+//    joinRdd1.partitioner
+//    joinRdd1.dependencies
 
     val cogoupRdd = VideoPair.map(_.swap)
       .cogroup(AreaPair,new HashPartitioner(2))
 
-    cogoupRdd.partitioner
-    cogoupRdd.dependencies
+//    cogoupRdd.partitioner
+//    cogoupRdd.dependencies
 
     cogoupRdd.flatMapValues(p =>{
       for(v<- p._1.iterator;w<-p._2.iterator)

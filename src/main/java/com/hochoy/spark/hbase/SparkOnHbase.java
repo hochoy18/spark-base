@@ -7,7 +7,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.util.Base64;
+//import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -50,7 +50,7 @@ public class SparkOnHbase {
         configuration.set(TableInputFormat.INPUT_TABLE, tableName);
 
         ClientProtos.Scan proto = ProtobufUtil.toScan(scan);
-        String ScanToString = Base64.encodeBytes(proto.toByteArray());
+        String ScanToString = "";// Base64.encodeBytes(proto.toByteArray());
         configuration.set(TableInputFormat.SCAN, ScanToString);
 
         JavaPairRDD<ImmutableBytesWritable, Result> myRDD = context.newAPIHadoopRDD(configuration,TableInputFormat.class, ImmutableBytesWritable.class, Result.class);

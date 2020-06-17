@@ -7,7 +7,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos
-import org.apache.hadoop.hbase.util.{Base64, Bytes}
+import org.apache.hadoop.hbase.util.{/*Base64,*/ Bytes}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 
@@ -37,7 +37,7 @@ object SparkSQLOnHbase {
     configuration.set(TableInputFormat.INPUT_TABLE, tableName);
 
     val proto : ClientProtos.Scan = ProtobufUtil.toScan(scan)
-    val scan2String = Base64.encodeBytes(proto.toByteArray)
+    val scan2String = "";//Base64.encodeBytes(proto.toByteArray)
 
     configuration.set(TableInputFormat.SCAN,scan2String)
     val hbaseRdd: RDD[(ImmutableBytesWritable, Result)] =

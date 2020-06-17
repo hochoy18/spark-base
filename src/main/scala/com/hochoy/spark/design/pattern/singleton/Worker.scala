@@ -10,7 +10,7 @@ package com.hochoy.spark.design.pattern.singleton
 object Worker {
 
   val instance = new Worker
-  def getInstance:Worker = getInstance
+  def getInstance:Worker = instance
 }
  class Worker {
   def work()=println("I am the only worker!!!")

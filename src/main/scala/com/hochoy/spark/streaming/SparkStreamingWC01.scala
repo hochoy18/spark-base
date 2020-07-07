@@ -33,7 +33,7 @@ object SparkStreaming01_WC {
     ssc.awaitTermination()
   }
 
-  def socketTextStream:Unit={
+  def socketTextStream():Unit={
     val conf: SparkConf = new SparkConf().setMaster("local[*]").setAppName(SparkStreaming01_WC.getClass.getName)
 
     val ssc = new StreamingContext(conf,Seconds(5))
@@ -52,7 +52,7 @@ object SparkStreaming01_WC {
   }
 
 
-  def textFileStream: Unit ={
+  def textFileStream(): Unit ={
     val conf = new SparkConf()
       .setAppName(this.getClass.getName)
       .setMaster("local[*]")

@@ -972,7 +972,7 @@ public class NativeIO {
                     }
                 }
             } finally {
-                IOUtils.cleanupWithLogger(LOG, input, fis);
+                IOUtils.closeStream(input);
             }
         }
     }

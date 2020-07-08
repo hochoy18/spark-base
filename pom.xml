@@ -474,7 +474,17 @@
             <artifactId>hadoop-auth</artifactId>
             <version>${hadoop.version}</version>
         </dependency>
-
+        <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-yarn-common -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-yarn-common</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-yarn-client</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-streaming-kafka-${profiles.streaming-kafka.version}_${scala.binary.version}</artifactId>

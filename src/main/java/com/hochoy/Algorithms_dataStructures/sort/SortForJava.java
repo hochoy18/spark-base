@@ -10,71 +10,43 @@ package com.hochoy.Algorithms_dataStructures.sort;
  */
 public class SortForJava {
 
-    public static void main(String[] args) {
-        int[] arr = {2, 3, 1, 5, 2, 8, 3, 91, 2, 4, 3};
-//        bubbleSort(arr);
-//        int i = quickSortPart1(arr);
-//        System.out.println(i);
-    }   
+    static class QuickSort{
 
 
-    static int quickSortPart1(int [] arr,int left ,int right){
-        int begin = left;
-        int end = right;
-        int key = right;
-        while (begin<end){
-            while (begin < end && arr[begin] <= arr[key]){
-                ++ begin;
+       static void quickSort(int[] arr ,int left,int right){
+            int pivot = 0;
+            if (left<right){
+                pivot = partition(arr,left,right);
+                quickSort(arr,left,pivot-1);
+                quickSort(arr,pivot +1,right);
             }
-            while (begin<end && arr[end] >= arr[key]){
-                -- end;
-            }
-            int tmp = arr[begin];
-            arr[begin] = arr[end];
-            arr[end] = tmp;
+
         }
-        int tmp = arr[begin];
-        arr[begin] = arr[end];
-        arr[end] = tmp;
-        return begin;
 
-    }
-
-    static int [] quickSort1(int arr[],int left,int right){
-//        if (left>=right){
-//            return ;
-//        }
-//        if((right - left +1 )< 10)
-//
-        return null;
-    }
-
-
-
-
-    static int[] bubbleSort(int[] arr) {
-        int len = arr.length;
-        int mid;
-        for (int i = 0; i < len-1; i++) {
-            for (int j = 0; j < len-i-1; j++) {
-                if (j ==9){
-                    for (int k=0;k<len-1;k++){
-                        System.out.print(arr[k]+ " * ");
-                    }
+        /**
+         *   我们从待排序的记录序列中选取一个记录(通常第一个)作为基准元素(称为key)key=arr[left]，然后设置两个变量，left指向数列的最左部，right指向数据的最右部。
+         * @param arr 待排序的数组，
+         * @param left
+         * @param right
+         * @return
+         */
+        static int partition(int[] arr , int left ,int right){
+            System.out.println("left : "+left);
+            int key = arr[left];
+            while (left < right){
+                while (left<right && arr[right] >=key ){
+                    right --;
                 }
-                if(arr[j]>arr[j+1]){
-                    mid = arr[j];
-                    arr[j] = arr[j+1];
-                    arr[j+1] = mid;
+                arr[left] = arr[right];
+                while (left<right && arr[left] <=key){
+                    left ++;
                 }
-                for (int k=0;k<=len-1;k++){
-                    System.out.print(arr[k]+ ", ");
-                }
-                System.out.println();
+                arr[right] = arr[left];
+
             }
+            arr[left] = key;
+
+            return left;
         }
-        return arr;
     }
-
-
 }

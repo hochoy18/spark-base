@@ -1,6 +1,7 @@
 package com.hochoy.leetcode;
 
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 import java.util.*;
 
@@ -513,6 +514,150 @@ public class Solution {
         return Integer.parseInt(stack.pop());
     }
 
+
+    @Test
+    public void canMakeArithmeticProgression() {
+        int[] arr = new int[]{65, 58, 95, 10, 57, 62, 13, 106, 78, 23, 85};
+
+        arr = new int[]{3,5,7,9,1,13,11};
+        System.out.println("排序前："+ Arrays.toString(arr));
+        boolean result = canMakeArithmeticProgression(arr);
+        System.out.println("排序前："+ Arrays.toString(arr));
+        System.out.println(result);
+    }
+    public boolean canMakeArithmeticProgression(int[] arr) {
+        int len;
+        if ( (len = arr.length)  <3 )
+            return true;
+        quickSort(arr,0,len-1);
+        int  gap = arr[1] - arr[0];
+        for (int i = 0; i < arr.length-1; i++) {
+            if (gap !=  arr[i+1] - arr[i]){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void quickSort(int[] arr, int left ,int right){
+
+        int pivot = 0;
+        if (left < right){
+            pivot = partition(arr,left,right);
+            quickSort(arr,left,pivot-1);
+            quickSort(arr,pivot +1 ,right);
+
+        }
+
+    }
+
+
+    int partition(int[] arr , int left, int right){
+        int flag = arr[right];
+        while (left < right){
+            while (left<right && arr[left] <= flag){
+                left ++;
+            }
+            arr[right] = arr[left];
+
+            while (left < right && arr[right] >= flag){
+                right --;
+            }
+            arr[left] = arr[right];
+        }
+        arr[left] = flag;
+        return left;
+    }
+
+
+
+    @Test
+    public void sortString() {
+        String s = "abcabcabcabc";
+        String res = sortString(s);
+        assertEquals("abccbaabccba",res);
+
+
+
+    }
+    public String sortString(String str ) {
+        StringBuilder sb = new StringBuilder();
+         char[] arr = str.toCharArray();
+        System.out.println("before sort: "+Arrays.toString(arr));
+        quickSort(arr,0,arr.length-1);
+        System.out.println("after  sort: "+Arrays.toString(arr));
+
+
+        sb.append('c');
+
+        return sb.toString();
+    }
+
+    String  sortString( char[] arr ){
+
+        StringBuilder sb = new StringBuilder();
+
+        int len = arr.length ;
+
+       char min = arr[0];
+
+       char max = arr[len -1];
+
+       int count = 0;
+
+        for (int left = 0; left < arr.length; left++) {
+
+            for (int right = arr.length - 1; right >= 0; right--) {
+
+            }
+        }
+
+        return sb.toString();
+    }
+
+
+
+    void quickSort(char[] arr , int left,int right){
+        int pivot = 0;
+        if (left < right){
+            pivot = partition(arr,left,right);
+            quickSort(arr,left,pivot -1);
+            quickSort(arr,pivot +1 ,right );
+
+        }
+
+    }
+    int partition(char[] arr, int left, int right){
+        char flag = arr[left];
+        while (left < right){
+            while (left<right && arr[right] >= flag){
+                right --;
+            }
+            arr[left] = arr[right];
+            while (left < right && arr[left] <= flag){
+                left ++;
+            }
+            arr[right] = arr[left];
+        }
+
+        arr[left] = flag;
+        return left;
+    }
+
+
+    @Test
+    public void getKth() {
+
+    }
+
+    public int getKth(int lo, int hi, int k) {
+
+
+        return 0;
+    }
+
+
+
 }
 
 class MyStack {
@@ -562,4 +707,7 @@ class MyStack {
     public boolean empty() {
         return output.isEmpty();
     }
+
+
+
 }

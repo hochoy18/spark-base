@@ -4,6 +4,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class Solution {
 
@@ -581,36 +582,74 @@ public class Solution {
 
     }
     public String sortString(String str ) {
+
+        // a , 3
+        // b , 3
+        // c , 3
+
+        int a = 'c';
+
+        System.out.println(a);
+
+
+
         StringBuilder sb = new StringBuilder();
          char[] arr = str.toCharArray();
-        System.out.println("before sort: "+Arrays.toString(arr));
-        quickSort(arr,0,arr.length-1);
-        System.out.println("after  sort: "+Arrays.toString(arr));
 
+
+//        System.out.println("before sort: "+Arrays.toString(arr));
+//        quickSort(arr,0,arr.length-1);
+//        System.out.println("after  sort: "+Arrays.toString(arr));
+//
 
         sb.append('c');
 
         return sb.toString();
     }
 
-    String  sortString( char[] arr ){
+    //      0 1 2 3 4 5 6 7 8
+    //      a a a b b b c c c  min = A[0] = a ,max = A[8] = c
+    //1 ->  _ a a _ b b _ c c  min = A[1] ,max = A[8] count+=1,count+=1,count+=1 ; boolean toBig = true;
+    //2 <-  _ a _ _ b _ _ c _
+    //3 ->  _ a _ _ _ _ _ _ _
+
+    String  sortString( char[] arr ) {
 
         StringBuilder sb = new StringBuilder();
 
-        int len = arr.length ;
+        int len = arr.length;
 
-       char min = arr[0];
+        char min = arr[0];
 
-       char max = arr[len -1];
+        char max = arr[len - 1];
 
-       int count = 0;
+        int count = 0;
 
-        for (int left = 0; left < arr.length; left++) {
+        // front -> back
+        for (int i = arr.length - 1; i >= 0; i--) {
 
-            for (int right = arr.length - 1; right >= 0; right--) {
+            sb.append(arr[i]);
 
-            }
+
+
         }
+
+
+
+
+
+//        boolean toBig = true;
+//        while (count < len){
+//            if (toBig){
+//                for (int i = arr.length - 1; i >= 0; i--) {
+//
+//                }
+//
+//            }else{
+//
+//            }
+//        }
+
 
         return sb.toString();
     }
@@ -643,6 +682,641 @@ public class Solution {
         arr[left] = flag;
         return left;
     }
+
+
+
+
+
+
+
+
+
+    @Test
+    public void average() {
+
+        int[] salary = new int[]{8000,9000,2000,3000,6000,1000};
+        double avg = average1(salary);
+        System.out.println(avg );
+
+        int []arr = new int[]{25000,48000,57000,86000,33000,10000,42000,3000,54000,29000,79000,40000};
+        avg = average(arr);
+        System.out.println(avg);
+        System.out.println();
+
+        avg = average1(arr);
+        System.out.println(avg);
+
+    }
+
+
+    public double average1(int[] salary) {
+        int min = salary[0] ,max = salary[0] ;
+        double sum = 0d;
+        for (int i = 0; i < salary.length; i++) {
+
+            if (salary[i] <= min)
+                min = salary[i];
+            if (salary[i] >= max)
+                max = salary[i];
+            sum += salary[i];
+        }
+        System.out.println("min: " + min + ",  max: " + max);
+        return (sum - min - max) / (salary.length - 2);
+
+    }
+
+
+    public double average(int[] salary) {
+        System.out.println("before sort :"+Arrays.toString(salary));
+        quickSortSalary(salary,0,salary.length - 1);
+        System.out.println("after sort :"+Arrays.toString(salary));
+
+        double sum = 0d;
+        for (int i = 1 ; i < salary.length -1; i++) {
+            sum += salary[i];
+        }
+
+        return sum /( salary.length -2);
+    }
+
+
+    void quickSortSalary(int[] salary,int left,int right){
+        int pivot  ;
+        if (left<right){
+            pivot = partitionSalary(salary,left,right );
+            quickSortSalary(salary, left,pivot-1);
+            quickSortSalary(salary,pivot + 1,right);
+        }
+
+    }
+
+    int partitionSalary(int[] salary , int left , int right ){
+        int key = salary[left];
+        while (left< right){
+            while (left < right && salary[right] > key) {
+                right --;
+            }
+            salary[left] = salary[right];
+            while (left < right && salary[left] < key){
+                left ++;
+            }
+            salary[right] = salary[left];
+        }
+        salary[left] = key;
+        return left;
+    }
+
+
+
+
+
+    @Test
+    public void minSubsequence() {
+        int[]nums = new int[]{4,4,7,6,7};
+
+        List<Integer> list = minSubsequence(nums);
+        System.out.println(list);
+        nums= new int []{4,3,10,9,8};
+        list = minSubsequence(nums);
+        System.out.println(list);
+    }
+
+
+
+    public List<Integer> minSubsequence(int[] nums) {
+
+        List<Integer>  res = new ArrayList<>();
+        if(nums.length == 1){
+            res.add(nums[0]);
+            return res;
+        }
+
+        System.out.println("before sort : " + Arrays.toString(nums));
+        quickSortDesc(nums,0,nums.length -1 );
+        System.out.println("after sort : " + Arrays.toString(nums));
+
+        int sum = 0,tmp = 0;
+        for (int i = 0; i < nums.length; i++) {
+            sum += nums[i] ;
+        }
+
+
+        for (int i = 0; i < nums.length; i++) {
+            tmp += nums[i];
+            if (tmp <= sum - tmp){
+                res.add(nums[i]);
+            }else {
+                res.add(nums[i]);
+                break;
+            }
+        }
+
+
+
+        return res;
+    }
+
+    void quickSortDesc(int[]nums ,int left,int right){
+        int pivot ;
+        if (left < right){
+            pivot = partitionDesc(nums,left,right);
+            quickSortDesc(nums,left,pivot - 1 );
+            quickSortDesc(nums,pivot + 1 ,right);
+        }
+    }
+
+    int partitionDesc(int[]nums , int left ,int right ){
+
+        int key = nums[left];
+        while (left<right){
+            while (left < right && nums[right] <= key){
+                right -- ;
+            }
+            nums[left] = nums[right];
+            while (left < right && nums[left] >= key){
+                left ++;
+            }
+            nums[right] = nums[left];
+        }
+        nums[left] = key;
+        return left;
+    }
+
+
+
+
+
+    @Test
+    public void countSmaller() {
+        int[]nums = new int[]{};
+        List<Integer> list = countSmaller(nums);
+        System.out.println(list);
+
+    }
+    public List<Integer> countSmaller(int[] nums) {
+        List<Integer> res = new ArrayList<>();
+        if (nums.length == 0){
+            return res;
+        }
+
+        for (int i = 0; i < nums.length -1 ; i++) {
+            int count =0 ;
+            for (int j = i+1; j < nums.length; j++) {
+                if (nums[i] > nums[j])
+                    count ++;
+            }
+            res.add(count);
+        }
+        res.add(0);
+
+        return  res;
+    }
+
+    @Test
+    public void countNegatives(){
+        int[][] grid;
+        int countNegatives ;
+
+//        grid= new int[][]{{4,3,2,-1},{3,2,1,-1},{1,1,-1,-2},{-1,-1,-2,-3}};
+//        countNegatives = countNegatives(grid);
+//        assertEquals(8,countNegatives);
+////
+//        countNegatives = countNegatives1(grid);
+//        assertEquals(8,countNegatives);
+
+        grid = new int[][]{{3,-1},{-1,-1}} ;
+        countNegatives = countNegatives1(grid);
+        assertEquals(3,countNegatives);
+
+
+    }
+    public int countNegatives(int[][] grid) {
+        int count = 0;
+        for (int i = 0; i < grid.length; i++) {
+            int[] line = grid[i];
+            for (int j = 0; j < line.length; j++) {
+                if (line[j] < 0)
+                    count ++;
+            }
+        }
+        return count;
+    }
+
+    // 8   7   5    3    4    7   9    19  -32
+    // 0   1   2    3    4    5   6    7    8
+    // L                 M                  R
+    //                        L   M         R
+    //                                 L    R
+    //                                     L/R
+
+    // 8  -7  -5   -3   -4   -7  -9   -19  -32
+    // 0   1   2    3    4    5   6    7    8
+    // L                 M                  R
+    //
+
+    public int countNegatives1(int[][] grid){
+        int count = 0;
+        for (int i = 0; i < grid.length; i++) {
+            int[] row = grid[i];
+            int len = row.length;
+            int loc = firstNegativeLoc(row);
+
+            System.out.println(loc + " --> " + (len - loc ));
+            count += (len-loc);
+        }
+        return count;
+    }
+    public int firstNegativeLoc(int[] grid){
+        if (grid[grid.length -1] >= 0)
+            return grid.length;
+        if(grid[0] < 0)
+            return 0;
+        int left = 0 ;
+        int right = grid.length - 1 ;
+        while (left < right ){
+            int mid = (left + right ) >> 1;
+            if ( grid[mid] >=0 ){
+                left = mid + 1;
+            }else {
+                if (grid[mid - 1] >= 0)
+                    return mid;
+                right = mid -1;
+            }
+        }
+        return left;
+    }
+
+
+    @Test
+    public void peakIndexInMountainArray() {
+        int[] A ;
+        int index;
+
+        A = new int[]{1,3, 5, 7, 9, 11, 13, 15  };
+        index = peakIndexInMountainArray(A);
+        assertEquals(7 ,index );
+
+        A = new int[]{0, 1, 0};
+        index = peakIndexInMountainArray(A);
+        assertEquals(1 ,index );
+
+        A = new int[]{0, 2, 1, 0};
+        index = peakIndexInMountainArray(A);
+        assertEquals(1 ,index );
+
+
+
+    }
+
+    public int peakIndexInMountainArray(int[] A) {
+
+        // 0 ,1, 2, 4
+        // 0  1  0
+        for (int i = 1; i < A.length -1; i++) {
+            if (A[i] > A[i-1] && A[i] > A[i+1]){
+                return i;
+            }
+        }
+        return -1;
+
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+//    public int peakIndexInMountainArray1(int[] A) {
+//        int L = 0 ;
+//        int R = A.length - 1;
+//        while (L <= R){
+//            int M = (L + R) >> 1;
+//            if (M>0 && M <  &&A[M] < A[R] )
+//
+//        }
+//
+//    }
+
+
+    @Test
+    public void kWeakestRows() {
+        int[][] mat = new int[][]{
+                {1, 1, 0, 0, 0},
+                {1, 1, 1, 1, 0},
+                {1, 0, 0, 0, 0},
+                {1, 1, 0, 0, 0},
+                {1, 1, 1, 1, 1}
+        };
+
+        int[] res = kWeakestRows(mat,3);
+        assertArrayEquals(new int[]{2,0,3},res);
+
+    }
+
+    public int[] kWeakestRows(int[][] mat, int k) {
+
+        int len = mat.length;
+        int[] tmp = new int[len];
+        int[] res = new int[k];
+
+        for (int i = 0; i < len; i++) {
+            int[] row = mat[i];
+            int count = 0;
+            for (int ele : row) {
+                if (ele  == 1){
+                    count ++;
+                }else {
+                    break;
+                }
+            }
+            tmp[i] = count;
+        }
+
+
+
+        // 2  4  1  2  5
+        return tmp;
+
+
+    }
+
+    @Test
+    public void isPerfectSquare() {
+        boolean flag;
+//        flag = isPerfectSquare(16);
+//        assertEquals(true,flag);
+
+//        flag = isPerfectSquare(10000);
+//        assertEquals(true ,flag);
+//
+//
+//        flag = isPerfectSquare(1000000);
+//        assertEquals(true ,flag);
+
+//        flag = isPerfectSquare(1000001);
+//        assertEquals(true ,flag);
+
+
+
+        flag = isPerfectSquare(808201);
+        assertEquals(true ,flag);
+        System.out.println(flag);
+
+    }
+
+    // L   M   R     MM     16
+    // 0   8   16    64     >     R = M -1
+    // 0   3    7    9      <     L = M +1
+    // 4   5    7    25     >     R = M -1
+    // 4   4   4     14     =
+    public boolean isPerfectSquare(int num) {
+        if (num ==1)return true;
+
+        long  L = 1;
+        long  R = num ;
+        while (L <= R){
+            long M = (L + R) / 2;
+            long MM = M * M;
+            if (MM == num)
+                return true;
+            else if (MM < num )
+                L = M +1;
+            else if (MM > num)
+                R = M -1;
+        }
+       return false;
+
+    }
+
+    @Test
+    public void guessNumber() {
+
+    }
+
+
+    public int guessNumber(int n) {
+
+        return n;
+    }
+
+
+
+
+    @Test
+    public void game() {
+        int[] guess = new int[]{1,2,3};
+        int[] answer = new int[]{1,2,3};
+        int game = game(guess,answer);
+
+        assertEquals(3,game);
+
+
+    }
+
+
+    public int game(int[] guess, int[] answer) {
+        int count = 0;
+        int i = 0 ;
+        int len = guess.length;
+        while(i < len && guess[i] == answer[i] ){
+            count ++;
+            i++;
+        }
+        return count;
+
+    }
+
+
+    @Test
+    public void twoSum() {
+        int[]numbers = new int[]{2, 7, 11, 15};
+        int target = 17;
+
+        try {
+            TimeUnit.SECONDS.sleep(5);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        long start = System.nanoTime();
+        int[] res = twoSum(numbers, target);
+
+        long twoSum =  ( System.nanoTime() - start);
+        System.out.println("twoSum: " +twoSum + "  nano seconds");
+        System.out.println(Arrays.toString(res));
+        assertArrayEquals(new int[]{1,4},res);
+
+        start =  System.nanoTime();
+        res = twoSum1(numbers, target);
+
+        long twoSum1 =  ( System.nanoTime() - start);
+        System.out.println("twoSum1: " + twoSum1+ "  nano seconds");
+        System.out.println(" binarySearch is faster than tow-pointer : " + (twoSum1 < twoSum) );
+        System.out.println(Arrays.toString(res));
+        assertArrayEquals(new int[]{1,4},res);
+
+    }
+
+    public int[] twoSum(int[] numbers, int target) {
+        int[] res = new int[2];
+        for (int i = 0; i < numbers.length; i++) {
+            for (int j = i+1; j < numbers.length; j++) {
+                if (numbers[i] + numbers[j] == target)
+                    res = new int[]{i+1,j+1};
+            }
+        }
+        return res;
+    }
+    public int[] twoSum1(int[] numbers, int target) {
+        for (int i = 0; i < numbers.length - 1; i++) {
+            int first = numbers[i];
+            int start = i + 1;
+            int second = target - first;
+            int idx = binarySearch(numbers,start,second);
+            if (idx != -1){
+                return new int[]{i+1,idx +1};
+            }
+        }
+        return new int[0];
+
+    }
+
+    // 0  1  2  3  4  5  6  7   8  9   10  11  12  13
+    // 1  2  3  4  6  8  9  10  11 12  15  17  18  19    target = 5 return {2 ,3 }
+    //       L              M                       R
+    //
+    public int binarySearch(int[] numbers, int start ,int target){
+
+        int end = numbers.length - 1;
+        while (start <= end){
+            int mid = (start + end ) >> 1;
+            if (numbers[mid] == target)
+                return mid;
+            else  if (numbers[mid] > target){
+                end = mid - 1;
+            }else  if (numbers[mid] < target){
+                start = mid +1;
+            }
+        }
+        return -1;
+    }
+
+    @Test
+    public void intersect() {
+
+        int[] nums1 = new int[]{1, 2,2,1};
+        int[] nums2 = new int[]{2, 2};
+
+        int[] intersect = intersect(nums1, nums2);
+        assertArrayEquals(new int[]{2,2},intersect);
+        System.out.println(Arrays.toString(intersect));
+
+
+    }
+
+
+    public int[] intersect(int[] nums1, int[] nums2) {
+        int len1 = nums1.length;
+        int len2 = nums2.length;
+        int[] min ;//= len1 >  len2 ? nums2 : (len1 == len2 ? nums1 : nums2);
+        int[] max ;//= len1 <  len2 ? nums2 : (len1 == len2 ? nums2 : nums1);
+
+        if (len1 <= len2){
+            min = nums1;
+            max = nums2;
+        }else {
+            min = nums2;
+            max = nums1;
+        }
+
+        quickSort1(max,0,max.length - 1);// O( N * logN )
+        quickSort1(min,0,min.length - 1);// O( N * logN )
+
+
+        // 1  2  2
+        // 1  2  2  3
+        int kk = 0;
+
+       int[] res = new int[min.length ];
+        for (int i = 0; i < min.length; i++) {
+            int k = min[i];
+            int bs = bs(max, kk, k);
+            if (bs != -1){
+                res[kk] = k;
+                System.out.println(k + "----->" + kk);
+                kk ++;
+            }
+        }
+
+
+
+        int[] result = new int[kk];
+        System.arraycopy(res,0,result,0,kk);
+        return result;
+
+    }
+
+
+    int bs(int[] nums ,int start,int target){
+//        int start = 0;
+        int end = nums.length - 1;
+        // 1  2  3  4  5  7
+        while (start <= end){
+            int mid = (start + end ) >> 1;
+            if (nums[mid] == target)
+                return mid;
+            else if (nums[mid] > target)
+                end  = mid -1;
+            else if (nums[mid ] < target)
+                start = mid +1;
+        }
+
+
+        return  -1;
+    }
+
+    void quickSort1(int[] nums ,int left ,int right ){
+        int pivot = 0 ;
+        if (left < right){
+            pivot = partition1(nums, left, right);
+            quickSort1(nums,left,pivot -1);
+            quickSort1(nums,pivot +1 , right);
+        }
+    }
+
+    // k=2
+    //  2  2  9  6  4  7  9
+    //  0  1  2  3  4  5  6
+    //     P K/L           R
+    // key = 9
+    //  2  2  9  6  4  7  9
+    //     P K/L       R
+    //  2  2  7  6  4  9  9
+    //                 P
+    int partition1(int[] nums , int left ,int right ){
+        int key = nums[left];
+        while (left < right){
+
+            while ( left < right && nums[right] >= key){
+                right -- ;
+            }
+            nums[left] = nums[right];
+            while (left < right && nums[left] <= key){
+                left ++;
+            }
+            nums[right] = nums[left];
+        }
+        nums[left] = key;
+        return left;
+    }
+
+
+
 
 
     @Test

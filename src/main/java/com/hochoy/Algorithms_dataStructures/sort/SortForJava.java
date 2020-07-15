@@ -49,4 +49,62 @@ public class SortForJava {
             return left;
         }
     }
+
+
+    static class InsertSort {
+
+
+
+        //idx: 0  1  2  3   4   ...
+        //     9  8  7  6   5   4  3  2  1
+        //     6  7  8  9   五  tmp = 5 ; i = 4 , j = 4 ===> nums[j-1] = 9 > tmp { nums[j] = nums[j-1] ; j = j-1 = 3}
+        //     6  7  8  8   9    xxxxxxx;         j = 3 ===> nums[j-1] = 8 > tmp { nums[j] = nums[j-1] ; j = j-1 = 2 }
+        //     6  7  7  8   9    xxxxxxx;         j = 2 ===> nums[j-1] = 7 > tmp { nums[j] = nums[j-1] ; j = j-1 = 1 }
+
+        //     6  6  7  8   9    xxxxxxx;         j = 1 ===> nums[j-1] = 6 > tmp { nums[j] = nums[j-1] ; j = j-1 = 0 }
+        //     5  6  7  8   9    xxxxxxx;         j = 0
+
+
+        //                                                     0  1  2  3  4  5   6 对“七” 进行插入排序
+        //                                                     6  7  7  8  8  9  七      =====> tmp = 7 ; i = 6 ;j = 6
+        // nums[j-1] = 9  > tmp,nums[j] = nums[j-1];j--  ===>  6  7  7  8  8  9   9      =====> tmp = 7  ;j = 5
+        // nums[j-1] = 8  > tmp,nums[j] = nums[j-1];j--  ===>  6  7  7  8  8  8   9      =====> tmp = 7  ;j = 4
+        // nums[j-1] = 8  > tmp,nums[j] = nums[j-1];j--  ===>  6  7  7  8  8  8   9      =====> tmp = 7  ;j = 3
+        // nums[j-1] = 7  = tmp,nums[j] = tmp ;break;    ===>  6  7  7  7  8  8   9
+        //
+        static void insertSort(int[] nums) {
+            int tmp;
+            for (int i = 1; i < nums.length; i++) {
+                if (nums[i - 1] > nums[i]) {
+                    tmp = nums[i];
+                    int j = i;
+                    while (j >= 0) {
+                        if (j > 0 && nums[j - 1] > tmp) {
+                            nums[j] = nums[j - 1];
+                        } else {
+                            nums[j] = tmp;
+                        }
+                        j--;
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    static class BucketSort{
+
+
+        //          0  1  2  3  4  5  6  7  8  9 10  11
+        //          5  3  5  2  8
+        //          0  0  0  0  0  0  0  0  0  0  0   0
+        //
+
+
+
+        static void bucketSort(int[] nums){
+
+        }
+    }
 }

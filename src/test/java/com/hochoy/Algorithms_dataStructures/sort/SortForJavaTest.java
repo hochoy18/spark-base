@@ -17,4 +17,14 @@ public class SortForJavaTest {
 
 
     }
+
+    @Test
+    public void insertSort(){
+
+        int[] nums = new int[]{9,8,7,6,5,4,3,2,1};
+        System.out.println("排序前："+ Arrays.toString(nums));
+        SortForJava.InsertSort.insertSort(nums);
+        System.out.println("排序后："+ Arrays.toString(nums));
+
+    }
 }

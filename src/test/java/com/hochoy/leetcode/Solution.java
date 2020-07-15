@@ -1318,6 +1318,175 @@ public class Solution {
 
 
 
+    @Test
+    public void sortArrayByParityII() {
+
+        int[] A = new int[]{4,2,5,7};
+        int[] res = sortArrayByParityII(A);
+
+        System.out.println(Arrays.toString( res ));
+
+        res = sortArrayByParityII2(A);
+        System.out.println(Arrays.toString( res ));
+
+
+    }
+
+    public int[] sortArrayByParityII2(int[] A) {
+
+        int[] res = new int[A.length];
+
+        int nextOddIndex = 1;
+        int nextEvenIndex = 0;
+
+        for (int i = 0; i < A.length; i++) {
+            int Ai = A[i];
+            if ((Ai & 1) == 1) {
+                res[nextOddIndex] = Ai;
+                nextOddIndex += 2;
+            } else {
+                res[nextEvenIndex] = Ai;
+                nextEvenIndex += 2;
+            }
+        }
+        return res;
+    }
+
+
+
+    public int[] sortArrayByParityII(int[] A) {
+
+        int[] res = new int[A.length];
+        Stack<Integer> odd = new Stack<>(); // 奇数
+        Stack<Integer> even = new Stack<>(); // 偶数
+        for (int i = 0; i < A.length; i++) {
+            int Ai = A[i];
+
+            if ((Ai & 1) == 1){
+                odd.push(Ai);
+            }else{
+                even.push(Ai);
+            }
+        }
+        for (int i = 0; i < res.length; i++) {
+            if ( (i & 1) == 1)
+                res[i] = odd.pop();
+            else res[i] = even.pop();
+        }
+
+        return res;
+    }
+
+    void insertSort(int[] nums){
+
+        int tmp ;
+        for (int i = 1; i < nums.length; i++) {
+
+            if (nums[i-1] > nums[i]){
+                tmp = nums[i];
+                int j = i;
+                while (j>=0){
+                    if (j> 0 && nums[j-1] > tmp){
+                        nums[j ]= nums[j];
+                    }else{
+                        nums[j ]= tmp;
+                    }
+                    j--;
+
+                }
+
+
+            }
+
+        }
+
+
+    }
+
+
+
+    @Test
+    public void minimumTotal() {
+        List<List<Integer>> triangle = new ArrayList<>();
+
+        triangle.add(Collections.singletonList(2));
+        triangle.add(Arrays.asList(3,4));
+        triangle.add(Arrays.asList(6,5,7));
+        triangle.add(Arrays.asList(4,1,8,3));
+        int res = minimumTotal(triangle);
+        System.out.println(res);
+        assertEquals(11,res);
+
+    }
+
+    /**
+     * [
+     *       [ 2 ]
+     *     [ 3, 4 ]
+     *   [ 6, 5, 7 ]
+     * [ 4, 1, 8, 3 ]
+     * ]
+     */
+    public int minimumTotal(List<List<Integer>> triangle) {
+
+        int n = triangle.size();
+
+        int[][] f = new int[n][n];
+        // f[i][j] 表示从三角形顶部走到位置 (i, j)的最小路径和。
+        //(i,j) 指的是三角形中第 ii 行第 jj 列（均从 00 开始编号）的位置。
+        f[0][0] = triangle.get(0).get(0);
+
+        for (int i = 1; i < n; i++) {
+            f[i][0] = f[i-1][0] + triangle.get(i).get(0);
+            for (int j = 1; j < i; j++) {
+                f[i][j] = Math.min(f[i-1][j-1], f[i-1][j] + triangle.get(i).get(j));
+            }
+        }
+
+        return 0;
+
+    }
+
+
+    @Test
+    public void subtractProductAndSum() {
+        int n = 4421;
+        int res = subtractProductAndSum(n);
+        System.out.println(res);
+
+    }
+
+    public int subtractProductAndSum(int n) {
+//        int mod ;
+//        int tmp = n;
+//        if (n<10){
+//            return 0;
+//        }
+//        int sum = 0;
+//        int prod = 1;
+//        while (tmp >=10){
+//            mod = tmp % 10;
+//            sum += mod;
+//            prod *= mod;
+//            tmp /= 10;
+//        }
+//        mod = tmp % 10;
+//        sum += mod;
+//        prod *= mod;
+//        return prod - sum;
+
+
+        int add = 0,mult = 1;
+        while (n > 0){
+            int mod = n % 10;
+            n /= 10;
+            add += mod;
+            mult *= mod;
+        }
+        return mult - add;
+
+    }
+
 
     @Test
     public void getKth() {

@@ -1487,6 +1487,74 @@ public class Solution {
 
     }
 
+    @Test
+    public void removeDuplicates() {
+        int[] nums = new int[]{0,0,1,1,1,2,2,3,3,4};
+        nums = new int[]{1,2,3,4,5};
+
+
+        int res = removeDuplicates(nums);
+        System.out.println(Arrays.toString(nums));
+
+        System.out.println(res);
+        assertEquals(5,res);
+
+        nums = new int[]{1,2,3,4,5};
+        res = removeDuplicates(nums);
+        System.out.println(Arrays.toString(nums));
+        System.out.println(res);
+    }
+
+
+    // 0,0,1,1,1,2,2,3,3,4
+    //
+    public int removeDuplicates(int[] nums) {
+        int len = nums.length;
+        if (len<=1)
+            return len;
+
+        int start = 0;
+
+        int dups = 0;
+        int max = nums[len-1];
+        while (start < len-1){
+            if (max == nums[start])
+                return start +1;
+            if(nums[start] == nums[start + 1 ]){
+                System.arraycopy(nums,start+1,nums,start,len - start-1);
+                dups ++;
+            }
+            else
+                start++;
+        }
+        return len - dups;
+
+    }
+
+    @Test
+    public void maxArea() {
+        int[] height = new int[]{1,8,6,2,5,4,8,3,7};
+        int maxArea = maxArea(height);
+        System.out.println(maxArea);
+        assertEquals(49,maxArea);
+
+    }
+    public int maxArea(int[] height) {
+        int max = 0;
+        for (int i = 0; i < height.length - 1; i++) {
+            for (int j = i+1; j < height.length; j++) {
+                int hi = height[i];
+                int hj = height[j];
+                int multi = Math.min(hi,hj) * (j-i);
+
+                if (multi > max){
+                    max = multi;
+                }
+            }
+        }
+        return max;
+
+    }
 
     @Test
     public void getKth() {

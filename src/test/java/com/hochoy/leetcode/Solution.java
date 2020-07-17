@@ -1556,6 +1556,45 @@ public class Solution {
 
     }
 
+
+    @Test
+    public void threeSumClosest() {
+        int[] nums = new int[]{-1, 2, 1, -4};
+        int target = 1;
+
+        nums = new int[]{-3,-2,-5,3,-4};
+        target = -1;
+
+        int res = threeSumClosest(nums, target);
+        System.out.println(res);
+
+
+    }
+
+    public int threeSumClosest(int[] nums, int target) {
+        int res;
+        int[] resArr = new int[]{nums[0], nums[1], nums[2]};
+        int minAbs = Math.abs(nums[0] + nums[1] + nums[2] - target);
+
+        for (int i = 0; i < nums.length - 2; i++) {
+            for (int j = i + 1; j < nums.length - 1; j++) {
+                for (int k = j + 1; k < nums.length; k++) {
+                    int sum = nums[i] + nums[j] + nums[k];
+                    int tmpAbs = Math.abs(sum - target);
+                    if (tmpAbs < minAbs && (i != j && j != k && i != k)) {
+                        resArr = new int[]{nums[i], nums[j], nums[k]};
+                        minAbs = tmpAbs;
+                    }
+
+                }
+            }
+        }
+
+        res = resArr[0] + resArr[1] + resArr[2];
+        System.out.println(Arrays.toString(resArr));
+        return res;
+    }
+
     @Test
     public void getKth() {
 

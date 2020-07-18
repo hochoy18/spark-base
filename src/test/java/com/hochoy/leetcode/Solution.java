@@ -1701,6 +1701,28 @@ public class Solution {
     }
 
     @Test
+    public void numJewelsInStones() {
+        String J = "aA", S = "aAAbbbb";
+        int res = numJewelsInStones(J,S);
+        System.out.println(res);
+
+    }
+
+    public int numJewelsInStones(String J, String S) {
+        Map<Character ,Integer> map = new HashMap<>();
+        for (int i=0;i<J.length();i++){
+            map.put(J.charAt(i),0);
+        }
+
+        int count = 0;
+        for (char c : S.toCharArray()) {
+            if (map.containsKey(c)){
+                count++;
+            }
+        }
+        return count;
+    }
+    @Test
     public void getKth() {
 
     }

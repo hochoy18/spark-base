@@ -1646,8 +1646,59 @@ public class Solution {
         return data > target ? idx  : idx +1;
 
     }
+    @Test
+    public void numIdenticalPairs() {
+
+        int[]nums = new int[]{1,2,3,1,1,3};
+
+        int res = numIdenticalPairs(nums);
+
+        System.out.println(res);
+
+        assertEquals(4,res);
+
+        nums = new int[]{1,1,1,1};
+        res = numIdenticalPairs(nums);
+
+        System.out.println(res);
+
+        assertEquals(6,res);
+
+        nums = new int[]{6,5,1,5,7,7,9,1,5,7,1,6,10,9,7,4,1,8,7,1,1,8,6,4,7,4,10,5,3,9,10,1,9,5,5,4,1,7,4,2,9,2,6,6,4,2,10,3,5,3,6,4,7,4,6,4,4,6,3,4,10,1,10,6,10,4,9,6,6,4,8,6,9,5,4};
+        res = numIdenticalPairs(nums);
+
+        System.out.println(res);
+
+        assertEquals(303,res);
 
 
+    }
+
+
+    public int numIdenticalPairs(int[] nums) {
+
+        Map<Integer, Integer> map = new HashMap<>();
+        for (int num : nums) {
+            if (!map.containsKey(num))
+                map.put(num, 1);
+            else map.put(num, map.get(num) + 1);
+        }
+        int count = 0;
+        for (Map.Entry<Integer, Integer> entry : map.entrySet()) {
+            Integer value = entry.getValue();
+            if (value >1){
+                int combiner = value *(value-1)/2 ;//factorial((long)value) / ( 2 * factorial((long)(value-2)));
+                count += combiner;
+            }
+        }
+        return count;
+    }
+
+    long factorial(long num) {
+        if (num <= 1)
+            return 1;
+        return num * factorial(num - 1);
+    }
 
     @Test
     public void getKth() {

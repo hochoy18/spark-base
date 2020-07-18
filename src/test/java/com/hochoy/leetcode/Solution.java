@@ -1596,6 +1596,60 @@ public class Solution {
     }
 
     @Test
+    public void searchInsert() {
+        int[]nums = new int[]{1,3,5,6};
+
+//        for (int i = 0; i < nums.length; i++) {
+//            int res = searchInsert(nums,nums[i]);
+//            System.out.print(res + " ");// 0 1 2 3
+//            assertEquals(i,res);
+//        }
+        System.out.println();
+        int[] out = new int[]{-1,0,2,4,9};
+        int[] kk = new int[]{ 0, 0,1,2,4};
+        for (int i = 0; i < out.length; i++) {
+            int res = searchInsert(nums,out[i]);
+            System.out.print(res + " \n");//0 0 1 2 4
+            assertEquals(kk[i],res);
+        }
+
+
+    }
+
+    public int searchInsert(int[] nums, int target) {
+
+        int len = nums.length;
+        int left = 0;
+        int right = len - 1;
+
+        int sub0 = Math.abs(target - nums[0]);
+        int data = 0;
+
+        int idx = -1;
+        while (left <= right) {
+            int mid = (left + right) >> 1;
+            int sub = target - nums[mid] ;
+            if (sub0 >= Math.abs(sub)){
+                sub0 = Math.abs(sub);
+                idx = mid;
+                data = nums[mid];
+            }
+            if (sub<0) {
+                right = mid - 1;
+            }else if (sub > 0 ){
+                left = mid + 1;
+            }else {
+               return idx;
+            }
+        }
+        System.out.printf("data: %d, target: %d,  idx:  %d %n",data, target ,idx );
+        return data > target ? idx  : idx +1;
+
+    }
+
+
+
+    @Test
     public void getKth() {
 
     }

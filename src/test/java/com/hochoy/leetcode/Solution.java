@@ -1723,6 +1723,72 @@ public class Solution {
         return count;
     }
     @Test
+    public void missingNumber() {
+        int[] nums;
+        int res;
+
+        nums = new int[]{0,1,3};
+        res = missingNumber(nums);
+        System.out.println(res);
+        assertEquals(2,res);
+
+        nums = new int[]{0,1,2,3,4,5,6,7,9};
+        res = missingNumber(nums);
+        System.out.println(res);
+        assertEquals(8,res);
+
+        nums = new int[]{0,1,2,3,4,6,7,8,9};
+        res = missingNumber(nums);
+        System.out.println(res);
+        assertEquals(5,res);
+
+        nums= new int[]{0,2,3,4,5,6,7,8,9};
+        res = missingNumber(nums);
+        System.out.println(res);
+        assertEquals(1,res);
+
+        nums= new int[]{0,1};
+        res = missingNumber(nums);
+        System.out.println(res);
+        assertEquals(2,res);
+
+
+        nums = new int[]{1,2};
+        res = missingNumber(nums);
+        System.out.println(res);
+        assertEquals(0,res);
+
+
+        nums = new int[]{1};
+        res = missingNumber(nums);
+        System.out.println(res);
+        assertEquals(0,res);
+
+        nums = new int[]{0};
+        res = missingNumber(nums);
+        System.out.println(res);
+        assertEquals(1,res);
+
+    }
+
+    public int missingNumber(int[] nums) {
+
+        int start = 0 ;
+        int end = nums.length - 1;
+        while (start <= end){
+            int mid = (start + end ) >> 1;
+            if (nums[mid] > mid ){
+                end = mid -1;
+            }else if (nums[mid] <= mid ){
+                start = mid + 1;
+            }
+        }
+        //0  1  2
+        return start;
+
+    }
+
+    @Test
     public void getKth() {
 
     }

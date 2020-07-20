@@ -1789,6 +1789,66 @@ public class Solution {
     }
 
     @Test
+    public void findMagicIndex() {
+        int[] nums;
+        int res;
+
+        nums = new int[]{0, 2, 3, 4, 5};
+        res = findMagicIndex(nums);
+        System.out.println(res);
+        assertEquals(0,res);
+
+        nums = new int[]{1, 1, 1};
+        res = findMagicIndex(nums);
+        System.out.println(res);
+        assertEquals(1,res);
+
+        nums = new int[]{5,6,9};
+        res = findMagicIndex(nums);
+        System.out.println(res);
+        assertEquals(-1,res);
+
+        // 0 1 2
+        // 0 0 2
+        // l m r n[m] < m
+        //
+        nums = new int[]{0,0,2};
+        res = findMagicIndex(nums);
+        System.out.println(res);
+        assertEquals(0,res);
+    }
+
+    public int findMagicIndex(int[] nums) {
+
+        for (int i = 0;
+             i < nums.length; i++) {
+            if (nums[i] == i)
+                return i;
+        }
+        return -1;
+
+//        int left = 0 ;
+//        int right = nums.length - 1 ;
+//        int tmp = -1;
+//        while (left <= right){
+//            int mid = (left + right )>> 1;
+//            if (nums[mid ] == mid ){
+//                tmp = mid ;
+//                right = mid -1;
+//                left = 0;
+//            }
+//            else if (nums[mid ] > mid){
+//                // 0 1 2 3
+//                // 0 3 9 10
+//                right = mid -1;
+//            }else
+//                left = mid + 1;
+//        }
+//        return  tmp;
+
+    }
+
+    @Test
     public void getKth() {
 
     }

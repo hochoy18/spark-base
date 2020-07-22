@@ -1849,6 +1849,34 @@ public class Solution {
     }
 
     @Test
+    public void reverseLeftWords() {
+        String s;
+        int k;
+        String res ;
+        s = "abcdefg";
+        k = 2;
+        res = reverseLeftWords(s,k);
+        System.out.println(res);
+        assertEquals("cdefgab",res);
+
+        s = "lrloseumgh";
+        k = 6;
+        res = reverseLeftWords(s,k);
+        System.out.println(res);
+        assertEquals("umghlrlose",res);
+
+
+
+    }
+    public String reverseLeftWords(String s, int n) {
+        if (s== null || s.length() <=1 || n == 0 || s.length() < n )
+            return s;
+        String pre = s.substring(0, n);
+        String suf = s.substring(n);
+        return suf + pre;
+    }
+
+    @Test
     public void getKth() {
 
     }

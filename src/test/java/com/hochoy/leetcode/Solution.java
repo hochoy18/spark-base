@@ -1876,6 +1876,143 @@ public class Solution {
         return suf + pre;
     }
 
+
+
+    @Test
+    public void runningSum() {
+        int[] nums ;
+        int[] res ;
+
+        nums = new int[]{1,2,3,4};
+        res = runningSum(nums);
+        System.out.println(Arrays.toString(res));
+        assertArrayEquals(new int[]{1,3,6,10},res);
+
+
+        nums = new int[]{1,1,1,1,1};
+        res = runningSum(nums);
+        System.out.println(Arrays.toString(res));
+        assertArrayEquals(new int[]{1,2,3,4,5},res);
+
+        nums = new int[]{3,1,2,10,1};
+        res = runningSum(nums);
+        System.out.println(Arrays.toString(res));
+        assertArrayEquals(new int[]{3,4,6,16,17},res);
+
+        nums = new int[]{3};
+        res = runningSum(nums);
+        System.out.println(Arrays.toString(res));
+        assertArrayEquals(new int[]{3},res);
+
+
+        System.out.println("------------------------runningSum1----------------------");
+
+        nums = new int[]{1,2,3,4};
+        res = runningSum1(nums);
+        System.out.println(Arrays.toString(res));
+        assertArrayEquals(new int[]{1,3,6,10},res);
+
+
+        nums = new int[]{1,1,1,1,1};
+        res = runningSum1(nums);
+        System.out.println(Arrays.toString(res));
+        assertArrayEquals(new int[]{1,2,3,4,5},res);
+
+        nums = new int[]{3,1,2,10,1};
+        res = runningSum1(nums);
+        System.out.println(Arrays.toString(res));
+        assertArrayEquals(new int[]{3,4,6,16,17},res);
+
+        nums = new int[]{3};
+        res = runningSum1(nums);
+        System.out.println(Arrays.toString(res));
+        assertArrayEquals(new int[]{3},res);
+
+
+
+    }
+
+    /**
+     * https://leetcode-cn.com/problems/running-sum-of-1d-array/
+     * 一维数组的动态和
+     * @param nums
+     * @return
+     */
+    public int[] runningSum(int[] nums) {
+        for (int i = 1; i < nums.length; i++) {
+            nums[i] = nums[i-1] + nums[i];
+        }
+        return nums;
+    }
+
+    public int[] runningSum1(int[] nums) {
+        int[] res = new int[nums.length];
+        res[0] = nums[0];
+        for (int i = 1; i < res.length; i++) {
+            res[i] = res[i-1] + nums[i];
+        }
+        return res;
+    }
+
+
+    @Test
+    public void minPathSum() {
+        int[][] grid;
+        int res;
+//        grid = new int[][]{{1, 3, 1}, {1, 5, 1}, {4, 2, 1}};
+//        res = minPathSum(grid);
+//        System.out.println(res);
+//        assertEquals(7, res);
+
+        grid = new int[][]{{1, 3, 1}, {1, 5, 1}, {4, 2, 1}, {1, 2, 3}};
+        res = minPathSum(grid);
+        System.out.println(res);
+        assertEquals(10, res);
+
+    }
+
+    /**
+     * https://leetcode-cn.com/problems/minimum-path-sum/submissions/
+     * 最小路径和
+     * @param grid
+     * @return
+     */
+    public int minPathSum(int[][] grid) {
+        // 1  3  1
+        // 1  5  1
+        // 4  2  1
+        // 1  2  3
+
+        for (int i = 0; i < grid.length; i++) {
+            for (int j = 0; j < grid[0].length; j++) {
+                print(grid);
+                if (i == 0 && j == 0)
+                    continue; // grid[0][0]
+                else if (i == 0)
+                    grid[i][j] = grid[i][j - 1] + grid[i][j]; // first line
+                else if (j == 0)
+                    grid[i][j] = grid[i - 1][j] + grid[i][j];// first column
+                else
+                    grid[i][j] = Math.min(grid[i - 1][j], grid[i][j - 1]) + grid[i][j];
+
+            }
+        }
+        print(grid);
+        return grid[grid.length - 1][grid[0].length - 1];
+    }
+
+    void print(int[][] grid){
+        for (int i = 0; i < grid.length; i++) {
+            System.out.println(Arrays.toString(grid[i]));
+        }
+        System.out.println("-----------------------");
+        try {
+            TimeUnit.SECONDS.sleep(3);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
     @Test
     public void getKth() {
 

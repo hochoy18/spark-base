@@ -2012,6 +2012,9 @@ public class Solution {
             e.printStackTrace();
         }
     }
+    void print(int[] nums){
+        System.out.println(Arrays.toString(nums));
+    }
 
     @Test
     public void getKth() {

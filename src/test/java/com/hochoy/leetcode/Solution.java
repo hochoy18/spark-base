@@ -2002,12 +2002,15 @@ public class Solution {
     }
 
     void print(int[][] grid){
+        print(grid,1);
+    }
+    void print(int[][] grid,int sleepSecond){
         for (int i = 0; i < grid.length; i++) {
             System.out.println(Arrays.toString(grid[i]));
         }
         System.out.println("-----------------------");
         try {
-            TimeUnit.SECONDS.sleep(3);
+            TimeUnit.SECONDS.sleep(sleepSecond);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -2016,16 +2019,7 @@ public class Solution {
         System.out.println(Arrays.toString(nums));
     }
 
-    @Test
-    public void getKth() {
 
-    }
-
-    public int getKth(int lo, int hi, int k) {
-
-
-        return 0;
-    }
     @Test
     public void search() {
         int[] nums ;
@@ -2087,6 +2081,61 @@ public class Solution {
             }
         }
         return  -1;
+    }
+
+    @Test
+    public void isSubsequence() {
+        String s = "abc", t = "ahbgdc";
+        boolean subsequence = isSubsequence(s, t);
+        System.out.println(subsequence);
+        assertEquals(true,subsequence);
+        s = "axc";
+        t = "ahbgdc";
+        subsequence = isSubsequence(s, t);
+        System.out.println(subsequence);
+        assertEquals(false,subsequence);
+
+
+        s = "aaaaaa";
+        t = "bbaaaa";
+        subsequence = isSubsequence(s, t);
+        System.out.println(subsequence);
+        assertEquals(false,subsequence);
+
+        s = "";
+        t = "bbaaaa";
+        subsequence = isSubsequence(s, t);
+        System.out.println(subsequence);
+        assertEquals(true,subsequence);
+
+    }
+    public boolean isSubsequence(String s, String t) {
+        if("".equals(s)){
+            return true;
+        }
+        char[] chars = s.toCharArray();
+        int i0 = t.indexOf(chars[0]);
+        if (i0 == -1)
+            return false;
+
+        for (int i = 1; i < chars.length; i++) {
+            i0 = t.indexOf(chars[i],i0+1);
+            if (i0 ==-1)
+                return false;
+        }
+        return true;
+    }
+
+
+    @Test
+    public void getKth() {
+
+    }
+
+    public int getKth(int lo, int hi, int k) {
+
+
+        return 0;
     }
 
 }

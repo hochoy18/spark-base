@@ -210,6 +210,14 @@ public class Solution {
         ListNode(int x) {
             val = x;
         }
+
+        @Override
+        public String toString() {
+            return "ListNode{" +
+                    "val=" + val +
+                    ", next=" + next +
+                    '}';
+        }
     }
 
     @Test
@@ -2126,6 +2134,289 @@ public class Solution {
         return true;
     }
 
+    @Test
+    public void maxDepth() {
+        TreeNode root = new TreeNode(3);
+
+        TreeNode rightRoot = new TreeNode(20);
+        rightRoot.left = new TreeNode(15);
+        rightRoot.right = new TreeNode(7);
+
+        root.left = new TreeNode(9);
+        root.right = rightRoot;
+        int i = maxDepth(root);
+        System.out.println(i);
+        assertEquals(3,i);
+
+        i = maxDepth1(root);
+        System.out.println(i);
+        assertEquals(3,i);
+
+        i = maxDepth2(root);
+        System.out.println(i);
+        assertEquals(3,i);
+
+    }
+    public int maxDepth(TreeNode root) {
+        if (root == null )
+            return 0;
+        else {
+            TreeNode left = root.left;
+            TreeNode right = root.right;
+            return Math.max(maxDepth(left),maxDepth(right) ) +1;
+        }
+
+    }
+
+    public int maxDepth1(TreeNode root) {
+        if (root == null )
+            return  0;
+        Deque<TreeNode> deque = new LinkedList<>();
+        deque.push(root);
+
+        int count = 0;
+        while (! deque.isEmpty()){
+            int size = deque.size();
+            while (size -- > 0){
+                TreeNode cur = deque.poll();
+                if (cur.left != null)
+                    deque.addLast(cur.left);
+                if (cur.right != null)
+                    deque.addLast(cur.right);
+            }
+            count ++;
+        }
+        return count;
+
+    }
+
+
+    @Test
+    public void maxDepth2() {
+        TreeNode root = new TreeNode(3);
+
+        TreeNode rightRoot = new TreeNode(20);
+        rightRoot.left = new TreeNode(15);
+        rightRoot.right = new TreeNode(7);
+        root.right = rightRoot;
+
+        TreeNode leftRoot = new TreeNode(9);
+        TreeNode leftL = new TreeNode(1);
+        TreeNode leftR = new TreeNode(2);
+        leftL.left = new TreeNode(88);
+        leftRoot.left = leftL;
+        leftRoot.right = leftR;
+        root.left = leftRoot;
+
+
+        int i = maxDepth2(root);
+        System.out.println(i);
+        assertEquals(4,i);
+    }
+    //                 3
+    //              /     \
+    //            /        \
+    //           9          20
+    //         /   \      /    \
+    //        1     2    15     7
+    ///      /
+    //     88
+    public int maxDepth2(TreeNode root) {
+        if (root == null )
+            return  0;
+
+        // stack记录的是节点，而level中的元素和stack中的元素
+        //是同时入栈同时出栈，并且level记录的是节点在第几层
+        Stack<TreeNode> stack = new Stack<>(); // 节点
+        Stack<Integer> level = new Stack<>(); //
+
+        stack.push(root);
+        level.push(1);
+        int max = 0;
+        while (! stack.isEmpty()){
+            TreeNode node = stack.pop();
+            int tmp = level.pop();
+
+            max = Math.max(tmp,max);
+            if (node.left != null){
+                stack.push(node.left);
+                level.push(tmp+1);
+            }
+            if (node.right != null){
+                stack.push(node.right);
+                level.push(tmp+1);
+            }
+        }
+
+        return max;
+    }
+
+
+    ListNode head;
+    ListNode genListNode(){
+        head = new ListNode(0);
+        ListNode n1 = new ListNode(4);
+        ListNode n2 = new ListNode(5);
+        ListNode n3 = new ListNode(1);
+        ListNode n4 = new ListNode(9);
+//        ListNode n5 = new ListNode(8);
+//        n4.next = n5;
+        n3.next = n4;
+        n2.next = n3;
+        n1.next = n2;
+        head.next = n1;
+
+        return head;
+    }
+    @Test
+    public void deleteNode() {
+
+
+        deleteNode(new ListNode(5));
+        System.out.println(head);
+
+
+        deleteNode(new ListNode(4));
+        System.out.println(head);
+
+        deleteNode(new ListNode(1));
+        System.out.println(head);
+
+        deleteNode(new ListNode(9));
+        System.out.println(head);
+
+
+    }
+
+    public void deleteNode(ListNode node) {
+        if (head.next == null){
+            return;
+        }
+        ListNode tmp = head;
+        boolean flag = false;
+        while (true){
+            if (tmp.next == null){
+                break;
+            }
+            if (tmp.next.val == node.val){
+                flag = true;
+                break;
+            }
+            tmp = tmp.next;
+        }
+        if (flag){
+//            node.next = tmp.next.next;
+            tmp.next =tmp.next.next;
+        }
+
+    }
+
+    @Test
+    public void middleNode() {
+        genListNode();
+        System.out.println(head);
+        ListNode listNode = middleNode(head);
+        System.out.println(listNode);
+
+
+        head = new ListNode(1);
+        System.out.println(head);
+        listNode = middleNode(head);
+        System.out.println(listNode);
+    }
+
+    public ListNode middleNode(ListNode head) {
+        if (head.next == null)
+            return head;
+        int size = 0;
+        ListNode tmp = head;
+        while (true){
+            if (tmp == null)
+                break;
+            size ++;
+            tmp = tmp.next;
+        }
+
+        tmp = head;
+        for (int i = 0; i < size >> 1; i++) {
+            tmp = tmp.next;
+        }
+
+        return tmp;
+    }
+
+    @Test
+    public void deleteDuplicates() {
+        head = new ListNode(0);
+        ListNode n1 = new ListNode(1);
+        ListNode n2 = new ListNode(1);
+        ListNode n3 = new ListNode(2);
+        n2.next = n3;
+        n1.next = n2;
+
+        head.next = n1;
+
+        System.out.println(head);
+        deleteDuplicates(head);
+        System.out.println(head);
+
+    }
+
+
+
+    @Test
+    public void deleteDuplicates1() {
+        head = new ListNode(1);
+        ListNode n1 = new ListNode(1);
+        ListNode n2 = new ListNode(1);
+
+        n1.next = n2;
+
+
+        head.next =  n1;
+
+        System.out.println(head);
+        deleteDuplicates(head);
+        System.out.println(head);
+
+    }
+
+
+    /**
+     * https://leetcode-cn.com/problems/remove-duplicates-from-sorted-list/
+     * 删除排序链表中的重复元素
+     * 给定一个排序链表，删除所有重复的元素，使得每个元素只出现一次。
+     * @param head
+     * @return
+     */
+    public ListNode deleteDuplicates(ListNode head) {
+        if (head == null )
+            return null;
+        if (head.next == null)
+            return head;
+
+        ListNode tmp = head;
+        while (true){
+
+            if (tmp==null ||tmp.next == null) // 遍历到最后一个节点，退出
+                break;
+            if (tmp.val == tmp.next.val){
+                tmp.next = tmp.next.next;
+            }else {
+                tmp = tmp.next;
+            }
+
+        }
+        return head;
+
+    }
+
+
+
+
+
+
+
 
     @Test
     public void getKth() {
@@ -2139,7 +2430,12 @@ public class Solution {
     }
 
 }
-
+ class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode(int x) { val = x; }
+}
 class MyStack {
 
     /**

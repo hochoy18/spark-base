@@ -32,6 +32,34 @@ public class SortForJavaTest {
     }
 
 
+    @Test
+    public void mergeSort(){
+
+        int arr[]=new int[] {65,58,95,10,57,62,13,106,78,23,85};
+//
+//        int len = arr.length;
+//        for (int i = 0; i <len -1 ; i++) {
+//            for (int j = i; j < len; j++) {
+//                System.out.println("\n--------------------------------------------\n");
+//                int[] tmp = Arrays.copyOfRange(arr,0,arr.length);
+//                SortForJava.ArraysUtil.print(tmp,500);
+//                int mid = i + ((i + j) >> 1);
+//                SortForJava.MergeSort.merge(tmp,i,mid,j);
+//                SortForJava.ArraysUtil.print(tmp,3000);
+//
+//            }
+//        }
+
+
+        System.out.printf("排序前：\n%s\n", Arrays.toString(arr));
+        System.out.println("--------------------------------------------");
+        SortForJava.MergeSort.mergeSort(arr);
+        System.out.println("--------------------------------------------");
+        System.out.printf("排序后：\n%s\n", Arrays.toString(arr));
+
+    }
+
+
 
     @Test
     public void insertSort(){

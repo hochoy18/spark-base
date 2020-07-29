@@ -161,8 +161,72 @@ public class SortForJava {
 
     }
 
+
+
+    static class MergeSort{
+
+        public static void mergeSort(int[] arr) {
+            sort(arr, 0, arr.length - 1);
+        }
+
+        public static void sort(int[] arr, int L, int R) {
+            System.out.printf("arr : %s  ,L : %s, R : %s , ====> arr[L] ~ arr[R]  :  %s%n",Arrays.toString(arr),L,R, Arrays.toString(Arrays.copyOfRange(arr,L,R+1)));
+            try {
+                TimeUnit.SECONDS.sleep(3);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if(L == R) {
+                return;
+            }
+            int mid = L + ((R - L) >> 1);
+            sort(arr, L, mid);
+            sort(arr, mid + 1, R);
+            merge(arr, L, mid, R);
+        }
+
+        public static void merge(int[] arr, int L, int mid, int R) {
+           // System.out.print("\n=====>   L : " + L + " mid :  " + mid + "  R : " + R  +" =====>\n" );
+            int[] temp = new int[R - L + 1];
+            int i = 0;
+            int p1 = L;
+            int p2 = mid + 1;
+            // 比较左右两部分的元素，哪个小，把那个元素填入temp中
+            while(p1 <= mid && p2 <= R) {
+                temp[i++] = arr[p1] < arr[p2] ? arr[p1++] : arr[p2++];
+                System.out.printf("==========> temp : %s%n",Arrays.toString(temp));
+            }
+            // 上面的循环退出后，把剩余的元素依次填入到temp中
+            // 以下两个while只有一个会执行
+            while(p1 <= mid) {
+                temp[i++] = arr[p1++];
+                System.out.printf("==========> temp : %s%n",Arrays.toString(temp));
+            }
+            while(p2 <= R) {
+                temp[i++] = arr[p2++];
+                System.out.printf("==========> temp : %s%n",Arrays.toString(temp));
+            }
+            // 把最终的排序的结果复制给原数组
+            for(i = 0; i < temp.length; i++) {
+                arr[L + i] = temp[i];
+            }
+            SortForJava.ArraysUtil.print(arr,3000);
+        }
+    }
+
     static class ArraysUtil{
+
         static void print(int[] nums,int sleepMs){
+            System.out.print(Arrays.toString(nums)  );
+            try {
+                TimeUnit.MILLISECONDS.sleep(sleepMs);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        static void println(int[] nums,int sleepMs){
             System.out.println(Arrays.toString(nums));
             try {
                 TimeUnit.MILLISECONDS.sleep(sleepMs);

@@ -2412,11 +2412,177 @@ public class Solution {
     }
 
 
+    @Test
+    public void shuffle() {
+        int[] nums = new int[]{2, 5, 1, 3, 4, 7};
+
+        int[] res = shuffle1(nums, nums.length >> 1);
+        assertArrayEquals(new int[]{2,3,5,4,1,7},res);
+
+    }
+
+    public int[] shuffle1(int[] nums, int n) {
+        int t1 = nums[0];
+        int t2 = nums[n];
+        for (int i = 1; i < nums.length ; i++) {
+            if ( (i & 1) == 0 ){
+                nums[i] = t1;
+                t1 = nums[i];
+            }else {
+                nums[i] = t2;
+                t2 = nums[n+i ];
+            }
+        }
+        return nums;
+    }
+
+
+    public int[] shuffle(int[] nums, int n) {
+        Queue<Integer> queue1 = new LinkedList<>();
+        Queue<Integer> queue2 = new LinkedList<>();
+        for (int i = 0; i < nums.length; i++) {
+            if (i<n)
+                queue1.offer(nums[i]);
+            else   queue2.offer(nums[i]);
+        }
+
+        for (int i = 0; i < nums.length; i++) {
+            if ( (i & 1) ==0 ){
+                int pop1 =  queue1 .poll();
+                nums[i] =  pop1;
+            }else {
+                nums[i]  = queue2.poll();
+            }
+        }
+        return nums;
+    }
+
+    @Test
+    public void kidsWithCandies() {
+        int[] candies = {2,3,5,1,3};int extraCandies = 3;
+        List<Boolean> booleans = kidsWithCandies(candies, extraCandies);
+        System.out.println(booleans);
+
+    }
+
+    public List<Boolean> kidsWithCandies(int[] candies, int extraCandies) {
+
+        int max = candies[0];
+        for (int i = 0; i < candies.length; i++) {
+            max = Math.max(max,candies[i]);
+        }
+        List<Boolean> res = new ArrayList<>( candies.length);
+        for (int i = 0; i < candies.length; i++) {
+            if (candies[i] + extraCandies >= max){
+                res.add(true);
+            }else res.add(false);
+        }
+
+        return res;
+    }
+
+
+    @Test
+    public void xorOperation() {
+
+        int n ;
+        int start;
+        int res;
+
+        n = 5;
+        start = 0;
+        res = xorOperation(n, start);
+        System.out.println(res);
+        assertEquals(8,res);
+
+        n = 4;
+        start = 3;
+        res = xorOperation(n, start);
+        System.out.println(res);
+        assertEquals(8,res);
+
+
+        n = 1;
+        start = 7;
+        res = xorOperation(n, start);
+        System.out.println(res);
+        assertEquals(7,res);
+
+        n = 10;
+        start = 5;
+        res = xorOperation(n, start);
+        System.out.println(res);
+        assertEquals(2,res);
+
+
+    }
+    public int xorOperation(int n, int start) {
+        int res = 0;
+        for (int i = 0; i < n; i++) {
+            res ^= ( start + 2 * i);
+        }
+        return res;
+    }
+
+
+
+    @Test
+    public void numberOfSteps() {
+
+        int num = 14;
+        int res = numberOfSteps(num);
+        System.out.println(res);
+
+        num = 8;
+        numberOfSteps = 0;
+        res = numberOfSteps(num);
+        System.out.println(res);
+        num = 123;
+        numberOfSteps = 0;
+        res = numberOfSteps(num);
+        System.out.println(res);
 
 
 
 
+        System.out.println(">> >>>" );
+        res = numberOfSteps1(14);
+        System.out.println( res);
+        res = numberOfSteps1(8);
+        System.out.println( res);
+        res = numberOfSteps1(123);
+        System.out.println( res);
 
+    }
+    int numberOfSteps = 0;
+    public int numberOfSteps(int num) {
+
+        test(num );
+        return numberOfSteps;
+    }
+
+    public int test(int num ) {
+        if (num == 0)
+            return 0;
+        numberOfSteps ++;
+        if ((num & 1) == 1)
+            return test( num - 1 );
+        else
+            return test(num >> 1 );
+    }
+
+
+    public int numberOfSteps1(int num) {
+         int count = 0;
+         while (num > 0){
+             if ( (num & 1) ==1 )
+                 num^=1;
+             else
+                 num  >>= 1;
+             count ++;
+         }
+         return count;
+    }
 
     @Test
     public void getKth() {

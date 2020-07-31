@@ -11,7 +11,20 @@ import java.util.Properties;
 
 public class KafkaConsumerAnalysis {
     static String TOPIC = "partitions3-topic";
+
     public static void main(String[] args) {
+
+        for (int i = 0; i < 4; i++) {
+            String consumerName = KafkaConsumerAnalysis.class.getSimpleName() + "------" + i;
+            Thread t = new Thread(KafkaConsumerAnalysis::consumer, consumerName);
+            t.start();
+            HochoyUtils.sleep(3000);
+        }
+
+    }
+
+    public static void consumer() {
+        String threadName = Thread.currentThread().getName();
 
         Properties props = HochoyUtils.getProperties("consumer.properties");
 
@@ -20,19 +33,17 @@ public class KafkaConsumerAnalysis {
         consumer.subscribe(Collections.singletonList(TOPIC));
 
 
-        while (true){
-            ConsumerRecords<String,String> records = consumer.poll(Duration.ofSeconds(5));
+        while (true) {
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(5));
 
             for (ConsumerRecord<String, String> record : records) {
                 long offset = record.offset();
                 int partition = record.partition();
                 String value = record.value();
                 String topic = record.topic();
-                System.out.printf("topic :  %s ,  partition : %d ,  offset : %d , value  :  %s%n",topic,partition,offset,value);
+                System.out.printf("threadName : %s  topic :  %s ,  partition : %d ,  offset : %d , value  :  %s%n", threadName, topic, partition, offset, value);
             }
         }
-
-
 
 
     }

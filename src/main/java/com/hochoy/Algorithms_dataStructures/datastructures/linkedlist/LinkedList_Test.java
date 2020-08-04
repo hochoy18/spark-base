@@ -1,4 +1,4 @@
-package com.hochoy.Algorithms_dataStructures.linkedlist;
+package com.hochoy.Algorithms_dataStructures.datastructures.linkedlist;
 
 import java.util.Stack;
 

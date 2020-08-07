@@ -1217,111 +1217,119 @@ public class Solution {
     @Test
     public void intersect() {
 
-        int[] nums1 = new int[]{1, 2,2,1};
-        int[] nums2 = new int[]{2, 2};
+        int[] nums1 = new int[]{9,4,9,8,4};
+        int[] nums2 = new int[]{4,9,5,5};
 
         int[] intersect = intersect(nums1, nums2);
-        assertArrayEquals(new int[]{2,2},intersect);
+        assertArrayEquals(new int[]{4,9},intersect);
         System.out.println(Arrays.toString(intersect));
 
 
+        nums1= new int []{1,2,2,1};
+        nums2 = new int[]{2,2};
+        intersect = intersect(nums1, nums2);
+        assertArrayEquals(new int[]{2,2},intersect);
+        System.out.println(Arrays.toString(intersect));
+
     }
-
-
     public int[] intersect(int[] nums1, int[] nums2) {
-        int len1 = nums1.length;
-        int len2 = nums2.length;
-        int[] min ;//= len1 >  len2 ? nums2 : (len1 == len2 ? nums1 : nums2);
-        int[] max ;//= len1 <  len2 ? nums2 : (len1 == len2 ? nums2 : nums1);
-
-        if (len1 <= len2){
-            min = nums1;
-            max = nums2;
-        }else {
+        int[] min = nums1,max =nums2 ;
+        int len1 = nums1.length ;
+        int len2 = nums2.length ;
+        if (len1 >= len2){
             min = nums2;
             max = nums1;
         }
 
-        quickSort1(max,0,max.length - 1);// O( N * logN )
-        quickSort1(min,0,min.length - 1);// O( N * logN )
-
-
-        // 1  2  2
-        // 1  2  2  3
-        int kk = 0;
-
-       int[] res = new int[min.length ];
+        Map<Integer,Integer> minMap = new HashMap<>();
         for (int i = 0; i < min.length; i++) {
-            int k = min[i];
-            int bs = bs(max, kk, k);
-            if (bs != -1){
-                res[kk] = k;
-                System.out.println(k + "----->" + kk);
-                kk ++;
+            if (minMap.containsKey(min[i]))
+                minMap.put(min[i],minMap.get(min[i]) +1);
+            else
+                minMap.put(min[i], 1);
+        }
+        Map<Integer,Integer> maxMap = new HashMap<>();
+        for (int i = 0; i < max.length; i++) {
+            if (maxMap.containsKey(max[i]))
+                maxMap.put(max[i],maxMap.get(max[i]) +1);
+            else
+                maxMap.put(max[i], 1);
+        }
+        for (Map.Entry<Integer, Integer> entry : minMap.entrySet()) {
+            Integer value = entry.getValue();
+            Integer key = entry.getKey();
+            if (maxMap.containsKey(key)){
+                minMap.put(key,Math.min(value,maxMap.get(key)));
+            }else{
+                minMap.put(key, 0);
             }
         }
-
-
-
-        int[] result = new int[kk];
-        System.arraycopy(res,0,result,0,kk);
-        return result;
-
+        List<Integer> list = new ArrayList<>();
+        for (Map.Entry<Integer, Integer> entry : minMap.entrySet()) {
+            Integer key = entry.getKey();
+            Integer value = entry.getValue();
+            if (value!= 0){
+                for (int i = 0; i < value; i++) {
+                    list.add(key);
+                }
+            }
+        }
+        int[] res = new int[list.size()];
+        for (int i = 0; i < list.size(); i++) {
+            res[i] = list.get(i);
+        }
+        return res;
     }
 
+    int bs(int[] nums ,int target,int start ,int end , boolean[] find){
 
-    int bs(int[] nums ,int start,int target){
-//        int start = 0;
-        int end = nums.length - 1;
-        // 1  2  3  4  5  7
-        while (start <= end){
+        while(start <= end){
             int mid = (start + end ) >> 1;
-            if (nums[mid] == target)
-                return mid;
-            else if (nums[mid] > target)
-                end  = mid -1;
-            else if (nums[mid ] < target)
+            if(nums[mid] == target ){
+                if (!find[mid]){
+                    find[mid ] = true;
+                    return mid;
+                }else {
+
+                }
+            }else if (nums[mid ] > target){
+                end = mid-1;
+            }else
                 start = mid +1;
         }
+        return -1;
 
 
-        return  -1;
     }
+
 
     void quickSort1(int[] nums ,int left ,int right ){
-        int pivot = 0 ;
-        if (left < right){
-            pivot = partition1(nums, left, right);
-            quickSort1(nums,left,pivot -1);
-            quickSort1(nums,pivot +1 , right);
+        if(left < right){
+            int key = nums[left];
+            int start = left;
+            int end = right;
+            while(start < end ){
+                while(start < end && nums[end] >= key){
+                    end --;
+                }
+                if(start < end ){
+                    nums[start] = nums[end];
+                }
+                while(start < end && nums[start] <= key){
+                    start ++ ;
+                }
+                if(start < end){
+                    nums[end] = nums[start];
+                }
+            }
+
+            nums[start] = key;
+            quickSort1(nums,left,start - 1);
+            quickSort1(nums,start + 1 ,right);
         }
     }
 
-    // k=2
-    //  2  2  9  6  4  7  9
-    //  0  1  2  3  4  5  6
-    //     P K/L           R
-    // key = 9
-    //  2  2  9  6  4  7  9
-    //     P K/L       R
-    //  2  2  7  6  4  9  9
-    //                 P
-    int partition1(int[] nums , int left ,int right ){
-        int key = nums[left];
-        while (left < right){
 
-            while ( left < right && nums[right] >= key){
-                right -- ;
-            }
-            nums[left] = nums[right];
-            while (left < right && nums[left] <= key){
-                left ++;
-            }
-            nums[right] = nums[left];
-        }
-        nums[left] = key;
-        return left;
-    }
 
 
 
@@ -2583,6 +2591,175 @@ public class Solution {
          }
          return count;
     }
+
+    @Test
+    public void isSameTreeDeepFirst() {
+        TreeNode p = new TreeNode(1);
+        TreeNode q = new TreeNode(1);
+        boolean sameTree;
+
+        p.left = new TreeNode(2);
+        q.right = new TreeNode(2);
+          sameTree = isSameTreeDeepFirst(p, q);
+        System.out.println(sameTree);
+        assertFalse(sameTree);
+
+
+
+        sameTree = isSameTreeWideFirst(p, q);
+        System.out.println(sameTree);
+        assertFalse(sameTree);
+
+
+        p.left = new TreeNode(2);
+        p.right = new TreeNode(1);
+        q.left = new TreeNode(2);
+        q.right = new TreeNode(1);
+
+        sameTree = isSameTreeDeepFirst(p,q);
+        System.out.println(sameTree);
+        assertTrue(sameTree);
+
+        sameTree = isSameTreeWideFirst(p,q);
+        System.out.println(sameTree);
+        assertTrue(sameTree);
+
+    }
+
+
+    public boolean isSameTreeWideFirst(TreeNode p, TreeNode q) {
+        if (p == null && q == null)
+            return true;
+        else if (p == null  || q == null)
+            return false;
+
+        Queue<TreeNode> queue1 = new LinkedList<TreeNode>();
+        Queue<TreeNode> queue2 = new LinkedList<>();
+        queue1.offer(p);
+        queue2.offer(q);
+
+        while (!queue1.isEmpty() && !queue2.isEmpty()){
+            TreeNode node1 = queue1.poll();
+            TreeNode node2 = queue2.poll();
+            if (node1.val != node2.val)
+                return false;
+            TreeNode left1 = node1.left,right1 = node1.right;
+            TreeNode left2 = node2.left,right2 = node2.right;
+            if (left1 == null ^ left2 == null){ // left 不相等
+                return false;
+            }
+            if (right1 == null ^ right2 == null) // right 不相等
+                return false;
+
+            if (left1 != null)
+                queue1.offer(left1);
+            if (right1 != null)
+                queue1.offer(right1);
+            if (left2 != null)
+                queue2.offer(left2);
+            if (right2 != null)
+                queue2.offer(right2);
+        }
+        return queue1.isEmpty() && queue2.isEmpty();
+
+    }
+
+
+    public boolean isSameTreeDeepFirst(TreeNode p, TreeNode q) {
+       if (p== null && q == null )
+           return true;
+       else if (p == null || q == null)
+           return false;
+       else if (p.val != q.val)
+           return false;
+       else return isSameTreeDeepFirst(p.left,q.left) && isSameTreeDeepFirst(p.right,q.right);
+    }
+
+
+
+
+    @Test
+    public void restoreString() {
+        String s = "codeleet";
+        int[] indices = new int[]{4,5,6,7,0,1,2,3};
+        String res = restoreString(s, indices);
+        System.out.println(res);
+    }
+    public String restoreString(String s, int[] indices) {
+
+
+        char[] chars = s.toCharArray();
+        System.out.println(Arrays.toString(chars));
+        quick(indices,0,indices.length-1  ,chars);
+        System.out.println(Arrays.toString(chars));
+        return new String(chars);
+
+    }
+
+
+    void quick(int[] nums ,int left ,int right,char[] chars){
+        if (left < right){
+            int start = left;
+            int end = right;
+            int x = nums[left];// nums[left] 作为基数,从 end 开始
+            char xc = chars[left];
+            while (start < end){
+                while (start < end && nums[end] >= x){ // 从 end 开始向 左遍历
+                    end --;
+                }
+                if(start<end) {
+                    nums[start] = nums[end];
+                    chars[start] = chars[end];
+                }
+                while (start < end && nums[start] <= x){
+                    start ++;
+                }
+                if(start < end){
+                    nums[end] = nums[start];
+                    chars[end] = chars[start];
+                }
+
+            }
+            nums[start] = x;
+            chars[start] = xc;
+            quick(nums,left,start-1,chars);
+            quick(nums,start+1,right,chars);
+        }
+    }
+
+    @Test
+    public void quick() {
+        int[] nums = new int[]{49 ,  38,  65   , 97 ,  76   ,13 ,  27 , 49  };
+        print(nums);
+        quick(nums,0,nums.length - 1);
+        print(nums);
+    }
+    void quick(int[] nums ,int left ,int right ){
+
+        if (left < right ){
+
+            int i = left ;
+            int j = right ;
+            int key = nums[left];
+            while (i < j ){
+                while(i<j && nums[j] >= key)
+                    j --;
+                if(i<j){
+                    nums[i] = nums[j];
+                }
+                while(i<j && nums[i] <= key)
+                    i ++;
+                if(i<j)
+                    nums[j] = nums[i];
+            }
+            nums[i] = key;
+            quick(nums,left,i-1);
+            quick(nums , i+1,right);
+        }
+    }
+
+
+
 
     @Test
     public void getKth() {

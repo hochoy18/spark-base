@@ -2758,8 +2758,107 @@ public class Solution {
         }
     }
 
+    @Test
+    public void largestPerimeter() {
+        int[] A;
+        int largestPerimeter ;
+
+        A = new int[]{3,2,3,4};
+        largestPerimeter = largestPerimeter(A);
+        System.out.println(largestPerimeter);
+
+        A = new int[]{20 ,7, 5, 4, 10, 9  };
+        largestPerimeter = largestPerimeter(A);
+        System.out.println(largestPerimeter);
+
+        A = new int[]{1,2,1};
+        largestPerimeter = largestPerimeter(A);
+        System.out.println(largestPerimeter);
+    }
+    public int largestPerimeter(int[] A) {
+        quick0(A,0,A.length -1);
+        System.out.println(Arrays.toString(A));
+
+        int maxLine = A[0];
+        int edge1=0;
+        int edge2 =0;
+        for(int i = 1;i<A.length-1 ;i++){
+            for(int j = i+1 ;j<A.length ;j++ ){
+                if(A[i] + A[j] > maxLine){
+                    edge1 = A[i];
+                    edge2 = A[j];
+                    return maxLine + edge1 + edge2 ;
+                }
+            }
+            maxLine = A[i];
+        }
+
+        if (edge1 == 0)
+            return 0;
+        else
+            return maxLine + edge1 + edge2 ;
+
+    }
+    void quick0(int[] A,int left ,int right ){
+        if(left < right){
+            int key = A[left];
+            int i = left ;
+            int j = right ;
+            while (i < j){
+                while(i < j && A[j] <= key){
+                    j --;
+                }
+                if(i<j){
+                    A[i] = A[j];
+                }
+                while(i<j && A[i] >= key){
+                    i ++;
+                }
+                if(i < j){
+                    A[j] = A[i];
+                }
+            }
+            A[i] = key;
+            quick0(A,left , i-1 );
+            quick0(A,i+1,right);
+        }
+    }
 
 
+    @Test
+    public void smallestK() {
+        int[] arr = new int[]{1,3,5,7,2,4,6,8};
+        int k = 4;
+        int[] ints = smallestK(arr, k);
+        System.out.println(Arrays.toString(ints));
+
+
+    }
+
+    public int[] smallestK(int[] arr, int k) {
+        if(k>=arr.length){
+            return arr;
+        }
+        int[] res = Arrays.copyOfRange(arr,0,k);
+        int[] left = Arrays.copyOfRange(arr,k,arr.length);
+        quick(res,0,res.length - 1);
+        quick(left,0,left.length - 1);
+        System.out.println(Arrays.toString(res));
+        System.out.println(Arrays.toString(left));
+        int j = 0;
+        for(int i = res.length -1 ;i>=0 ;i--){
+            for(;j<left.length ;j++){
+                if(res[i] > left[j]){
+                    res[i]= left[j];
+                    break;
+                }
+            }
+            j = j+1;
+        }
+        return res;
+
+
+    }
 
     @Test
     public void getKth() {

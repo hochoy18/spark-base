@@ -2890,6 +2890,71 @@ public class Solution {
 
     }
 
+
+    @Test
+    public void solve() {
+        char[][] board = new char[][]{
+                {'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'},
+                {'X', 'O', 'O', 'X', 'O', 'O', 'X', 'X'},
+                {'X', 'X', 'O', 'X', 'O', 'X', 'O', 'X'},
+                {'X', 'O', 'X', 'X', 'X', 'X', 'X', 'X'},
+                {'X', 'X', 'O', 'X', 'O', 'X', 'O', 'X'},
+                {'X', 'O', 'X', 'X', 'X', 'X', 'O', 'X'}
+        };
+        for (char[] chars : board) {
+            System.out.println(Arrays.toString(chars));
+        }
+        System.out.println();
+        solve(board);
+        for (char[] chars : board) {
+            System.out.println(Arrays.toString(chars));
+        }
+
+    }
+    int n, m;
+    public void solve(char[][] board) {
+        n = board.length;
+        if(n == 0){
+            return ;
+        }
+        m = board[0].length;
+        for(int i = 0;i < n ;i++){
+            dfs(board,i,0);   // board[x][y] 左侧边界
+            dfs(board,i,m-1); // board[x][y] 右侧边界
+        }
+
+        for(int i = 0;i < m-1;i++){
+            dfs(board,0,i);      // board[x][y] 上边界
+            dfs(board,n-1,i);    // board[x][y] 下边界
+        }
+
+        for(int i = 0; i < n ;i ++){
+            for (int j =0; j< m ;j ++){
+                if(board[i][j] == 'A'){
+                    board[i][j] = 'O';
+                }else if (board[i][j] == 'O'){
+                    board[i][j] = 'X';
+                }
+            }
+        }
+
+    }
+    void dfs(char[][] board ,int x ,int y){
+        if(x<0 || x>=n || y<0 ||y>=m || board[x][y] !='O'  ){
+            System.out.printf("x=%d,   y=%d %n",x,y);
+            // x<0 || x>=n || y<0 ||y>=m 边界，边界直接return
+            // board[x][y] !='O' 不为 O，对 X 不需要处理，直接返回
+            return;
+        }
+        // 能执行 以下代码的都是 非边界 的 元素，
+        board[x][y] = 'A';
+        dfs(board,x+1,y); // board[x][y]  的 正下方元素
+        dfs(board,x-1,y); // board[x][y]  的 正上方元素
+        dfs(board,x,y+1); // board[x][y]  的 右侧元素
+        dfs(board,x,y-1); // board[x][y]  的 左侧元素
+
+    }
+
     @Test
     public void getKth() {
 

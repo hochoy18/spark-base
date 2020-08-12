@@ -15,7 +15,6 @@ import scala.collection.mutable.ListBuffer
   * @Version V1.0.0
   */
 object DateUtils {
-  val LOGGER = LoggerFactory.getLogger(getClass)
   final val NOT_USER_DEFAULT = "-9999999"
 
   /**
@@ -72,8 +71,6 @@ object DateUtils {
   }
 
   def date_diff(startDate: String, endDate: String, pattern: String, dateType: String, defaultValue: String): String = {
-    LOGGER.info("startDate：{},endDate ：{},pattern ：{},dateType ：{},defaultValue ：{}"
-      ,startDate,endDate,pattern,dateType,defaultValue)
     val diff = dateType match {
       case "day" ⇒ getDiffWithDefault(startDate, endDate, pattern, defaultValue, DateBasicFunction.getDateDiff)
       case "week" ⇒ getDiffWithDefault(startDate, endDate, pattern, defaultValue, DateBasicFunction.getWeekDiffOfTwoDate)
@@ -91,7 +88,6 @@ object DateUtils {
     * @return
     */
   def date_first( date: String,  pattern: String = "yyyy-MM-dd", dateType: String): String = {
-    LOGGER.info("date：{}, pattern ：{},dateType ：{} ",date,pattern,dateType)
     val diff = dateType match {
       case "week" ⇒ getFirstDay(date,  pattern, DateBasicFunction.getFirstDayOfWeek)
       case "month" ⇒ getFirstDay(date,  pattern, DateBasicFunction.getFirstDayOfMonth)

@@ -455,8 +455,6 @@ public class NativeIO {
                     stat = stat(path);
                 }
             } catch (NativeIOException nioe) {
-                LOG.warn("NativeIO.getStat error ({}): {} -- file path: {}",
-                        nioe.getErrorCode(), nioe.getMessage(), path);
                 throw new PathIOException(path, nioe);
             }
             return stat;

@@ -40,7 +40,7 @@ public class KafkaProducerAnalysis {
 
         Properties props = initConfig();
         Random random = new Random();
-        KafkaProducer<String, String> producer = new KafkaProducer(props);
+        KafkaProducer<String, String> producer = new KafkaProducer<>(props);
 
 
         for (int i = 0 ; i < MSG_SIZE; i ++ ){

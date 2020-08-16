@@ -31,11 +31,16 @@ public class Stack<T> implements Iterable<Object> {
     public int size(){
         return size;
     }
+    public boolean isEmpty(){
+        return  size == 0;
+    }
+    public boolean nonEmpty(){
+        return !isEmpty();
+    }
 
     @Override
     public Iterator<Object> iterator() {
-        StackIterator stackIterator = new StackIterator();
-        return stackIterator;
+        return new StackIterator();
     }
 
     private class Node<E> {
@@ -51,7 +56,7 @@ public class Stack<T> implements Iterable<Object> {
 
         private Node<T> n;
 
-        public StackIterator() {
+        private StackIterator() {
             this.n = head;
         }
 

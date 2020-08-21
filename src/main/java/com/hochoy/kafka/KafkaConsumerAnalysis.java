@@ -124,50 +124,50 @@ public class KafkaConsumerAnalysis {
 
 
     }
+    static class Offset{
+        private long offset;
+        private int partition;
+        private String groupid;
+        private String topic;
 
+        public Offset(long offset, int partition, String groupid, String topic) {
+            this.offset = offset;
+            this.partition = partition;
+            this.groupid = groupid;
+            this.topic = topic;
+        }
+
+        public long getOffset() {
+            return offset;
+        }
+
+        public void setOffset(long offset) {
+            this.offset = offset;
+        }
+
+        public int getPartition() {
+            return partition;
+        }
+
+        public void setPartition(int partition) {
+            this.partition = partition;
+        }
+
+        public String getGroupid() {
+            return groupid;
+        }
+
+        public void setGroupid(String groupid) {
+            this.groupid = groupid;
+        }
+
+        public String getTopic() {
+            return topic;
+        }
+
+        public void setTopic(String topic) {
+            this.topic = topic;
+        }
+    }
 }
-class Offset{
-    private long offset;
-    private int partition;
-    private String groupid;
-    private String topic;
 
-    public Offset(long offset, int partition, String groupid, String topic) {
-        this.offset = offset;
-        this.partition = partition;
-        this.groupid = groupid;
-        this.topic = topic;
-    }
-
-    public long getOffset() {
-        return offset;
-    }
-
-    public void setOffset(long offset) {
-        this.offset = offset;
-    }
-
-    public int getPartition() {
-        return partition;
-    }
-
-    public void setPartition(int partition) {
-        this.partition = partition;
-    }
-
-    public String getGroupid() {
-        return groupid;
-    }
-
-    public void setGroupid(String groupid) {
-        this.groupid = groupid;
-    }
-
-    public String getTopic() {
-        return topic;
-    }
-
-    public void setTopic(String topic) {
-        this.topic = topic;
-    }
-}

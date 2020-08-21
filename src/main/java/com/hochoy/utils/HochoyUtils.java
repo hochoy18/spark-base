@@ -112,8 +112,8 @@ public class HochoyUtils {
                 int columnCount = metaData.getColumnCount();
                 for (int i = 1; i <= columnCount; i++) {
                     String columnName = metaData.getColumnName(i);
-                    String columnClassName = metaData.getColumnClassName(i);
-                    System.out.println(columnClassName);
+//                    String columnClassName = metaData.getColumnClassName(i);
+//                    System.out.println(columnClassName);
                     Object object = resultSet.getObject(i);
                     map.put(columnName,object);
                 }

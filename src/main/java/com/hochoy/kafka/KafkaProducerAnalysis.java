@@ -13,7 +13,7 @@ public class KafkaProducerAnalysis {
 
 
     static int MSG_SIZE = (int)1e4;
-    static String TOPIC = "test_topic";
+    static String TOPIC = "partitions3-topic";
 
     public static void main(String[] args) {
 

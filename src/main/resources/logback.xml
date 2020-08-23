@@ -27,12 +27,12 @@
 
     <!-- 相当于logger元素，只是name值已经确定为root了 -->
     <!-- 级别依次为【从高到低】：FATAL > ERROR > WARN > INFO > DEBUG > TRACE  -->
-    <root level="WARN">
+    <root level="INFO">
         <appender-ref ref="STDOUT" />
         <appender-ref ref="hochoy-log" />
     </root>
 
-    <logger name="com.hochoy" level="WARN">
+    <logger name="com.hochoy" level="INFO">
         <appender-ref ref="hochoy-log" />
     </logger>
 

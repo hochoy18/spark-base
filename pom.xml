@@ -11,23 +11,16 @@
 
 
     <properties>
-        <powermock.version>1.6.5</powermock.version>
-        <!--<hbase.version>1.2.4</hbase.version>-->
-        <hbase.version>1.2.6.1</hbase.version>
-        <scala.version>2.11.8</scala.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <hadoop.version>2.8.2</hadoop.version>
-        <spark.version>2.2.3</spark.version>
+        <hbase.version>1.2.6.1</hbase.version>
+        <scala.version>2.12.11</scala.version>
+        <hadoop.version>2.7.3</hadoop.version>
+        <spark.version>2.4.5</spark.version>
 
-        <scala.binary.version>2.11</scala.binary.version>
+        <scala.binary.version>2.12</scala.binary.version>
         <java-version>1.8</java-version>
-        <phoenix.version>4.14.1-HBase-1.4</phoenix.version>
-        <!--<phoenix.version>4.8.0-HBase-1.2</phoenix.version>-->
-        <jol.version>0.10</jol.version>
-        <hive.version>1.2.2</hive.version>
         <parquet.version>1.11.0</parquet.version>
 
-        <antlr4.version>4.7.2</antlr4.version>
         <commons-lang3.version>3.10</commons-lang3.version>
         <commons-lang.version>2.6</commons-lang.version>
     </properties>
@@ -91,22 +84,25 @@
     </pluginRepositories>
 
     <dependencies>
+
         <dependency>
-            <groupId>com.101tec</groupId>
-            <artifactId>zkclient</artifactId>
-            <version>0.11</version>
+            <groupId>io.netty</groupId>
+            <artifactId>netty</artifactId>
+            <version>3.10.6.Final</version>
         </dependency>
-        <!--<dependency>-->
-            <!--<groupId>org.apache.hbase</groupId>-->
-            <!--<artifactId>hbase-server</artifactId>-->
-            <!--<version>${hbase.version}</version>-->
-            <!--<exclusions>-->
-                <!--<exclusion>-->
-                    <!--<groupId>org.apache.hbase</groupId>-->
-                    <!--<artifactId>*</artifactId>-->
-                <!--</exclusion>-->
-            <!--</exclusions>-->
-        <!--</dependency>-->
+
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.50.Final</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.hbase</groupId>
@@ -114,59 +110,8 @@
             <version>${hbase.version}</version>
         </dependency>
 
-        <!--<dependency>-->
-            <!--<groupId>org.apache.hbase</groupId>-->
-            <!--<artifactId>hbase-mapreduce</artifactId>-->
-            <!--<version>${hbase.version}</version>-->
-            <!--<exclusions>-->
-                <!--<exclusion>-->
-                    <!--<groupId>org.apache.hbase</groupId>-->
-                    <!--<artifactId>*</artifactId>-->
-                <!--</exclusion>-->
-            <!--</exclusions>-->
-        <!--</dependency>-->
 
 
-        <dependency>
-            <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-it</artifactId>
-            <version>${hbase.version}</version>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.sun.jersey</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.glassfish</groupId>
-                    <artifactId>javax.el</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-testing-util</artifactId>
-            <version>${hbase.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>javax.servlet</groupId>
-                    <artifactId>servlet-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.sun.jersey</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.sun.jersey.contribs</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.apache.hbase</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
 
 
         <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
@@ -176,11 +121,6 @@
             <version>29.0-jre</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore</artifactId>
-            <version>4.4.8</version>
-        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -206,81 +146,6 @@
 
 
 
-        <!-- https://mvnrepository.com/artifact/org.antlr/antlr4-runtime -->
-        <!--<dependency>-->
-            <!--<groupId>org.antlr</groupId>-->
-            <!--<artifactId>antlr4-runtime</artifactId>-->
-            <!--<version>${antlr4.version}</version>-->
-        <!--</dependency>-->
-        <!-- https://mvnrepository.com/artifact/org.antlr/antlr4 -->
-        <dependency>
-            <groupId>org.antlr</groupId>
-            <artifactId>antlr4</artifactId>
-            <version>${antlr4.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.antlr</groupId>
-                    <artifactId>antlr-runtime</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-
-
-        <!-- https://mvnrepository.com/artifact/org.apache.parquet/parquet-hadoop -->
-        <dependency>
-            <groupId>org.apache.parquet</groupId>
-            <artifactId>parquet-hadoop</artifactId>
-            <version>${parquet.version}</version>
-        </dependency>
-
-
-        <dependency>
-            <groupId>org.apache.hive</groupId>
-            <artifactId>hive-jdbc</artifactId>
-            <version>${hive.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.curator</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-
-        <!--<dependency>-->
-            <!--<groupId>com.fasterxml.jackson.core</groupId>-->
-            <!--<artifactId>jackson-databind</artifactId>-->
-            <!--<version>2.10.3</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>javax.servlet</groupId>-->
-            <!--<artifactId>javax.servlet-api</artifactId>-->
-            <!--<version>3.1.0</version>-->
-        <!--</dependency>-->
-
-        <!-- https://mvnrepository.com/artifact/org.openjdk.jol/jol-core -->
-        <dependency>
-            <groupId>org.openjdk.jol</groupId>
-            <artifactId>jol-core</artifactId>
-            <version>${jol.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjdk.jol</groupId>
-            <artifactId>jol-cli</artifactId>
-            <version>${jol.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjdk.jol</groupId>
-            <artifactId>jol-benchmarks</artifactId>
-            <version>${jol.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjdk.jol</groupId>
-            <artifactId>jol-samples</artifactId>
-            <version>${jol.version}</version>
-        </dependency>
-
 
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -289,104 +154,6 @@
         </dependency>
 
 
-        <!--<dependency>-->
-            <!--<groupId>javax.ws.rs</groupId>-->
-            <!--<artifactId>jsr311-api</artifactId>-->
-            <!--<version>1.1.1</version>-->
-        <!--</dependency>-->
-        <!-- https://mvnrepository.com/artifact/javax.ws.rs/javax.ws.rs-api -->
-        <dependency>
-            <groupId>javax.ws.rs</groupId>
-            <artifactId>javax.ws.rs-api</artifactId>
-            <version>2.1.1</version>
-        </dependency>
-
-        <!--<dependency>-->
-            <!--<groupId>javax.ws.rs</groupId>-->
-            <!--<artifactId>javax.ws.rs-api</artifactId>-->
-            <!--<version>2.0.1</version>-->
-        <!--</dependency>-->
-
-
-        <dependency>
-            <groupId>org.roaringbitmap</groupId>
-            <artifactId>RoaringBitmap</artifactId>
-            <version>0.8.13</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/com.chuusai/shapeless -->
-        <dependency>
-            <groupId>com.chuusai</groupId>
-            <artifactId>shapeless_2.11</artifactId>
-            <version>2.3.3</version>
-        </dependency>
-
-        <!--<dependency>-->
-            <!--<groupId>org.apache.hbase</groupId>-->
-            <!--<artifactId>hbase-spark</artifactId>-->
-            <!--<version>1.2.0-cdh5.9.0</version>-->
-            <!--<exclusions>-->
-                <!--<exclusion>-->
-                    <!--<groupId>org.apache.hbase</groupId>-->
-                    <!--<artifactId>hbase-client</artifactId>-->
-                <!--</exclusion>-->
-
-                <!--<exclusion>-->
-                    <!--<groupId>org.apache.hadoop</groupId>-->
-                    <!--<artifactId>hadoop-client</artifactId>-->
-                <!--</exclusion>-->
-
-                <!--<exclusion>-->
-                    <!--<groupId>org.apache.hadoop</groupId>-->
-                    <!--<artifactId>hadoop-core</artifactId>-->
-                <!--</exclusion>-->
-
-                <!--<exclusion>-->
-                    <!--<groupId>com.sun.jersey</groupId>-->
-                    <!--<artifactId>*</artifactId>-->
-                <!--</exclusion>-->
-            <!--</exclusions>-->
-        <!--</dependency>-->
-        <dependency>
-            <groupId>org.apache.phoenix</groupId>
-            <artifactId>phoenix-core</artifactId>
-            <version>${phoenix.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.phoenix</groupId>
-            <artifactId>phoenix-spark</artifactId>
-            <version>${phoenix.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-
-        <!--<dependency>-->
-            <!--<groupId>com.hortonworks</groupId>-->
-            <!--<artifactId>shc-core</artifactId>-->
-            <!--<version>1.1.2-2.1-s_2.11-SNAPSHOT</version>-->
-            <!--<exclusions>-->
-                <!--&lt;!&ndash;<exclusion>&ndash;&gt;-->
-                    <!--&lt;!&ndash;<groupId>javax.servlet</groupId>&ndash;&gt;-->
-                    <!--&lt;!&ndash;<artifactId>javax.servlet-api</artifactId>&ndash;&gt;-->
-                <!--&lt;!&ndash;</exclusion>&ndash;&gt;-->
-                <!--<exclusion>-->
-                    <!--<groupId>org.apache.spark</groupId>-->
-                    <!--<artifactId>spark-core</artifactId>-->
-                <!--</exclusion>-->
-            <!--</exclusions>-->
-        <!--</dependency>-->
-        <dependency>
-            <groupId>com.typesafe</groupId>
-            <artifactId>config</artifactId>
-            <version>1.3.0</version>
-            <scope>provided</scope>
-        </dependency>
-
-
-
-        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-hive -->
-
 
         <dependency>
             <groupId>org.scala-lang</groupId>
@@ -394,148 +161,14 @@
             <version>${scala.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-common</artifactId>
-            <version>${hadoop.version}</version>
-            <scope>compile</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>javax.ws.rs</groupId>
-                    <artifactId>jsr311-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.sun.jersey</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.apache.curator</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
 
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-hdfs</artifactId>
-            <version>${hadoop.version}</version>
-            <scope>compile</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.sun.jersey</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-mapreduce-client-common</artifactId>
-            <version>${hadoop.version}</version>
-            <scope>compile</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.sun.jersey</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.sun.jersey.contribs</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-mapreduce-client-core</artifactId>
-            <version>${hadoop.version}</version>
-            <scope>compile</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.sun.jersey</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-mapreduce -->
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-mapreduce</artifactId>
-            <version>${hadoop.version}</version>
-            <type>pom</type>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-mapreduce-client-shuffle -->
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-mapreduce-client-shuffle</artifactId>
-            <version>${hadoop.version}</version>
-        </dependency>
-
-
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-auth</artifactId>
-            <version>${hadoop.version}</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-yarn-common -->
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-yarn-common</artifactId>
-            <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-yarn-client</artifactId>
-            <version>${hadoop.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-streaming-kafka-${profiles.streaming-kafka.version}_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
         </dependency>
-        <!--<dependency>-->
-            <!--<groupId>org.apache.spark</groupId>-->
-            <!--<artifactId>spark-streaming-kafka-0-10_${scala.binary.version}</artifactId>-->
-            <!--<version>${spark.version}</version>-->
-        <!--</dependency>-->
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-hive_${scala.binary.version}</artifactId>
-            <version>${spark.version}</version>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>javax.ws.rs</groupId>
-                    <artifactId>javax.ws.rs-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.glassfish.jersey.bundles.repackaged</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.apache.curator</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
+
+
 
         <dependency>
             <groupId>org.apache.spark</groupId>
@@ -550,7 +183,15 @@
             <version>${spark.version}</version>
             <scope>compile</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-yarn -->
+
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql-kafka-${profiles.streaming-kafka.version}_${scala.binary.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <!--&lt;!&ndash; https://mvnrepository.com/artifact/org.apache.spark/spark-yarn &ndash;&gt;-->
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-yarn_${scala.binary.version}</artifactId>
@@ -572,36 +213,6 @@
 
 
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-            <version>4.1.19.Final</version>
-        </dependency>
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-module-junit4-legacy</artifactId>
-            <version>${powermock.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-api-mockito</artifactId>
-            <version>${powermock.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-module-junit4</artifactId>
-            <version>1.6.5</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.mrunit</groupId>
-            <artifactId>mrunit</artifactId>
-            <version>1.1.0</version>
-            <classifier>hadoop2</classifier>
-        </dependency>
-        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-pool2</artifactId>
             <version>2.4.2</version>
@@ -611,45 +222,6 @@
             <artifactId>mysql-connector-java</artifactId>
             <version>5.1.40</version>
         </dependency>
-
-        <dependency>
-            <groupId>it.unimi.dsi</groupId>
-            <artifactId>fastutil</artifactId>
-            <version>8.2.1</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-spark</artifactId>
-            <version>2.1.0-cdh6.3.3</version>
-            <exclusions>
-                <!--<exclusion>-->
-                    <!--<groupId>org.apache.hbase</groupId>-->
-                    <!--<artifactId>hbase-client</artifactId>-->
-                <!--</exclusion>-->
-
-                <!--<exclusion>-->
-                    <!--<groupId>org.apache.hadoop</groupId>-->
-                    <!--<artifactId>hadoop-client</artifactId>-->
-                <!--</exclusion>-->
-
-                <!--<exclusion>-->
-                    <!--<groupId>org.apache.hadoop</groupId>-->
-                    <!--<artifactId>hadoop-core</artifactId>-->
-                <!--</exclusion>-->
-
-                <!--<exclusion>-->
-                    <!--<groupId>com.sun.jersey</groupId>-->
-                    <!--<artifactId>*</artifactId>-->
-                <!--</exclusion>-->
-                <exclusion>
-                    <groupId>*</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-
-        </dependency>
-
 
     </dependencies>
 
@@ -762,6 +334,9 @@
             <properties>
                 <profiles.streaming-kafka.version>0-10</profiles.streaming-kafka.version>
             </properties>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
         </profile>
 
         <profile>
@@ -769,9 +344,7 @@
             <properties>
                 <profiles.streaming-kafka.version>0-8</profiles.streaming-kafka.version>
             </properties>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
+
         </profile>
     </profiles>
 </project>

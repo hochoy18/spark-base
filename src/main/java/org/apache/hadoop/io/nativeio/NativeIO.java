@@ -40,7 +40,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils.AlreadyExistsException;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.PerformanceAdvisory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -200,7 +199,6 @@ public class NativeIO {
                     // This can happen if the user has an older version of libhadoop.so
                     // installed - in this case we can continue without native IO
                     // after warning
-                    PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
                 }
             }
         }
@@ -660,7 +658,6 @@ public class NativeIO {
                     // This can happen if the user has an older version of libhadoop.so
                     // installed - in this case we can continue without native IO
                     // after warning
-                    PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
                 }
             }
         }
@@ -679,7 +676,6 @@ public class NativeIO {
                 // This can happen if the user has an older version of libhadoop.so
                 // installed - in this case we can continue without native IO
                 // after warning
-                PerformanceAdvisory.LOG.debug("Unable to initialize NativeIO libraries", t);
             }
         }
     }
@@ -736,14 +732,6 @@ public class NativeIO {
     private static long cacheTimeout;
     private static boolean initialized = false;
 
-    /**
-     * The Windows logon name has two part, NetBIOS domain name and
-     * user account name, of the format DOMAIN\UserName. This method
-     * will remove the domain part of the full logon name.
-     *
-     * @param Fthe full principal name containing the domain
-     * @return name with domain removed
-     */
     private static String stripDomain(String name) {
         int i = name.indexOf('\\');
         if (i != -1)

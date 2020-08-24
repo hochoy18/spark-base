@@ -2955,6 +2955,102 @@ public class Solution {
 
     }
 
+
+    @Test
+    public void relativeSortArray() {
+        int[] arr1 = new int[]{ 2, 3, 1, 3, 2, 4, 6, 7, 9, 2, 19 ,1};
+        int[] arr2 = new int[]{ 2, 1, 4, 3, 9, 6 };
+
+
+
+
+//        qs(arr1,0,arr1.length-1);
+//        print(arr1);
+//        qs(arr2,0,arr2.length -1);
+//        print(arr2);
+
+
+
+    }
+
+
+    @Test
+    public void repeatedSubstringPattern() {
+        assertTrue(repeatedSubstringPattern("abab"));
+        assertFalse(repeatedSubstringPattern("aba"));
+        assertTrue(repeatedSubstringPattern("abcabcabcabc"));
+
+    }
+
+    public boolean repeatedSubstringPattern(String s) {
+
+        int len =  s.length();
+        for (int i = 1; i < (len >> 1)+1; i++) {
+
+            String sub = s.substring(0, i);
+            if (len % sub.length() ==0){
+                if (strRepeatNTimes(sub,len / sub.length()).equals(s)){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    String strRepeatNTimes(String str , int n){
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+            sb.append(str);
+        }
+        return sb.toString();
+    }
+
+
+    public int[] relativeSortArray(int[] arr1, int[] arr2) {
+        int[] res = Arrays.copyOf(arr2,arr1.length-1);
+
+        Map<Integer,Integer >map = new LinkedHashMap<>();
+        for (int k : arr2) {
+            map.put(k,1);
+        }
+        for (int i : arr1) {
+
+        }
+
+
+
+        return res;
+    }
+
+    public void qs(int[] nums, int start ,int end ){
+        if (start < end ){
+            int key = nums[start];
+            int i = start,j = end;
+            while (i < j){
+                while (i<j && nums[j] >= key){
+                    j --;
+                }
+                if (i<j){
+                    nums[i] = nums[j];
+                }
+                while (i<j && nums[i] <= key){
+                    i++;
+                }
+                if (i<j){
+                    nums[j] = nums[i];
+                }
+            }
+            nums[i] = key;
+            qs(nums,start,i-1);
+            qs(nums,i+1,end);
+
+
+
+        }
+    }
+
+
+
+
     @Test
     public void getKth() {
 

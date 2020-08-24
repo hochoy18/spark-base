@@ -29,8 +29,8 @@ object StructuredStreaming {
   def kafka(args: Array[String]):Unit={
     val df: DataFrame = spark.readStream
       .format("kafka") // 设置 kafka 数据源
-      .option("kafka.bootstrap.servers", "DESKTOP-HQQ4VIP:9092")
-      .option("subscribe", "partitions3-topic") // 也可以订阅多个主题:   "topic1,topic2"
+      .option("kafka.bootstrap.servers", args(1))
+      .option("subscribe", args(2)) // 也可以订阅多个主题:   "topic1,topic2"
       .load
 
 

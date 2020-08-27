@@ -7,7 +7,7 @@ object StructuredStreaming {
   val spark = SparkSession
     .builder()
     .appName("StructuredNetworkWordCount")
-    .master("local[*]")
+//    .master("local[*]")
     .getOrCreate()
 
   import spark.implicits._
@@ -69,11 +69,11 @@ object StructuredStreaming {
     val socketDF = spark
       .readStream
       .format("socket")
-      .option("host", "localhost")
-      .option("port", 9999)
+      .option("host", args(1))
+      .option("port", args(2))
       .load()
 
-    socketDF.isStreaming    // Returns True for DataFrames that have streaming sources
+    print(socketDF.isStreaming  )  // Returns True for DataFrames that have streaming sources
 
     socketDF.printSchema
 

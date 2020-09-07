@@ -3047,9 +3047,36 @@ public class Solution {
 
         }
     }
+    @Test
+    public void topKFrequent() {
 
+        int[] nums = {1,1,1,2,2,3};
+        int k = 2;
+        int[] ints = topKFrequent(nums, k);
+        print(ints);
+    }
 
+    public int[] topKFrequent(int[] nums, int k) {
+        if (nums == null || nums.length == 0 || k<=0){
+            return null;
+        }
+        int[] res = new int[k];
+        Map<Integer,Integer> map = new TreeMap<>();
 
+        Arrays.stream(nums).forEach(num -> map.put(num, map.getOrDefault(num,0)+1));
+
+        ArrayList<Map.Entry<Integer, Integer>> list = new ArrayList<>(map.entrySet());
+
+        list.sort((o1, o2) -> o2.getValue() - o1.getValue());
+
+        for (int i = 0; i < k ; i++) {
+            Map.Entry<Integer, Integer> entry = list.get(i);
+//            System.out.println(entry.getKey()  + " : " + entry.getValue());
+            res[i] = entry.getKey();
+        }
+        return res;
+
+    }
 
     @Test
     public void getKth() {
